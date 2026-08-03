@@ -341,7 +341,7 @@ body[data-theme="dark"] .page-head .eyebrow::before { background:linear-gradient
 .chip { display:inline-flex; align-items:center; gap:7px; background:var(--glass-2); border:1px solid var(--border-mid); border-radius:var(--r-sm); padding:6px 12px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-mid); animation:chipPop 350ms var(--ease-bounce) both; }
 @keyframes chipPop { from{opacity:0;transform:scale(0.8) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
 .chip-bolt { color:var(--violet); }
-.chip-x { color:var(--text-dim); font-size:15px; line-height:1; transition:color 120ms; }
+.chip-x { background:none; border:none; padding:0; font:inherit; color:var(--text-dim); font-size:15px; line-height:1; cursor:pointer; transition:color 120ms; }
 .chip-x:hover { color:var(--red); }
 
 /* Action row */
@@ -1212,8 +1212,8 @@ tbody tr:hover { background:var(--glass-2); }
         <span class="results-title" id="forms-title-label">Responses</span>
         <div class="header-controls">
           <button id="score-all-btn" class="btn-ghost" style="white-space:nowrap"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1l1.6 3.3 3.6.5-2.6 2.5.6 3.6-3.2-1.7-3.2 1.7.6-3.6L1.3 4.8l3.6-.5L6.5 1Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg> Score All Pending</button>
-          <button id="auto-move-btn" class="btn-ghost" style="white-space:nowrap;border-color:rgba(52,211,153,.4);color:#34d399" title="Move candidates scoring above the threshold into HR Round">➜ Auto-move &gt; <span id="auto-move-thresh">65</span></button>
-          <button id="auto-reject-btn" class="btn-ghost" style="white-space:nowrap;border-color:rgba(248,113,113,.4);color:#f87171" title="Reject candidates scoring below the threshold">✕ Auto-reject &lt; <span id="auto-reject-thresh">30</span></button>
+          <button id="auto-move-btn" class="btn-ghost" style="white-space:nowrap;border-color:rgba(52,211,153,.4);color:#34d399" title="Move candidates scoring above the threshold into HR Round" aria-label="Move candidates scoring above the threshold into HR Round">➜ Auto-move &gt; <span id="auto-move-thresh">65</span></button>
+          <button id="auto-reject-btn" class="btn-ghost" style="white-space:nowrap;border-color:rgba(248,113,113,.4);color:#f87171" title="Reject candidates scoring below the threshold" aria-label="Reject candidates scoring below the threshold">✕ Auto-reject &lt; <span id="auto-reject-thresh">30</span></button>
           <div class="search-wrap"><span class="search-icon">&#x2315;</span><input id="forms-search" type="text" placeholder="Search email or answer&#x2026;"></div>
         </div>
       </div>
@@ -1231,7 +1231,7 @@ tbody tr:hover { background:var(--glass-2); }
             <option value="time">Time taken</option>
             <option value="name">Name</option>
           </select>
-          <button id="sort-dir" class="filter-select" title="Toggle ascending / descending" style="cursor:pointer;min-width:118px;text-align:left">↓ Desc</button>
+          <button id="sort-dir" class="filter-select" title="Toggle ascending / descending" aria-label="Toggle ascending / descending" style="cursor:pointer;min-width:118px;text-align:left">↓ Desc</button>
         </div>
         <div style="display:flex;align-items:center;gap:7px;margin-left:auto">
           <span style="font-family:'Poppins',sans-serif;font-weight:700;font-size:11px;letter-spacing:.6px;color:var(--violet)">STATUS</span>
@@ -1323,10 +1323,10 @@ tbody tr:hover { background:var(--glass-2); }
       <span class="results-title" id="acc-stage-title">HR Round</span>
       <div class="header-controls">
         <span id="r1-invite-wrap" style="display:none">
-          <button id="r1-invite-btn" class="btn-ghost" style="white-space:nowrap;border-color:rgba(52,211,153,.45);color:#34d399" title="Email all Round 1 candidates a Calendly booking link">&#x1F4C5; Send Calendly invite to all</button>
+          <button id="r1-invite-btn" class="btn-ghost" style="white-space:nowrap;border-color:rgba(52,211,153,.45);color:#34d399" title="Email all Round 1 candidates a Calendly booking link" aria-label="Email all Round 1 candidates a Calendly booking link">&#x1F4C5; Send Calendly invite to all</button>
         </span>
         <span id="r2-onboard-wrap" style="display:none">
-          <button id="r2-onboard-btn" class="btn-ghost" style="white-space:nowrap;border-color:rgba(31,45,89,.55);color:#2F5BEA;font-weight:700;" title="Send onboarding welcome email to Round 2 candidates">&#127881; Send Onboarding Email</button>
+          <button id="r2-onboard-btn" class="btn-ghost" style="white-space:nowrap;border-color:rgba(31,45,89,.55);color:#2F5BEA;font-weight:700;" title="Send onboarding welcome email to Round 2 candidates" aria-label="Send onboarding welcome email to Round 2 candidates">&#127881; Send Onboarding Email</button>
         </span>
         <select id="acc-role-filter" title="Filter by role" style="background:var(--glass-2);border:1px solid var(--border-dim);border-radius:9px;color:var(--text-on);font-size:13px;padding:8px 12px;cursor:pointer">
           <option value="">All roles</option>
@@ -1469,7 +1469,7 @@ tbody tr:hover { background:var(--glass-2); }
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
         Add College
       </button>
-      <button id="col-discover-btn" class="btn-ghost" style="border-color:rgba(46,168,160,.5);color:#5fd3c8" title="Auto-discover placement contacts from the college website & brochure">
+      <button id="col-discover-btn" class="btn-ghost" style="border-color:rgba(46,168,160,.5);color:#5fd3c8" title="Auto-discover placement contacts from the college website & brochure" aria-label="Auto-discover placement contacts from the college website & brochure">
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M8.5 8.5L12 12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
         Discover Contacts
       </button>
@@ -1641,7 +1641,7 @@ tbody tr:hover { background:var(--glass-2); }
 <div id="discover-modal">
   <div class="cand-modal-scrim" onclick="closeDiscoverModal()"></div>
   <div class="cand-modal-box" style="max-width:780px">
-    <button class="cand-modal-close" onclick="closeDiscoverModal()">✕</button>
+    <button class="cand-modal-close" onclick="closeDiscoverModal()" aria-label="Close">✕</button>
     <div class="cand-modal-name" style="margin-bottom:6px">Discover Placement Contacts</div>
     <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:18px;line-height:1.5">
       Type a college name — for known institutions (all IITs, NITs, IIITs, BITS, IISc, and major universities)
@@ -1661,7 +1661,7 @@ tbody tr:hover { background:var(--glass-2); }
 <div id="col-modal">
   <div class="cand-modal-scrim" onclick="closeColModal()"></div>
   <div class="cand-modal-box">
-    <button class="cand-modal-close" onclick="closeColModal()">✕</button>
+    <button class="cand-modal-close" onclick="closeColModal()" aria-label="Close">✕</button>
     <div class="cand-modal-name" id="col-modal-title" style="margin-bottom:22px">Add College</div>
     <div class="col-form-grid">
       <div class="field-group"><label class="field-label">College Name *</label><input id="cf-name" class="field-input" placeholder="IIT Delhi"></div>
@@ -1775,7 +1775,7 @@ tbody tr:hover { background:var(--glass-2); }
 <div id="cand-modal">
   <div class="cand-modal-scrim" onclick="closeCandModal()"></div>
   <div class="cand-modal-box">
-    <button class="cand-modal-close" onclick="closeCandModal()">✕</button>
+    <button class="cand-modal-close" onclick="closeCandModal()" aria-label="Close">✕</button>
     <div class="cand-modal-header">
       <div class="cand-modal-avatar" id="cm-avatar"></div>
       <div>
@@ -1792,7 +1792,7 @@ tbody tr:hover { background:var(--glass-2); }
   <div class="modal">
     <div class="modal-head">
       <div class="modal-head-left"><div class="mname" id="m-name">—</div><div class="msrc" id="m-src">—</div></div>
-      <button class="modal-close" id="m-close">✕</button>
+      <button class="modal-close" id="m-close" aria-label="Close">✕</button>
     </div>
     <div class="modal-body" id="m-body"></div>
   </div>
@@ -1972,7 +1972,7 @@ function renderChips() {
   files.forEach((f, i) => {
     const ch = document.createElement('div'); ch.className='chip'; ch.style.animationDelay=`${i*35}ms`;
     const short = f.name.length > 30 ? f.name.slice(0,27)+'…' : f.name;
-    ch.innerHTML = `<span class="chip-bolt">⚡</span><span>${short}</span><span class="chip-x" data-i="${i}">×</span>`;
+    ch.innerHTML = `<span class="chip-bolt">⚡</span><span>${short}</span><button type="button" class="chip-x" data-i="${i}" aria-label="Remove ${short}">×</button>`;
     ch.querySelector('.chip-x').addEventListener('click', () => { files.splice(i,1); renderChips(); });
     fileChips.appendChild(ch);
   });
@@ -2439,7 +2439,7 @@ refreshEmailCount();
         return `<div style="background:var(--glass-2);border:1px solid var(--border-dim);border-radius:8px;padding:10px 12px;margin-bottom:8px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
             <div style="font-size:12.5px;line-height:1.5;color:var(--text-mid);white-space:pre-wrap;flex:1">${stage}${escNote(n.text)}</div>
-            <button class="note-del-btn" data-rid="${escNote(responseId)}" data-nid="${escNote(n.id)}" title="Delete note"
+            <button class="note-del-btn" data-rid="${escNote(responseId)}" data-nid="${escNote(n.id)}" title="Delete note" aria-label="Delete note"
                     style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;flex-shrink:0;padding:0 2px">🗑</button>
           </div>
           <div style="font-size:10px;color:var(--text-dim);margin-top:6px;font-family:'JetBrains Mono',monospace">${escNote(when)}</div>
@@ -2961,7 +2961,7 @@ refreshEmailCount();
         <td>${scoreCell}</td>
         <td style="white-space:nowrap">${decisionCell}</td>
         <td><button class="td-view-btn" onclick="event.stopPropagation();openCandModal(${idx})">VIEW</button></td>
-        <td><button class="td-del-btn" title="Delete candidate" onclick="event.stopPropagation();confirmDelete(this,'${r.response_id}',${idx})">🗑</button></td>`;
+        <td><button class="td-del-btn" title="Delete candidate" aria-label="Delete candidate" onclick="event.stopPropagation();confirmDelete(this,'${r.response_id}',${idx})">🗑</button></td>`;
       tbody.appendChild(tr);
     });
   }
@@ -3225,27 +3225,27 @@ refreshEmailCount();
       if (_stage === 'hr' || _stage === 'round1'){
         // Straight promote to the next interview round.
         const nx = NEXT[_stage];
-        promoteBtn = `<button class="td-view-btn" style="border-color:rgba(52,211,153,.5);color:#34d399" title="Advance to ${_labels[nx]}" onclick="event.stopPropagation();promoteAccepted('${esc(r.response_id)}')">➜ ${esc(_labels[nx].toUpperCase())}</button>`;
+        promoteBtn = `<button class="td-view-btn" style="border-color:rgba(52,211,153,.5);color:#34d399" title="Advance to ${_labels[nx]}" aria-label="Advance to ${_labels[nx]}" onclick="event.stopPropagation();promoteAccepted('${esc(r.response_id)}')">➜ ${esc(_labels[nx].toUpperCase())}</button>`;
       } else if (_stage === 'round2'){
         // Round 2 is the hiring decision. First SELECT (mark hired), then the
         // button becomes "➜ ONBOARDED" to move them into the final stage.
         if (!isSelected){
-          promoteBtn = `<button class="td-view-btn" style="border-color:rgba(250,204,21,.6);color:#facc15" title="Mark as selected (hired)" onclick="event.stopPropagation();markSelected('${esc(r.response_id)}')">★ SELECT</button>`;
+          promoteBtn = `<button class="td-view-btn" style="border-color:rgba(250,204,21,.6);color:#facc15" title="Mark as selected (hired)" aria-label="Mark as selected (hired)" onclick="event.stopPropagation();markSelected('${esc(r.response_id)}')">★ SELECT</button>`;
         } else {
           promoteBtn = `<span class="dec-badge dec-accepted" title="Selected (hired)" style="border-color:rgba(250,204,21,.55);color:#facc15">★ SELECTED</span> `
-            + `<button class="td-view-btn" style="border-color:rgba(96,165,250,.6);color:#60a5fa" title="Move to Onboarded — do this after sending the onboarding form" onclick="event.stopPropagation();promoteAccepted('${esc(r.response_id)}')">➜ ONBOARDED</button> `
-            + `<button class="td-mini-btn" title="Undo selection" onclick="event.stopPropagation();unmarkSelected('${esc(r.response_id)}')">↩</button>`;
+            + `<button class="td-view-btn" style="border-color:rgba(96,165,250,.6);color:#60a5fa" title="Move to Onboarded — do this after sending the onboarding form" aria-label="Move to Onboarded — do this after sending the onboarding form" onclick="event.stopPropagation();promoteAccepted('${esc(r.response_id)}')">➜ ONBOARDED</button> `
+            + `<button class="td-mini-btn" title="Undo selection" aria-label="Undo selection" onclick="event.stopPropagation();unmarkSelected('${esc(r.response_id)}')">↩</button>`;
         }
       } else { // onboarded — terminal stage
         promoteBtn = `<span class="dec-badge dec-accepted" title="Hired & onboarding form sent" style="border-color:rgba(96,165,250,.55);color:#60a5fa">✓ ONBOARDED</span>`;
       }
       const backBtn = PREV[_stage]
-        ? `<button class="td-mini-btn" title="Move back to ${_labels[PREV[_stage]]}" onclick="event.stopPropagation();demoteAccepted('${esc(r.response_id)}')">↩</button>`
-        : `<button class="td-mini-btn" title="Remove from pipeline" onclick="event.stopPropagation();removeAccepted('${esc(r.response_id)}')">✕</button>`;
+        ? `<button class="td-mini-btn" title="Move back to ${_labels[PREV[_stage]]}" aria-label="Move back to ${_labels[PREV[_stage]]}" onclick="event.stopPropagation();demoteAccepted('${esc(r.response_id)}')">↩</button>`
+        : `<button class="td-mini-btn" title="Remove from pipeline" aria-label="Remove from pipeline" onclick="event.stopPropagation();removeAccepted('${esc(r.response_id)}')">✕</button>`;
       // Reject is available at EVERY stage (HR Round, Round 1, Round 2,
       // Onboarded), not just the HR Round. It moves the candidate to the
       // Rejected tab and removes them from this pipeline.
-      const rejectBtn = `<button class="td-mini-btn labeled" title="Reject — move to the Rejected tab" style="border-color:rgba(248,113,113,.5);color:#f87171;margin-left:6px" onclick="event.stopPropagation();rejectAccepted('${esc(r.response_id)}')">✕ Reject</button>`;
+      const rejectBtn = `<button class="td-mini-btn labeled" title="Reject — move to the Rejected tab" aria-label="Reject — move to the Rejected tab" style="border-color:rgba(248,113,113,.5);color:#f87171;margin-left:6px" onclick="event.stopPropagation();rejectAccepted('${esc(r.response_id)}')">✕ Reject</button>`;
       const tr = document.createElement('tr');
       tr.style.animationDelay = `${i*25}ms`;
       tr.style.cursor = 'pointer';
@@ -3368,7 +3368,7 @@ refreshEmailCount();
         return `<div style="background:var(--glass-2);border:1px solid var(--border-dim);border-radius:8px;padding:9px 11px;margin-bottom:7px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
             <div style="font-size:12.5px;line-height:1.5;color:var(--text-mid);white-space:pre-wrap;flex:1">${stage}${esc(n.text)}</div>
-            <button class="accnote-del" data-rid="${esc(responseId)}" data-nid="${esc(n.id)}" title="Delete note" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;flex-shrink:0">🗑</button>
+            <button class="accnote-del" data-rid="${esc(responseId)}" data-nid="${esc(n.id)}" title="Delete note" aria-label="Delete note" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;flex-shrink:0">🗑</button>
           </div>
           <div style="font-size:10px;color:var(--text-dim);margin-top:5px;font-family:'JetBrains Mono',monospace">${esc(when)}</div>
         </div>`;
@@ -3757,7 +3757,7 @@ refreshEmailCount();
         <td><span class="dec-badge dec-rejected">${esc(r.rejected_round)||'—'}</span></td>
         <td style="font-size:10px;white-space:nowrap;color:var(--text-dim)">${when}</td>
         <td><button class="td-view-btn" onclick="event.stopPropagation();this.closest('tr').click()">VIEW</button></td>
-        <td><button class="td-view-btn rej-restore-btn" data-rid="${esc(r.response_id)}" style="border-color:rgba(52,211,153,.45);color:#34d399" title="Restore to active pipeline">↩ RESTORE</button></td>`;
+        <td><button class="td-view-btn rej-restore-btn" data-rid="${esc(r.response_id)}" style="border-color:rgba(52,211,153,.45);color:#34d399" title="Restore to active pipeline" aria-label="Restore to active pipeline">↩ RESTORE</button></td>`;
       // Wire the restore button via a listener (robust to any characters in
       // the response_id — building the call as an inline onclick string broke
       // parsing for some IDs, so the click silently did nothing).
@@ -3861,7 +3861,7 @@ refreshEmailCount();
         return `<div style="background:var(--glass-2);border:1px solid var(--border-dim);border-radius:8px;padding:9px 11px;margin-bottom:7px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
             <div style="font-size:12.5px;line-height:1.5;color:var(--text-mid);white-space:pre-wrap;flex:1">${stage}${esc(n.text)}</div>
-            <button class="rejnote-del" data-rid="${esc(responseId)}" data-nid="${esc(n.id)}" title="Delete note" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;flex-shrink:0">🗑</button>
+            <button class="rejnote-del" data-rid="${esc(responseId)}" data-nid="${esc(n.id)}" title="Delete note" aria-label="Delete note" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;flex-shrink:0">🗑</button>
           </div>
           <div style="font-size:10px;color:var(--text-dim);margin-top:5px;font-family:'JetBrains Mono',monospace">${esc(when)}</div>
         </div>`;
@@ -4014,7 +4014,7 @@ refreshEmailCount();
         <td><span class="col-prio-badge ${c.priority_level}">${c.priority_score??'—'}</span> <span style="font-size:10px;color:var(--text-dim)">${c.priority_level||''}</span></td>
         <td style="white-space:nowrap">
           <button class="td-view-btn" onclick="editCollege('${c.id}')">EDIT</button>
-          <button class="td-del-btn" title="Delete" onclick="delCollege(this,'${c.id}')">🗑</button>
+          <button class="td-del-btn" title="Delete" aria-label="Delete" onclick="delCollege(this,'${c.id}')">🗑</button>
         </td>
       </tr>`).join('');
     if (filtersActive && _colleges.length)
@@ -4730,7 +4730,7 @@ refreshEmailCount();
       <button class="emp-vt active" data-view="tiles">▦ Tiles</button>
       <button class="emp-vt" data-view="sheet">▤ Sheet</button>
     </div>
-    <button class="btn-ghost" id="emp-reveal-btn" title="Show / hide PAN, Aadhaar, account, salary">🔒 Reveal sensitive</button>
+    <button class="btn-ghost" id="emp-reveal-btn" title="Show / hide PAN, Aadhaar, account, salary" aria-label="Show / hide PAN, Aadhaar, account, salary">🔒 Reveal sensitive</button>
     <div class="emp-search-wrap"><input id="emp-search" type="text" placeholder="Search name, ID, email, designation…"></div>
   </div>
   <div class="emp-meta" id="emp-meta">Loading…</div>
@@ -5334,7 +5334,7 @@ refreshEmailCount();
       div.innerHTML = `
         <input class="field-input adm-trait-name" placeholder="Trait (e.g. high ownership)" style="flex:0 0 200px">
         <input class="field-input adm-trait-desc" placeholder="What it means — optional, helps the AI judge by gist" style="flex:1">
-        <button class="td-mini-btn adm-trait-del" title="Remove" type="button">✕</button>`;
+        <button class="td-mini-btn adm-trait-del" title="Remove" aria-label="Remove" type="button">✕</button>`;
       div.querySelector('.adm-trait-name').value = (t&&t.name)||'';
       div.querySelector('.adm-trait-desc').value = (t&&t.description)||'';
       div.querySelector('.adm-trait-del').addEventListener('click', ()=> div.remove());
