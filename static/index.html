@@ -30,6 +30,11 @@
 
   --green:#16a34a; --green-dim:rgba(22,163,74,0.12);
   --red:#e11d48; --cyan:#2F5BEA; --cyan-dim:rgba(47,91,234,0.10);
+  /* Dedicated error-text color: --red itself is only 4.38:1 on glass-2 in
+     this theme (fails WCAG AA 4.5:1 for the small text validation messages
+     use). #d0173f clears 5.0-5.4:1 on both bg-base and glass-2. Kept
+     separate from --red so existing badges/buttons/charts are untouched. */
+  --text-error:#d0173f;
 
   /* text-dim was #8a93a6 (2.9-3.1:1 against its actual backgrounds) which
      fails WCAG AA (4.5:1) for the small/normal-size text it's used on
@@ -60,6 +65,8 @@ body[data-theme="dark"] {
   --grad-text:linear-gradient(120deg,#ffffff,#c5cee6);
   --green:#34d399; --green-dim:rgba(52,211,153,0.14);
   --red:#fb7185; --cyan:#5b8def; --cyan-dim:rgba(91,141,239,0.14);
+  /* --red already clears 5.3-6.5:1 here, so --text-error can stay the same. */
+  --text-error:#fb7185;
   /* Same fix as light theme: #6b7aa0 was only 3.3-4.1:1; #8b9ed0 clears
      4.5:1+ against both bg-void and glass-2. */
   --text-on:#eef2fb; --text-mid:#a9b4d0; --text-dim:#8b9ed0;
@@ -445,6 +452,22 @@ tbody tr:hover { background:var(--glass-2); }
 .field-input::placeholder { color:var(--text-dim); }
 .field-input:focus { border-color:var(--glass-border-hi); box-shadow:0 0 0 3px rgba(31,45,89,0.1); }
 .field-hint { display:block; font-size:11px; color:var(--text-dim); margin-top:6px; }
+/* ── Required-field validation (shared across every form in the app) ── */
+input.invalid, select.invalid, textarea.invalid {
+  border-color:var(--text-error) !important;
+}
+input.invalid:focus, select.invalid:focus, textarea.invalid:focus {
+  box-shadow:0 0 0 3px rgba(225,29,72,0.15) !important;
+}
+.field-error {
+  display:none;
+  align-items:center; gap:5px;
+  font-family:'Poppins',sans-serif; font-size:11.5px; font-weight:600;
+  color:var(--text-error); margin-top:6px; line-height:1.4;
+}
+.field-error.show { display:flex; }
+.field-error::before { content:'⚠'; font-size:11px; flex-shrink:0; }
+.field-label .req-mark { color:var(--text-error); margin-left:2px; }
 .preview-toggle { display:inline-flex; align-items:center; gap:6px; font-family:'Poppins',sans-serif; font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-dim); background:transparent; border:none; padding:0; margin-bottom:18px; transition:color 150ms; }
 .preview-toggle:hover { color:var(--violet); }
 .email-preview-box { background:var(--bg-deep); border:1px solid var(--border-dim); border-radius:var(--r-sm); padding:18px; margin-bottom:18px; font-size:12px; color:var(--text-mid); line-height:1.65; max-height:220px; overflow-y:auto; }
@@ -1079,11 +1102,11 @@ tbody tr:hover { background:var(--glass-2); }
         </div>
 
         <div class="email-grid">
-          <div class="field-group"><label class="field-label" for="gmail-addr">Sender Gmail Address</label><input id="gmail-addr" class="field-input" type="email" placeholder="hr@hopcharge.com" autocomplete="email"></div>
-          <div class="field-group"><label class="field-label" for="gmail-pass">Gmail App Password</label><input id="gmail-pass" class="field-input" type="password" placeholder="xxxx xxxx xxxx xxxx" autocomplete="off"><span class="field-hint">16-character app password, not your Gmail login</span></div>
+          <div class="field-group"><label class="field-label" for="gmail-addr">Sender Gmail Address<span class="req-mark">*</span></label><input id="gmail-addr" class="field-input" type="email" placeholder="hr@hopcharge.com" autocomplete="email" required></div>
+          <div class="field-group"><label class="field-label" for="gmail-pass">Gmail App Password<span class="req-mark">*</span></label><input id="gmail-pass" class="field-input" type="password" placeholder="xxxx xxxx xxxx xxxx" autocomplete="off" required><span class="field-hint">16-character app password, not your Gmail login</span></div>
         </div>
         <div class="email-grid full" style="margin-bottom:18px">
-          <div class="field-group"><label class="field-label" for="form-link">Google Forms Assessment Link</label><input id="form-link" class="field-input" type="url" placeholder="https://docs.google.com/forms/d/…"><span class="field-hint">Embedded as a CTA button in every email</span></div>
+          <div class="field-group"><label class="field-label" for="form-link">Google Forms Assessment Link<span class="req-mark">*</span></label><input id="form-link" class="field-input" type="url" placeholder="https://docs.google.com/forms/d/…" required><span class="field-hint">Embedded as a CTA button in every email</span></div>
         </div>
 
         <div class="manual-emails-row" style="margin:-4px 0 14px;padding:11px 14px;background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.18);border-radius:8px">
@@ -1166,8 +1189,8 @@ tbody tr:hover { background:var(--glass-2); }
       <div class="email-body">
         <div class="forms-grid">
           <div class="field-group">
-            <label class="field-label" for="forms-id">Google Form ID or Edit URL</label>
-            <input id="forms-id" class="field-input" type="text" placeholder="Paste the form EDIT url or its ID">
+            <label class="field-label" for="forms-id">Google Form ID or Edit URL<span class="req-mark">*</span></label>
+            <input id="forms-id" class="field-input" type="text" placeholder="Paste the form EDIT url or its ID" required>
             <span class="field-hint">Use the <strong>edit</strong> URL: docs.google.com/forms/d/<strong>&lt;ID&gt;</strong>/edit &nbsp;—&nbsp; <em>not</em> the published /d/e/ responder link</span>
           </div>
           <div class="field-group">
@@ -1177,8 +1200,8 @@ tbody tr:hover { background:var(--glass-2); }
         </div>
         <div class="forms-grid full" style="margin-bottom:18px">
           <div class="field-group forms-creds">
-            <label class="field-label" for="forms-creds">Service Account JSON</label>
-            <textarea id="forms-creds" placeholder='Paste the full service account JSON key contents here:
+            <label class="field-label" for="forms-creds">Service Account JSON<span class="req-mark">*</span></label>
+            <textarea id="forms-creds" required placeholder='Paste the full service account JSON key contents here:
 { "type": "service_account", "project_id": "...", "private_key": "...", "client_email": "..." }'></textarea>
             <span class="field-hint">Stays local — only used to call Google's own API.</span>
           </div>
@@ -1367,14 +1390,14 @@ tbody tr:hover { background:var(--glass-2); }
 
     <div id="ob-recipients" style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--glass-border);font-size:12px;line-height:1.5;color:var(--text-mid)"></div>
 
-    <label class="field-label" for="ob-gmail" style="margin-top:14px">Gmail Address</label>
-    <input class="field-input" id="ob-gmail" type="email" placeholder="hr@hopcharge.com">
+    <label class="field-label" for="ob-gmail" style="margin-top:14px">Gmail Address<span class="req-mark">*</span></label>
+    <input class="field-input" id="ob-gmail" type="email" placeholder="hr@hopcharge.com" required>
 
-    <label class="field-label" for="ob-pass" style="margin-top:10px">Gmail App Password</label>
-    <input class="field-input" id="ob-pass" type="password" placeholder="xxxx xxxx xxxx xxxx">
+    <label class="field-label" for="ob-pass" style="margin-top:10px">Gmail App Password<span class="req-mark">*</span></label>
+    <input class="field-input" id="ob-pass" type="password" placeholder="xxxx xxxx xxxx xxxx" required>
 
-    <label class="field-label" for="ob-form" style="margin-top:10px">Onboarding Form Link</label>
-    <input class="field-input" id="ob-form" type="url" placeholder="https://forms.google.com/…">
+    <label class="field-label" for="ob-form" style="margin-top:10px">Onboarding Form Link<span class="req-mark">*</span></label>
+    <input class="field-input" id="ob-form" type="url" placeholder="https://forms.google.com/…" required>
     <span class="field-hint" style="font-size:11px;color:var(--text-dim);margin-top:3px;display:block">This is the new-employee onboarding form, not the recruitment form.</span>
 
     <div id="ob-status" style="display:none;margin:14px 0 0;padding:11px 14px;border-radius:9px;font-size:13px;line-height:1.6;background:var(--glass-2);border:1px solid var(--glass-border);color:var(--text-mid)"></div>
@@ -1577,13 +1600,13 @@ tbody tr:hover { background:var(--glass-2); }
           </div>
           <span class="field-hint">Hugging Face uses a free-tier shared inference API (no billing) — get a token at huggingface.co/settings/tokens with "Inference Providers" permission.</span>
 
-          <label class="field-label" for="ai-model" style="margin-top:18px">Model</label>
-          <input id="ai-model" class="field-input" list="ai-model-list" placeholder="e.g. claude-3-5-sonnet-latest" autocomplete="off">
+          <label class="field-label" for="ai-model" style="margin-top:18px">Model<span class="req-mark">*</span></label>
+          <input id="ai-model" class="field-input" list="ai-model-list" placeholder="e.g. claude-3-5-sonnet-latest" autocomplete="off" required>
           <datalist id="ai-model-list"></datalist>
           <span class="field-hint">Pick a suggestion or type the exact model id from your provider console.</span>
 
-          <label class="field-label" for="ai-key" style="margin-top:18px">API Key</label>
-          <input id="ai-key" class="field-input" type="password" placeholder="Enter your API key">
+          <label class="field-label" for="ai-key" style="margin-top:18px">API Key<span class="req-mark">*</span></label>
+          <input id="ai-key" class="field-input" type="password" placeholder="Enter your API key" required>
           <span class="field-hint">Stored encrypted · never displayed after save</span>
 
           <label class="field-label" for="ai-temp" style="margin-top:18px">Temperature <span id="ai-temp-val" style="color:var(--violet)">0.2</span></label>
@@ -1649,7 +1672,7 @@ tbody tr:hover { background:var(--glass-2); }
       Nothing is saved until you click <b style="color:#5fd3c8">Save</b> on a result.
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-      <input id="disc-name" type="text" placeholder="College name (e.g. IIT Delhi)" style="flex:2;min-width:200px;background:rgba(255,255,255,.04);color:var(--text-mid);border:1px solid rgba(255,255,255,.13);border-radius:8px;padding:10px 12px;font-size:13px;outline:none">
+      <input id="disc-name" type="text" placeholder="College name (e.g. IIT Delhi)" required style="flex:2;min-width:200px;background:rgba(255,255,255,.04);color:var(--text-mid);border:1px solid rgba(255,255,255,.13);border-radius:8px;padding:10px 12px;font-size:13px;outline:none">
       <input id="disc-site" type="text" placeholder="Website (optional, improves results)" style="flex:2;min-width:200px;background:rgba(255,255,255,.04);color:var(--text-mid);border:1px solid rgba(255,255,255,.13);border-radius:8px;padding:10px 12px;font-size:13px;outline:none">
       <button id="disc-run-btn" class="btn-parse" style="white-space:nowrap">Discover</button>
     </div>
@@ -1664,7 +1687,7 @@ tbody tr:hover { background:var(--glass-2); }
     <button class="cand-modal-close" onclick="closeColModal()" aria-label="Close">✕</button>
     <div class="cand-modal-name" id="col-modal-title" style="margin-bottom:22px">Add College</div>
     <div class="col-form-grid">
-      <div class="field-group"><label class="field-label" for="cf-name">College Name *</label><input id="cf-name" class="field-input" placeholder="IIT Delhi"></div>
+      <div class="field-group"><label class="field-label" for="cf-name">College Name<span class="req-mark">*</span></label><input id="cf-name" class="field-input" placeholder="IIT Delhi" required></div>
       <div class="field-group"><label class="field-label" for="cf-type">Type</label>
         <select id="cf-type" class="field-input"><option>IIT</option><option>NIT</option><option>IIIT</option><option>Government</option><option selected>Private</option><option>Other</option></select>
       </div>
@@ -1739,8 +1762,8 @@ tbody tr:hover { background:var(--glass-2); }
     </div>
 
     <div style="display:flex;gap:10px;margin-top:12px">
-      <div style="flex:1"><label class="field-label" for="r1-sender" style="font-size:11px">Sender Gmail</label><input id="r1-sender" class="field-input" type="email" placeholder="hr@hopcharge.com"></div>
-      <div style="flex:1"><label class="field-label" for="r1-pass" style="font-size:11px">App Password</label><input id="r1-pass" class="field-input" type="password" placeholder="xxxx xxxx xxxx xxxx"></div>
+      <div style="flex:1"><label class="field-label" for="r1-sender" style="font-size:11px">Sender Gmail<span class="req-mark">*</span></label><input id="r1-sender" class="field-input" type="email" placeholder="hr@hopcharge.com" required></div>
+      <div style="flex:1"><label class="field-label" for="r1-pass" style="font-size:11px">App Password<span class="req-mark">*</span></label><input id="r1-pass" class="field-input" type="password" placeholder="xxxx xxxx xxxx xxxx" required></div>
     </div>
     <div class="field-hint" style="margin-top:6px">Sender + App Password reused from your Send Emails tab when available.</div>
 
@@ -1876,13 +1899,75 @@ function toast(msg, type='inf', ms=3400) {
    of {loc, msg, type} objects -- `new Error(data.detail)` on that array
    stringifies to the useless "Error: [object Object]". This normalizes
    either shape into one readable string. */
-function errDetail(data, status) {
+function errDetail(data, fallback) {
   const d = data && data.detail;
   if (typeof d === 'string' && d) return d;
   if (Array.isArray(d) && d.length) {
     return d.map(e => (e && e.msg) ? e.msg : JSON.stringify(e)).join('; ');
   }
-  return status ? `HTTP ${status}` : 'Unknown error';
+  if (typeof fallback === 'number') return `HTTP ${fallback}`;
+  return fallback || 'Unknown error';
+}
+
+/* ── Required-field validation (shared across every form in the app) ──
+   showFieldError/clearFieldError manage one red <div class="field-error">
+   per input (inserted right after it). validateRequired runs a list of
+   {input, message[, test]} checks -- test is an optional (value)=>boolean
+   validator, defaulting to "non-empty" -- shows/clears errors, focuses +
+   scrolls to the first invalid field, and returns true only if everything
+   passed. Errors clear live as soon as the user provides a value, instead
+   of only re-checking on the next submit attempt. */
+function _fieldErrorEl(input) {
+  let err = document.getElementById(input.id + '-error');
+  if (!err) {
+    err = document.createElement('div');
+    err.className = 'field-error';
+    err.id = input.id + '-error';
+    input.insertAdjacentElement('afterend', err);
+  }
+  return err;
+}
+function showFieldError(input, message) {
+  if (!input) return;
+  input.classList.add('invalid');
+  input.setAttribute('aria-invalid', 'true');
+  const err = _fieldErrorEl(input);
+  err.textContent = message;
+  err.classList.add('show');
+  input.setAttribute('aria-describedby', err.id);
+}
+function clearFieldError(input) {
+  if (!input) return;
+  input.classList.remove('invalid');
+  input.removeAttribute('aria-invalid');
+  const err = document.getElementById(input.id + '-error');
+  if (err) { err.classList.remove('show'); err.textContent = ''; }
+}
+function attachLiveClear(input) {
+  if (!input || input._liveClearAttached) return;
+  input._liveClearAttached = true;
+  input.addEventListener('input', () => { if (input.value.trim()) clearFieldError(input); });
+}
+function validateRequired(fields) {
+  let firstInvalid = null;
+  fields.forEach(({input, message, test}) => {
+    if (!input) return;
+    attachLiveClear(input);
+    const val = (input.value || '').trim();
+    const ok = test ? test(val) : !!val;
+    if (!ok) {
+      showFieldError(input, message);
+      if (!firstInvalid) firstInvalid = input;
+    } else {
+      clearFieldError(input);
+    }
+  });
+  if (firstInvalid) {
+    firstInvalid.focus();
+    firstInvalid.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    return false;
+  }
+  return true;
 }
 
 /* ───────── SIDEBAR / ROUTING ───────── */
@@ -2146,6 +2231,9 @@ function validEmails(){ return candidates.filter(c=>c.email && c.email.includes(
 function refreshEmailCount(){ const n=validEmails(); if(!addrEl.value||!passEl.value||!linkEl.value) sendInfo.textContent=n>0?`${n} candidate${n>1?'s':''} ready — fill in all fields`:'Parse CVs first, then fill in all fields'; validateEmailForm(); }
 function validateEmailForm(){ const recipients = manualActive()? parseManualEmails().length : validEmails(); const ok=addrEl.value.includes('@')&&passEl.value.length>=8&&linkEl.value.startsWith('http')&&recipients>0; sendBtn.disabled=!ok; if(ok)sendInfo.textContent=`${recipients} email${recipients>1?'s':''} will be sent`; }
 [addrEl,passEl,linkEl].forEach(el=>el.addEventListener('input',validateEmailForm));
+addrEl.addEventListener('blur', () => { if (addrEl.value.trim()) clearFieldError(addrEl); else showFieldError(addrEl, 'Enter the sender Gmail address.'); });
+passEl.addEventListener('blur', () => { if (passEl.value.trim()) clearFieldError(passEl); else showFieldError(passEl, 'Enter the Gmail App Password.'); });
+linkEl.addEventListener('blur', () => { if (linkEl.value.trim()) clearFieldError(linkEl); else showFieldError(linkEl, 'Enter the Google Forms assessment link.'); });
 // Manual-emails runtime wiring (placed here so sendBtn/validateEmailForm exist)
 if(manualEnable){
   const _syncManualUI=function(){
@@ -2187,10 +2275,23 @@ if(manualEmailsEl){
 previewBtn.addEventListener('click',()=>{previewBox.classList.toggle('hidden');});
 sendBtn.addEventListener('click', async () => {
   const gmail_address=addrEl.value.trim(), app_password=passEl.value.trim(), form_link=linkEl.value.trim();
+  const requiredFields = [
+    { input: addrEl, message: 'Enter the sender Gmail address.' },
+    { input: passEl, message: 'Enter the Gmail App Password.' },
+    { input: linkEl, message: 'Enter the Google Forms assessment link.' },
+  ];
+  if (manualActive()) {
+    requiredFields.push({ input: manualEmailsEl, message: 'Add at least one valid email, or turn off manual mode.',
+                          test: () => parseManualEmails().length > 0 });
+  }
+  if (trackEnable && trackEnable.checked) {
+    requiredFields.push({ input: trackBaseEl, message: 'Enter the public URL where this server is reachable.' });
+  }
+  if (!validateRequired(requiredFields)) return;
+
   const payload={gmail_address,app_password,form_link};
   if(manualActive()){
     const list=parseManualEmails();
-    if(!list.length){ toast('Add at least one valid email, or turn off manual mode','err'); return; }
     payload.manual_emails=list.join('\n');
   }
   if(trackEnable && trackEnable.checked){
@@ -2232,6 +2333,13 @@ refreshEmailCount();
     fetchBtn.disabled = !(formIdEl.value.trim() && credsEl.value.trim().startsWith('{'));
   }
   [formIdEl, credsEl].forEach(el => el.addEventListener('input', validate));
+  formIdEl.addEventListener('blur', () => { if (formIdEl.value.trim()) clearFieldError(formIdEl); else showFieldError(formIdEl, 'Enter the Google Form ID or edit URL.'); });
+  credsEl.addEventListener('blur', () => {
+    const v = credsEl.value.trim();
+    if (!v) showFieldError(credsEl, 'Paste the service account JSON key.');
+    else if (!v.startsWith('{')) showFieldError(credsEl, 'This doesn\'t look like JSON — it should start with {.');
+    else clearFieldError(credsEl);
+  });
 
   // ── Smart field extractor ─────────────────────────────────
   const AVATAR_COLORS = ['#1F2D59','#1F2D59','#3B82F6','#10B981','#F59E0B','#EF4444','#EC4899'];
@@ -2470,14 +2578,14 @@ refreshEmailCount();
   async function addCandidateNote(responseId){
     const textEl = document.getElementById('note-text-'+responseId);
     const stageEl = document.getElementById('note-stage-'+responseId);
+    if (textEl && !validateRequired([{ input: textEl, message: 'Write a note first.' }])) return;
     const text = (textEl?.value||'').trim();
-    if (!text){ toast('Write a note first','err'); return; }
     try{
       const res = await fetch(`/api/notes/${encodeURIComponent(responseId)}`,{
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({text, stage:(stageEl?.value||'').trim()})});
       const d = await res.json();
-      if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      if(!res.ok) throw new Error(errDetail(d, res.status));
       if(textEl) textEl.value=''; if(stageEl) stageEl.value='';
       toast('Note added','ok');
       loadCandidateNotes(responseId);
@@ -2489,7 +2597,7 @@ refreshEmailCount();
     try{
       const res = await fetch(`/api/notes/${encodeURIComponent(responseId)}/${encodeURIComponent(noteId)}`,{method:'DELETE'});
       const d = await res.json().catch(()=>({}));
-      if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      if(!res.ok) throw new Error(errDetail(d, res.status));
       toast('Note deleted','ok');
       loadCandidateNotes(responseId);
       if (window.refreshNoteCounts) window.refreshNoteCounts();
@@ -2519,7 +2627,7 @@ refreshEmailCount();
     try {
       const r = await fetch(`/api/ai/score/${responseId}`,{method:'POST'});
       const d = await r.json();
-      if(!r.ok) throw new Error(d.detail||'Scoring failed');
+      if(!r.ok) throw new Error(errDetail(d, 'Scoring failed'));
       // merge result into the in-memory record and re-open modal
       Object.assign(_modalResponses[idx], {
         objective_score:d.result.objective_score, ai_score:d.result.ai_score,
@@ -2628,7 +2736,7 @@ refreshEmailCount();
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({response_id:_acceptTargetId, note})});
       const d = await res.json();
-      if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      if(!res.ok) throw new Error(errDetail(d, res.status));
       _acceptedIds.add(_acceptTargetId);
       toast(`Accepted into HR Round`, 'ok');
       closeAcceptDialog();
@@ -2688,7 +2796,7 @@ refreshEmailCount();
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({response_id:rejectedId, round_name, reason})});
       const d = await res.json();
-      if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      if(!res.ok) throw new Error(errDetail(d, res.status));
       _rejectedIds.add(rejectedId);
 
       // If the candidate was rejected from inside the Accepted pipeline, also
@@ -2696,7 +2804,7 @@ refreshEmailCount();
       if (fromPipeline){
         try{
           const del = await fetch(`/api/accepted/${encodeURIComponent(rejectedId)}`, {method:'DELETE'});
-          if (!del.ok){ const dd = await del.json().catch(()=>({})); throw new Error(dd.detail||`HTTP ${del.status}`); }
+          if (!del.ok){ const dd = await del.json().catch(()=>({})); throw new Error(errDetail(dd, del.status)); }
         }catch(err){ toast('Rejected, but could not remove from pipeline: '+err.message, 'err'); }
         _acceptedIds.delete(rejectedId);
       }
@@ -3007,6 +3115,12 @@ refreshEmailCount();
 
   // Sync from Google
   fetchBtn.addEventListener('click', async () => {
+    const ok = validateRequired([
+      { input: formIdEl, message: 'Enter the Google Form ID or edit URL.' },
+      { input: credsEl, message: 'Paste the service account JSON key (should start with {).',
+        test: v => v.startsWith('{') },
+    ]);
+    if (!ok) return;
     const form_id = formIdEl.value.trim();
     const credentials_json = credsEl.value.trim();
     fetchBtn.disabled = true;
@@ -3061,7 +3175,7 @@ refreshEmailCount();
     try {
       const r = await fetch('/api/ai/score-all', {method:'POST'});
       const d = await r.json();
-      if(!r.ok) throw new Error(d.detail||'Scoring failed');
+      if(!r.ok) throw new Error(errDetail(d, 'Scoring failed'));
       toast(`Scored ${d.scored} candidate${d.scored!==1?'s':''}${d.errors?` (${d.errors} errors)`:''}`, 'ok');
       const am = d.auto_moved;
       if (am && am.moved_count > 0)
@@ -3084,7 +3198,7 @@ refreshEmailCount();
     try {
       const r = await fetch('/api/accepted/auto-move', {method:'POST'});
       const d = await r.json();
-      if(!r.ok) throw new Error(d.detail||'Auto-move failed');
+      if(!r.ok) throw new Error(errDetail(d, 'Auto-move failed'));
       if (d.moved_count > 0)
         toast(`Moved ${d.moved_count} candidate${d.moved_count!==1?'s':''} (score > ${d.threshold}) to HR Round`, 'ok');
       else
@@ -3102,7 +3216,7 @@ refreshEmailCount();
     try {
       const r = await fetch('/api/rejected/auto-reject', {method:'POST'});
       const d = await r.json();
-      if(!r.ok) throw new Error(d.detail||'Auto-reject failed');
+      if(!r.ok) throw new Error(errDetail(d, 'Auto-reject failed'));
       if (d.rejected_count > 0)
         toast(`Auto-rejected ${d.rejected_count} candidate${d.rejected_count!==1?'s':''} (score < ${d.threshold})`, 'inf');
       else
@@ -3393,18 +3507,18 @@ refreshEmailCount();
   async function accAddNote(responseId){
     const t = document.getElementById('accnote-text-'+responseId);
     const s = document.getElementById('accnote-stage-'+responseId);
+    if (t && !validateRequired([{ input: t, message: 'Write a note first.' }])) return;
     const text = (t?.value||'').trim();
-    if (!text){ toast('Write a note first','err'); return; }
     try{
       const res = await fetch(`/api/notes/${encodeURIComponent(responseId)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text, stage:(s?.value||'').trim()})});
-      const d = await res.json(); if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      const d = await res.json(); if(!res.ok) throw new Error(errDetail(d, res.status));
       if(t) t.value=''; if(s) s.value=''; toast('Note added','ok'); accLoadNotes(responseId);
     }catch(e){ toast('Could not add note: '+e.message,'err'); }
   }
   async function accDeleteNote(responseId, noteId){
     try{
       const res = await fetch(`/api/notes/${encodeURIComponent(responseId)}/${encodeURIComponent(noteId)}`,{method:'DELETE'});
-      const d = await res.json().catch(()=>({})); if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      const d = await res.json().catch(()=>({})); if(!res.ok) throw new Error(errDetail(d, res.status));
       toast('Note deleted','ok'); accLoadNotes(responseId);
     }catch(e){ toast('Could not delete note: '+e.message,'err'); }
   }
@@ -3441,7 +3555,7 @@ refreshEmailCount();
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({response_id:responseId})});
       const d = await res.json();
-      if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      if(!res.ok) throw new Error(errDetail(d, res.status));
       toast(`Advanced to ${d.stage_label}`, 'ok');
       // No forced reload here: the optimistic update already shows the correct
       // state, and the 30s background refresh reconciles with the server. This
@@ -3469,7 +3583,7 @@ refreshEmailCount();
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({response_id:responseId})});
       const d = await res.json();
-      if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      if(!res.ok) throw new Error(errDetail(d, res.status));
       toast(`Moved back to ${d.stage_label}`, 'inf');
     }catch(e){
       toast('Move failed: '+e.message, 'err');
@@ -3488,7 +3602,7 @@ refreshEmailCount();
     try{
       const res = await fetch(`/api/accepted/${encodeURIComponent(responseId)}`, {method:'DELETE'});
       const d = await res.json();
-      if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      if(!res.ok) throw new Error(errDetail(d, res.status));
       toast('Candidate removed from pipeline', 'inf');
       if (window.refreshDecisionState) window.refreshDecisionState();
     }catch(e){
@@ -3521,10 +3635,15 @@ refreshEmailCount();
   _obDialog.addEventListener('click', e => { if (e.target === _obDialog) _obDialog.style.display = 'none'; });
 
   document.getElementById('ob-send').addEventListener('click', async () => {
-    const gmail = document.getElementById('ob-gmail').value.trim();
-    const pass  = document.getElementById('ob-pass').value.trim();
-    const form  = document.getElementById('ob-form').value.trim();
-    if (!gmail || !pass || !form) { toast('Fill in all three fields', 'err'); return; }
+    const gmailEl = document.getElementById('ob-gmail'), passEl2 = document.getElementById('ob-pass'), formEl2 = document.getElementById('ob-form');
+    if (!validateRequired([
+      { input: gmailEl, message: 'Enter the sender Gmail address.' },
+      { input: passEl2, message: 'Enter the Gmail App Password.' },
+      { input: formEl2, message: 'Enter the onboarding form link.' },
+    ])) return;
+    const gmail = gmailEl.value.trim();
+    const pass  = passEl2.value.trim();
+    const form  = formEl2.value.trim();
 
     // Onboarding goes ONLY to the candidates explicitly marked SELECTED in Round 2.
     const selectedIds = _all
@@ -3548,7 +3667,7 @@ refreshEmailCount();
                                response_ids: selectedIds })
       });
       const d = await res.json();
-      if (!res.ok) throw new Error(d.detail || `HTTP ${res.status}`);
+      if (!res.ok) throw new Error(errDetail(d, res.status));
 
       const sent   = d.sent   || 0;
       const failed = d.failed || 0;
@@ -3581,7 +3700,7 @@ refreshEmailCount();
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({response_id:responseId})});
       const d = await res.json();
-      if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      if(!res.ok) throw new Error(errDetail(d, res.status));
       toast('Marked as selected \uD83C\uDF89', 'ok');
     }catch(e){
       _selectedSet.delete(responseId);   // roll back the optimistic change
@@ -3598,7 +3717,7 @@ refreshEmailCount();
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({response_id:responseId})});
       const d = await res.json();
-      if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      if(!res.ok) throw new Error(errDetail(d, res.status));
       toast('Selection removed', 'inf');
     }catch(e){
       _selectedSet.add(responseId);      // roll back
@@ -3706,7 +3825,7 @@ refreshEmailCount();
     try{
       const res = await fetch(`/api/analytics/overview?window=${encodeURIComponent(_win)}`);
       const d = await res.json();
-      if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      if(!res.ok) throw new Error(errDetail(d, res.status));
       renderCards(d.cards||{});
       trend(d.series||[]);
       bars('an-roles', (d.role_breakdown||[]).slice(0,12).map(r=>({label:`${r.role}  (✓${r.accepted} ✕${r.rejected})`, value:r.processed, color:'#7c3aed'})));
@@ -3886,18 +4005,18 @@ refreshEmailCount();
   async function rejAddNote(responseId){
     const t = document.getElementById('rejnote-text-'+responseId);
     const s = document.getElementById('rejnote-stage-'+responseId);
+    if (t && !validateRequired([{ input: t, message: 'Write a note first.' }])) return;
     const text = (t?.value||'').trim();
-    if (!text){ toast('Write a note first','err'); return; }
     try{
       const res = await fetch(`/api/notes/${encodeURIComponent(responseId)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text, stage:(s?.value||'').trim()})});
-      const d = await res.json(); if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      const d = await res.json(); if(!res.ok) throw new Error(errDetail(d, res.status));
       if(t) t.value=''; if(s) s.value=''; toast('Note added','ok'); rejLoadNotes(responseId);
     }catch(e){ toast('Could not add note: '+e.message,'err'); }
   }
   async function rejDeleteNote(responseId, noteId){
     try{
       const res = await fetch(`/api/notes/${encodeURIComponent(responseId)}/${encodeURIComponent(noteId)}`,{method:'DELETE'});
-      const d = await res.json().catch(()=>({})); if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      const d = await res.json().catch(()=>({})); if(!res.ok) throw new Error(errDetail(d, res.status));
       toast('Note deleted','ok'); rejLoadNotes(responseId);
     }catch(e){ toast('Could not delete note: '+e.message,'err'); }
   }
@@ -3906,7 +4025,7 @@ refreshEmailCount();
     try{
       const res = await fetch(`/api/rejected/${encodeURIComponent(responseId)}`, {method:'DELETE'});
       const d = await res.json();
-      if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      if(!res.ok) throw new Error(errDetail(d, res.status));
       toast('Candidate restored to active pipeline', 'ok');
       loadRejectedPage();
       // Un-grey the row in the responses table if it's loaded
@@ -3936,7 +4055,7 @@ refreshEmailCount();
   const STATUSES = ["Not Contacted","Email Sent","Awaiting Response","Interested",
     "Need More Information","Call Scheduled","Partnership Discussion","Active Partner","Not Interested"];
   const TYPES = ["IIT","NIT","IIIT","Government","Private","Other"];
-  const api = (p,o) => fetch('/api/colleges'+p, o).then(async r => { const j = await r.json(); if(!r.ok) throw new Error(j.detail||('HTTP '+r.status)); return j; });
+  const api = (p,o) => fetch('/api/colleges'+p, o).then(async r => { const j = await r.json(); if(!r.ok) throw new Error(errDetail(j, r.status)); return j; });
   const slug = s => 'st-' + s.toLowerCase().replace(/\s+/g,'-');
   const $ = id => document.getElementById(id);
 
@@ -4133,8 +4252,8 @@ refreshEmailCount();
   }
 
   $('col-save-btn').addEventListener('click', async () => {
+    if (!validateRequired([{ input: $('cf-name'), message: 'Enter the college name.' }])) return;
     const payload = formPayload();
-    if (!payload.college_name) { $('col-modal-info').textContent='College name is required'; return; }
     $('col-save-btn').disabled = true;
     try {
       if (_editId) await api(`/${_editId}`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
@@ -4164,7 +4283,7 @@ refreshEmailCount();
     try {
       const res = await fetch('/api/colleges/import?on_duplicate=update', {method:'POST', body:fd});
       const d = await res.json();
-      if(!res.ok) throw new Error(d.detail||'Import failed');
+      if(!res.ok) throw new Error(errDetail(d, 'Import failed'));
       toast(`Imported: ${d.created} new, ${d.updated} updated, ${d.skipped} skipped`, 'ok');
       loadColleges();
     } catch(err){ toast('Import error: '+err.message,'err'); $('col-info').textContent=err.message; }
@@ -4198,9 +4317,9 @@ refreshEmailCount();
   $('disc-site').addEventListener('keydown', e=>{ if(e.key==='Enter') runDiscovery(); });
 
   async function runDiscovery(){
-    const name = $('disc-name').value.trim();
     const site = $('disc-site').value.trim();
-    if(!name){ toast('Enter a college name','inf'); return; }
+    if (!validateRequired([{ input: $('disc-name'), message: 'Enter a college name.' }])) return;
+    const name = $('disc-name').value.trim();
     const btn = $('disc-run-btn'); btn.disabled=true; const o=btn.textContent; btn.textContent='Searching…';
     $('disc-status').textContent='Checking placement pages… usually takes 5–20 seconds. Results appear when ready.';
     $('disc-results').innerHTML='';
@@ -4209,7 +4328,7 @@ refreshEmailCount();
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({college_name:name, website:site})});
       const d = await r.json();
-      if(!r.ok) throw new Error(d.detail||'Discovery failed');
+      if(!r.ok) throw new Error(errDetail(d, r.status));
       renderDiscovery(d.result, d.linkedin_search, d.google_tpo_search, d.website_guesses, name);
     }catch(e){ $('disc-status').textContent='Error: '+e.message; }
     finally{ btn.disabled=false; btn.textContent=o; }
@@ -4279,7 +4398,7 @@ refreshEmailCount();
           email:c.email, phone:c.phone, website:_discWebsite, placement_page_url:c.source_url,
           source_type:c.source_type, source_url:c.source_url, confidence_score:c.confidence})});
       const d = await r.json();
-      if(!r.ok) throw new Error(d.detail||'Save failed');
+      if(!r.ok) throw new Error(errDetail(d, 'Save failed'));
       toast(`Saved ${c.name||'contact'} → ${window._discName} (${d.action})`, 'ok');
       if (_loaded) loadColleges();
     }catch(e){ toast('Save failed: '+e.message, 'err'); }
@@ -4443,8 +4562,12 @@ refreshEmailCount();
 
   // Save API Key
   $('ai-save-btn').addEventListener('click', async () => {
+    const ok = validateRequired([
+      { input: $('ai-model'), message: 'Enter the model id.' },
+      { input: $('ai-key'), message: 'Enter your API key.' },
+    ]);
+    if (!ok) return;
     const key = $('ai-key').value.trim();
-    if (!key) { alert('Enter an API key first'); return; }
     $('ai-save-btn').disabled = true;
     try {
       const r = await fetch('/api/ai/config', {
@@ -4535,7 +4658,7 @@ refreshEmailCount();
       status.textContent = 'Loading event types…';
       const r = await fetch('/api/round1-invite/event-types');
       const d = await r.json();
-      if (!r.ok) throw new Error(d.detail || r.statusText);
+      if (!r.ok) throw new Error(errDetail(d, r.statusText));
       const sel = document.getElementById('r1-event');
       sel.innerHTML = (d.event_types||[]).map(e=>`<option value="${e.uri}">${e.name}${e.duration?` (${e.duration}m)`:''}</option>`).join('') || '<option value="">No event types found</option>';
       if (_preview.event_type_uri) sel.value = _preview.event_type_uri;
@@ -4574,18 +4697,34 @@ refreshEmailCount();
   document.addEventListener('keydown', e=>{ if (e.key==='Escape') closeR1Invite(); });
 
   async function doSend(){
-    const sender = document.getElementById('r1-sender').value.trim();
-    const pass   = document.getElementById('r1-pass').value.trim();
-    if (!sender || !pass){ toast('Sender Gmail and App Password are both required', 'err'); return; }
+    const senderEl = document.getElementById('r1-sender'), passEl = document.getElementById('r1-pass');
+    const sender = senderEl.value.trim();
+    const pass   = passEl.value.trim();
+    const cseEl = document.getElementById('r1-link-cse'), opsEl = document.getElementById('r1-link-ops');
+    const baseFields = [
+      { input: senderEl, message: 'Enter the sender Gmail address.' },
+      { input: passEl, message: 'Enter the Gmail App Password.' },
+    ];
+    if (_mode==='free') {
+      const bad = u => u && !u.toLowerCase().includes('calendly.com');
+      baseFields.push(
+        { input: cseEl, message: 'Must be a valid Calendly URL.', test: v => !bad(v) },
+        { input: opsEl, message: 'Must be a valid Calendly URL.', test: v => !bad(v) },
+      );
+    }
+    if (!validateRequired(baseFields)) return;
+    if (_mode==='free' && !cseEl.value.trim() && !opsEl.value.trim()) {
+      showFieldError(cseEl, 'Add at least one role\u2019s Calendly link.');
+      showFieldError(opsEl, 'Add at least one role\u2019s Calendly link.');
+      cseEl.focus();
+      return;
+    }
     const btn = document.getElementById('r1-confirm-btn'); const orig = btn.textContent;
     const payload = { gmail_address: sender, app_password: pass };
     try {
       if (_mode==='free'){
-        const cseLink = (document.getElementById('r1-link-cse').value || '').trim();
-        const opsLink = (document.getElementById('r1-link-ops').value || '').trim();
-        const bad = u => u && !u.toLowerCase().includes('calendly.com');
-        if (bad(cseLink) || bad(opsLink)){ toast('Links must be valid Calendly URLs', 'err'); return; }
-        if (!cseLink && !opsLink){ toast('Add at least one role\u2019s Calendly link', 'err'); return; }
+        const cseLink = cseEl.value.trim();
+        const opsLink = opsEl.value.trim();
         const role_links = {
           customer_support_executive: cseLink,
           operations_specialist: opsLink,
@@ -4596,8 +4735,9 @@ refreshEmailCount();
             link_operations_specialist:opsLink})});
         payload.role_links = role_links;
       } else {
-        const ev = document.getElementById('r1-event').value;
-        if (!ev){ toast('Pick a Calendly event type (Load events first)', 'err'); return; }
+        const evEl = document.getElementById('r1-event');
+        if (!validateRequired([{ input: evEl, message: 'Pick a Calendly event type (Load events first).' }])) return;
+        const ev = evEl.value;
         const tok = document.getElementById('r1-token').value.trim();
         const evName = document.getElementById('r1-event').selectedOptions[0]?.textContent || '';
         const body = Object.assign({ mode:'api', event_type_uri:ev, event_type_name:evName }, tok ? { api_token:tok } : {});
@@ -4606,7 +4746,7 @@ refreshEmailCount();
       btn.disabled = true; btn.textContent = 'Sending…';
       const res = await fetch('/api/round1-invite/send', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
       const d = await res.json();
-      if (!res.ok) throw new Error(d.detail || res.statusText);
+      if (!res.ok) throw new Error(errDetail(d, res.statusText));
       const failed = (d.results||[]).filter(x=>x.status==='failed').length;
       const skipped = d.skipped || (d.results||[]).filter(x=>x.status==='skipped').length;
       if (d.sent>0 && !failed && !skipped)  toast(`Sent the Round 1 Calendly invite to ${d.sent} candidate${d.sent!==1?'s':''}`, 'ok');
@@ -4636,9 +4776,9 @@ refreshEmailCount();
   <div class="rejd-card" style="border-color:rgba(96,165,250,.32);max-width:540px">
     <div class="rejd-title" style="color:#60a5fa">&#9729; SYNC CVs FROM GOOGLE DRIVE</div>
     <div class="rejd-sub" id="drive-sub">Pull new CV PDFs from a shared Drive folder and parse them automatically. Only files not imported before are fetched.</div>
-    <label class="field-label" for="drive-folder" style="font-size:11px">Google Drive folder link or ID</label>
+    <label class="field-label" for="drive-folder" style="font-size:11px">Google Drive folder link or ID<span class="req-mark">*</span></label>
     <div style="display:flex;gap:8px">
-      <input id="drive-folder" class="field-input" type="text" placeholder="https://drive.google.com/drive/folders/…" style="flex:1">
+      <input id="drive-folder" class="field-input" type="text" placeholder="https://drive.google.com/drive/folders/…" required style="flex:1">
       <button type="button" id="drive-test-btn" class="rejd-cancel" style="white-space:nowrap">Test access</button>
     </div>
     <div class="field-hint" id="drive-status" style="margin-top:8px">Auth reuses your Google Forms service account. Share the folder with that service-account email (Viewer).</div>
@@ -4682,29 +4822,29 @@ refreshEmailCount();
   document.getElementById('drive-open-btn')?.addEventListener('click', openDrive);
 
   document.getElementById('drive-test-btn').addEventListener('click', async ()=>{
+    if (!validateRequired([{ input: folderEl(), message: 'Paste a Drive folder link or ID first.' }])) return;
     const folder=folderEl().value.trim();
-    if(!folder){ toast('Paste a Drive folder link or ID first','err'); return; }
     statusEl().textContent='Checking access…';
     try{
       await fetch('/api/drive/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({folder})});
       const r=await fetch('/api/drive/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({folder})});
       const d=await r.json();
-      if(!r.ok) throw new Error(d.detail||r.statusText);
+      if(!r.ok) throw new Error(errDetail(d, r.statusText));
       statusEl().innerHTML=`Connected to <b style="color:var(--text-mid)">${d.folder_name}</b> — ${d.pdf_count} PDF${d.pdf_count!==1?'s':''}, <b style="color:var(--text-mid)">${d.new_count} new</b>.`;
       toast(`Drive: ${d.new_count} new CV${d.new_count!==1?'s':''} ready`,'ok');
     }catch(e){ statusEl().textContent='Access failed: '+e.message; toast('Drive: '+e.message,'err'); }
   });
 
   document.getElementById('drive-sync-btn').addEventListener('click', async ()=>{
+    if (!validateRequired([{ input: folderEl(), message: 'Paste a Drive folder link or ID first.' }])) return;
     const folder=folderEl().value.trim();
-    if(!folder){ toast('Paste a Drive folder link or ID first','err'); return; }
     const btn=document.getElementById('drive-sync-btn'); const orig=btn.textContent;
     btn.disabled=true; btn.textContent='Syncing…';
     try{
       await fetch('/api/drive/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({folder})});
       const r=await fetch('/api/drive/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({folder})});
       const d=await r.json();
-      if(!r.ok) throw new Error(d.detail||r.statusText);
+      if(!r.ok) throw new Error(errDetail(d, r.statusText));
       if(!d.success){ toast(d.error||'Sync failed','err'); }
       else {
         let msg=`Drive sync: ${d.imported} imported`;
@@ -4802,10 +4942,10 @@ refreshEmailCount();
         <span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);background:var(--violet-dim);border-radius:5px;padding:3px 9px">Sent at form dispatch</span>
       </div>
       <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">The first email candidates receive, with the assessment-form link. Use <code style="background:var(--glass-2);padding:1px 5px;border-radius:4px">{name}</code> to insert the candidate's name. The header, button and footer stay fixed.</div>
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">Subject</label>
-      <input type="text" id="adm-rec-subject" class="field-input" style="margin-bottom:16px" placeholder="Email subject line">
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">Body (paragraphs separated by a blank line)</label>
-      <textarea id="adm-rec-body" rows="9" class="field-input" style="resize:vertical;line-height:1.6" placeholder="Email body text…"></textarea>
+      <label for="adm-rec-subject" style="display:block;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">Subject<span class="req-mark">*</span></label>
+      <input type="text" id="adm-rec-subject" class="field-input" required style="margin-bottom:16px" placeholder="Email subject line">
+      <label for="adm-rec-body" style="display:block;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">Body (paragraphs separated by a blank line)<span class="req-mark">*</span></label>
+      <textarea id="adm-rec-body" rows="9" class="field-input" required style="resize:vertical;line-height:1.6" placeholder="Email body text…"></textarea>
       <div style="display:flex;gap:10px;align-items:center;margin-top:14px">
         <button class="btn-send" id="adm-rec-save">Save recruitment email</button>
         <button class="btn-ghost" id="adm-rec-reset">Reset to default</button>
@@ -4819,10 +4959,10 @@ refreshEmailCount();
         <span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);background:var(--green-dim);border-radius:5px;padding:3px 9px">Sent on onboarding</span>
       </div>
       <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">The welcome email sent when a candidate is onboarded. The subject is editable here; the rich body layout is managed in the template.</div>
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">Subject</label>
-      <input type="text" id="adm-ob-subject" class="field-input" style="margin-bottom:16px" placeholder="Onboarding subject line">
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">Body reference (not yet sent — shown for record)</label>
-      <textarea id="adm-ob-body" rows="5" class="field-input" style="resize:vertical;line-height:1.6" placeholder="Onboarding body…"></textarea>
+      <label for="adm-ob-subject" style="display:block;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">Subject<span class="req-mark">*</span></label>
+      <input type="text" id="adm-ob-subject" class="field-input" required style="margin-bottom:16px" placeholder="Onboarding subject line">
+      <label for="adm-ob-body" style="display:block;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">Body reference (not yet sent — shown for record)<span class="req-mark">*</span></label>
+      <textarea id="adm-ob-body" rows="5" class="field-input" required style="resize:vertical;line-height:1.6" placeholder="Onboarding body…"></textarea>
       <div style="display:flex;gap:10px;align-items:center;margin-top:14px">
         <button class="btn-send" id="adm-ob-save">Save onboarding email</button>
         <button class="btn-ghost" id="adm-ob-reset">Reset to default</button>
@@ -5079,8 +5219,9 @@ refreshEmailCount();
       if(fl.derived){ input=`<input id="${fid}" class="field-input" value="${eA(val)}" disabled><span class="emp-hint">auto-calculated</span>`; }
       else if(SELECTS[fl.key]){ input=`<select id="${fid}" class="field-input" data-k="${fl.key}">`+SELECTS[fl.key].map(o=>`<option ${o===val?'selected':''}>${eT(o)}</option>`).join('')+`</select>`; }
       else if(TEXTAREAS.has(fl.key)){ input=`<textarea id="${fid}" class="field-input" data-k="${fl.key}" rows="2">${eT(val)}</textarea>`; }
-      else { input=`<input id="${fid}" class="field-input" data-k="${fl.key}" value="${eA(val)}">`; }
-      wrap.innerHTML=`<label class="field-label" for="${fid}">${eT(fl.label)}${fl.sensitive?' 🔒':''}</label>${input}`;
+      else { input=`<input id="${fid}" class="field-input" data-k="${fl.key}" value="${eA(val)}"${fl.key==='name'?' required':''}>`; }
+      const reqMark = fl.key==='name' ? '<span class="req-mark">*</span>' : '';
+      wrap.innerHTML=`<label class="field-label" for="${fid}">${eT(fl.label)}${reqMark}${fl.sensitive?' 🔒':''}</label>${input}`;
       f.appendChild(wrap);
     });
   }
@@ -5093,11 +5234,13 @@ refreshEmailCount();
   }
   function closeEdit(){ document.getElementById('emp-edit-dialog').classList.remove('open'); }
   async function saveEmp(){
+    const nameEl = document.querySelector('#emp-form [data-k="name"]');
+    if (nameEl && !validateRequired([{ input: nameEl, message: 'Enter the employee\'s name.' }])) return;
     const data={}; document.querySelectorAll('#emp-form [data-k]').forEach(el=>{ data[el.dataset.k]=el.value; });
     try{
       const url = _empEditId?`/api/employees/${encodeURIComponent(_empEditId)}`:'/api/employees';
       const r=await fetch(url,{method:_empEditId?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});
-      const d=await r.json(); if(!r.ok) throw new Error(d.detail||`HTTP ${r.status}`);
+      const d=await r.json(); if(!r.ok) throw new Error(errDetail(d, r.status));
       toast(_empEditId?'Employee updated':'Employee added','ok'); closeEdit(); loadEmployees();
     }catch(e){ toast('Save failed: '+e.message,'err'); }
   }
@@ -5114,7 +5257,7 @@ refreshEmailCount();
   async function delEmp(id){
     try{
       const r=await fetch(`/api/employees/${encodeURIComponent(id)}`,{method:'DELETE'});
-      const d=await r.json(); if(!r.ok) throw new Error(d.detail||`HTTP ${r.status}`);
+      const d=await r.json(); if(!r.ok) throw new Error(errDetail(d, r.status));
       toast('Employee removed','inf'); closeEdit(); loadEmployees();
     }catch(e){ toast('Delete failed: '+e.message,'err'); }
   }
@@ -5126,7 +5269,7 @@ refreshEmailCount();
     const box=document.getElementById('emp-import-status'); box.style.display='block'; box.textContent='Reading form…';
     try{
       const r=await fetch('/api/employees/form/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({form_id:fid})});
-      const d=await r.json(); if(!r.ok) throw new Error(d.detail||`HTTP ${r.status}`);
+      const d=await r.json(); if(!r.ok) throw new Error(errDetail(d, r.status));
       box.innerHTML=`<b>${eT(d.form_title)||'Form'}</b> · ${d.response_count} responses<br>
         Mapped fields: ${d.mapped_fields.map(eT).join(', ')||'none'}<br>
         ${d.unmapped_questions.length?`<span style="color:#fbbf24">Unmatched questions:</span> ${d.unmapped_questions.map(eT).join(', ')}`:''}`;
@@ -5137,7 +5280,7 @@ refreshEmailCount();
     const fid=document.getElementById('emp-form-id').value.trim();
     try{
       const r=await fetch('/api/employees/form/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({form_id:fid})});
-      const d=await r.json(); if(!r.ok) throw new Error(d.detail||`HTTP ${r.status}`);
+      const d=await r.json(); if(!r.ok) throw new Error(errDetail(d, r.status));
       toast(`Imported ${d.imported} · skipped ${d.skipped_duplicate} duplicates`,'ok');
       document.getElementById('emp-import-dialog').classList.remove('open');
       document.getElementById('emp-import-go').style.display='none';
@@ -5155,7 +5298,7 @@ refreshEmailCount();
     document.getElementById('emp-csv-go').style.display='none';
     try{
       const r=await fetch('/api/employees/sheet-csv/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sheet_url:url})});
-      const d=await r.json(); if(!r.ok) throw new Error(d.detail||`HTTP ${r.status}`);
+      const d=await r.json(); if(!r.ok) throw new Error(errDetail(d, r.status));
       box.innerHTML=`<b>${d.total_rows} rows</b> found · <span style="color:#34d399">${d.new} new</span>`
         + (d.duplicates?` · <span style="color:#fbbf24">${d.duplicates} already exist</span>`:'')
         + `<br>Mapped: ${d.mapped_fields.map(eT).join(', ')||'none'}`
@@ -5168,7 +5311,7 @@ refreshEmailCount();
     const url=document.getElementById('emp-csv-url').value.trim();
     try{
       const r=await fetch('/api/employees/sheet-csv/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sheet_url:url})});
-      const d=await r.json(); if(!r.ok) throw new Error(d.detail||`HTTP ${r.status}`);
+      const d=await r.json(); if(!r.ok) throw new Error(errDetail(d, r.status));
       toast(`Imported ${d.imported} · skipped ${d.skipped_duplicate} duplicates`,'ok');
       document.getElementById('emp-csv-dialog').classList.remove('open');
       document.getElementById('emp-csv-go').style.display='none';
@@ -5196,7 +5339,7 @@ refreshEmailCount();
       await fetch('/api/employees/sheet/settings',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({spreadsheet:document.getElementById('emp-sheet-id').value,worksheet:document.getElementById('emp-sheet-ws').value})});
       const r=await fetch('/api/employees/sheet/test',{method:'POST'});
-      const d=await r.json(); if(!r.ok) throw new Error(d.detail||`HTTP ${r.status}`);
+      const d=await r.json(); if(!r.ok) throw new Error(errDetail(d, r.status));
       box.innerHTML=`Connected to <b>${eT(d.title)}</b><br>Tabs: ${d.worksheets.map(eT).join(', ')}<br>Service account: ${eT(d.service_account_email)}`;
       toast('Sheet connected','ok');
     }catch(e){ box.textContent='Error: '+e.message; }
@@ -5204,7 +5347,7 @@ refreshEmailCount();
   async function sheetSync(){
     try{
       const r=await fetch('/api/employees/sheet/sync',{method:'POST'});
-      const d=await r.json(); if(!r.ok) throw new Error(d.detail||`HTTP ${r.status}`);
+      const d=await r.json(); if(!r.ok) throw new Error(errDetail(d, r.status));
       toast(`Backed up ${d.rows} rows to ${d.worksheet}`,'ok'); sheetLoad();
     }catch(e){ toast('Sync failed: '+e.message,'err'); }
   }
@@ -5289,14 +5432,14 @@ refreshEmailCount();
     try{
       const res = await fetch('/api/admin/thresholds',{method:'PUT',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({auto_reject:+rej.value, auto_move:+mov.value})});
-      const d = await res.json(); if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      const d = await res.json(); if(!res.ok) throw new Error(errDetail(d, res.status));
       toast('Thresholds saved','ok');
     }catch(e){ toast('Could not save thresholds: '+e.message,'err'); }
   });
   document.getElementById('adm-threshold-reset')?.addEventListener('click', async ()=>{
     try{
       const res = await fetch('/api/admin/thresholds/reset',{method:'POST'});
-      const d = await res.json(); if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      const d = await res.json(); if(!res.ok) throw new Error(errDetail(d, res.status));
       rej.value = d.thresholds.auto_reject; mov.value = d.thresholds.auto_move;
       document.getElementById('adm-reject-val').textContent = d.thresholds.auto_reject;
       document.getElementById('adm-move-val').textContent = d.thresholds.auto_move;
@@ -5306,20 +5449,24 @@ refreshEmailCount();
 
   // Email save/reset helper
   async function saveEmail(kind, subjId, bodyId){
-    const subject = document.getElementById(subjId).value.trim();
-    const body = document.getElementById(bodyId).value.trim();
-    if (!subject || !body){ toast('Subject and body are required','err'); return; }
+    const subjEl = document.getElementById(subjId), bodyEl = document.getElementById(bodyId);
+    if (!validateRequired([
+      { input: subjEl, message: 'Enter a subject line.' },
+      { input: bodyEl, message: 'Enter the email body.' },
+    ])) return;
+    const subject = subjEl.value.trim();
+    const body = bodyEl.value.trim();
     try{
       const res = await fetch('/api/admin/email/'+kind,{method:'PUT',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({subject, body})});
-      const d = await res.json(); if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      const d = await res.json(); if(!res.ok) throw new Error(errDetail(d, res.status));
       toast('Email saved','ok');
     }catch(e){ toast('Could not save email: '+e.message,'err'); }
   }
   async function resetEmail(kind, subjId, bodyId){
     try{
       const res = await fetch('/api/admin/email/'+kind+'/reset',{method:'POST'});
-      const d = await res.json(); if(!res.ok) throw new Error(d.detail||`HTTP ${res.status}`);
+      const d = await res.json(); if(!res.ok) throw new Error(errDetail(d, res.status));
       document.getElementById(subjId).value = d.email.subject || '';
       document.getElementById(bodyId).value = d.email.body || '';
       toast('Reset to default','ok');
@@ -5405,7 +5552,7 @@ refreshEmailCount();
         const res = await fetch('/api/admin/role-tuning/'+encodeURIComponent(sel.value),{
           method:'PUT', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({strictness:+strict.value, creativeness:+creative.value, traits:collectTraits()})});
-        const d = await res.json(); if(!res.ok) throw new Error(d.detail||('HTTP '+res.status));
+        const d = await res.json(); if(!res.ok) throw new Error(errDetail(d, res.status));
         msg.textContent='Saved. Re-score candidates (Forms → Score all) to apply.';
         if (window.toast) toast('Scoring tuning saved','ok');
       }catch(e){ msg.textContent='Save failed: '+e.message; }
