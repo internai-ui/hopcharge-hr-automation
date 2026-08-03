@@ -1871,6 +1871,20 @@ function toast(msg, type='inf', ms=3400) {
   setTimeout(()=>{ t.style.animation='tout 280ms ease forwards'; setTimeout(()=>t.remove(),280); }, ms);
 }
 
+/* FastAPI's own HTTPException(detail="...") errors give a plain string, but
+   its AUTO-GENERATED 422 request-validation errors give detail as an ARRAY
+   of {loc, msg, type} objects -- `new Error(data.detail)` on that array
+   stringifies to the useless "Error: [object Object]". This normalizes
+   either shape into one readable string. */
+function errDetail(data, status) {
+  const d = data && data.detail;
+  if (typeof d === 'string' && d) return d;
+  if (Array.isArray(d) && d.length) {
+    return d.map(e => (e && e.msg) ? e.msg : JSON.stringify(e)).join('; ');
+  }
+  return status ? `HTTP ${status}` : 'Unknown error';
+}
+
 /* ───────── SIDEBAR / ROUTING ───────── */
 const body = document.body;
 const sidebarHotzone = document.getElementById('sidebar-hotzone');
@@ -2000,7 +2014,7 @@ parseBtn.addEventListener('click', async () => {
   const fd = new FormData(); files.forEach(f => fd.append('files', f));
   try {
     const res = await fetch('/api/parse', { method:'POST', body:fd });
-    if (!res.ok) { const err = await res.json().catch(()=>({detail:'Server error'})); throw new Error(err.detail || `HTTP ${res.status}`); }
+    if (!res.ok) { const err = await res.json().catch(()=>({detail:'Server error'})); throw new Error(errDetail(err, res.status)); }
     const data = await res.json(); candidates = data.candidates || [];
     if (candidates.length) { toast(`⚡ ${candidates.length} candidate${candidates.length>1?'s':''} extracted`, 'ok'); renderResults(candidates); }
     else { toast('No data extracted — check your PDFs', 'err'); }
@@ -2177,7 +2191,7 @@ sendBtn.addEventListener('click', async () => {
   if(manualActive()){
     const list=parseManualEmails();
     if(!list.length){ toast('Add at least one valid email, or turn off manual mode','err'); return; }
-    payload.manual_emails=list;
+    payload.manual_emails=list.join('\n');
   }
   if(trackEnable && trackEnable.checked){
     payload.tracking_base_url=(trackBaseEl.value.trim()||window.location.origin);
@@ -2190,7 +2204,7 @@ sendBtn.addEventListener('click', async () => {
   try {
     const res=await fetch('/api/send-emails',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const data=await res.json();
-    if(!res.ok)throw new Error(data.detail||`HTTP ${res.status}`);
+    if(!res.ok)throw new Error(errDetail(data, res.status));
     document.getElementById('er-sent').textContent=`${data.sent} sent`;
     document.getElementById('er-fail').textContent=`${data.failed} failed`;
     document.getElementById('er-skip').textContent=`${data.skipped_no_email} skipped`;
@@ -2550,7 +2564,7 @@ refreshEmailCount();
     try {
       const res = await fetch(`/api/forms/responses/${responseId}`, { method: 'DELETE' });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      if (!res.ok) throw new Error(errDetail(data, res.status));
 
       // Animate row out, then rebuild from the canonical dataset
       const tr = btn.closest('tr');
@@ -3006,7 +3020,7 @@ refreshEmailCount();
         body: JSON.stringify({ form_id, credentials_json }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      if (!res.ok) throw new Error(errDetail(data, res.status));
       toast(`⚡ ${data.new_added} new response${data.new_added!==1?'s':''} — ${data.total} total`, 'ok');
       infoEl.textContent = `${data.total} responses stored · ${data.new_added} new`;
       renderResponses(data);
@@ -3027,7 +3041,7 @@ refreshEmailCount();
   loadBtn.addEventListener('click', async () => {
     try {
       const res = await fetch('/api/forms/responses');
-      if (!res.ok) { const e = await res.json(); throw new Error(e.detail); }
+      if (!res.ok) { const e = await res.json(); throw new Error(errDetail(e, res.status)); }
       const data = await res.json();
       renderResponses(data);
       lastEl.value = data.last_synced || '';
@@ -4440,7 +4454,7 @@ refreshEmailCount();
       });
       if(!r.ok) {
         const e = await r.json();
-        alert('Save failed: ' + (e.detail||'Unknown error'));
+        alert('Save failed: ' + errDetail(e, r.status));
         return;
       }
       $('ai-key').value = '';
