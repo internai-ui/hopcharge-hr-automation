@@ -64,13 +64,21 @@ _GROQ_DEFAULTS = {
 }
 _HUGGINGFACE_DEFAULTS = {
     # friendly short-name → HF model id, routed via the Inference Providers
-    # router (https://router.huggingface.co/v1) which auto-picks whichever
-    # backing provider currently serves that model on the free tier.
-    "qwen2.5-7b":       "Qwen/Qwen2.5-7B-Instruct-1M",
+    # router (https://router.huggingface.co/v1), which auto-picks whichever
+    # backing provider currently serves that model. IMPORTANT: which models
+    # actually work is account-dependent (it's whatever "Inference Providers"
+    # the user has enabled at huggingface.co/settings/inference-providers) —
+    # "recommended" models in HF's own docs are NOT a guarantee. Verified
+    # working with a live token at the time these defaults were set:
+    # meta-llama/Llama-3.1-8B-Instruct and Qwen/Qwen2.5-Coder-32B-Instruct.
+    # google/gemma-2-2b-it and Qwen/Qwen2.5-7B-Instruct-1M were NOT enabled
+    # for that token despite being HF's own top doc recommendation, so don't
+    # assume any specific id works without testing — the model field is
+    # free-text precisely so a user can type whatever their account serves.
     "llama-3.1-8b":     "meta-llama/Llama-3.1-8B-Instruct",
-    "gemma-2-2b":       "google/gemma-2-2b-it",
+    "qwen2.5-coder-32b": "Qwen/Qwen2.5-Coder-32B-Instruct",
     "deepseek-r1":      "deepseek-ai/DeepSeek-R1",
-    "hf-default":       "Qwen/Qwen2.5-7B-Instruct-1M",
+    "hf-default":       "meta-llama/Llama-3.1-8B-Instruct",
 }
 
 

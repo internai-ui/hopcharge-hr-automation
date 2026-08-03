@@ -40,11 +40,10 @@ SECRET_KEY_FILE: Path = OUTPUT_DIR / ".ai_secret.key"
 PROVIDERS = {"anthropic", "openai", "gemini", "groq", "huggingface"}
 MODELS = {
     "huggingface": {
-        "hf-default":   "Qwen 2.5 7B Instruct (default, free tier)",
-        "qwen2.5-7b":   "Qwen 2.5 7B Instruct",
-        "llama-3.1-8b": "Llama 3.1 8B Instruct",
-        "gemma-2-2b":   "Gemma 2 2B Instruct",
-        "deepseek-r1":  "DeepSeek R1",
+        "hf-default":        "Llama 3.1 8B Instruct (default, free tier)",
+        "llama-3.1-8b":      "Llama 3.1 8B Instruct",
+        "qwen2.5-coder-32b": "Qwen 2.5 Coder 32B Instruct",
+        "deepseek-r1":       "DeepSeek R1 (reasoning, slower)",
     },
     "anthropic": {
         "claude-sonnet": "Claude Sonnet",
