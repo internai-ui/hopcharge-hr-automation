@@ -163,7 +163,18 @@ def load_candidates() -> list[dict]:
 # ──────────────────────────────────────────────
 
 def _sanitize_name(name: str) -> str:
-    """Remove/replace non-ASCII characters that SMTP can't encode."""
+    """
+    Normalize a few "smart" punctuation characters that look odd if copy-pasted
+    from a resume (curly quotes, non-breaking spaces, en/em dashes).
+
+    Does NOT strip non-ASCII letters: every message here is sent with
+    _charset="utf-8" and SMTPUTF8 is enabled on the connection, so genuine
+    unicode names (accents, non-Latin scripts) are fully supported end to end.
+    An earlier version did `name.encode('ascii', errors='ignore')`, which
+    silently mangled names mid-word instead of just dropping accents (e.g.
+    a name with an e-acute lost that letter entirely instead of keeping a
+    plain "e").
+    """
     replacements = {
         '\xa0': ' ',     # non-breaking space → space
         '\u2013': '-',   # en dash → hyphen
@@ -174,7 +185,7 @@ def _sanitize_name(name: str) -> str:
     }
     for uni, ascii_char in replacements.items():
         name = name.replace(uni, ascii_char)
-    return name.encode('ascii', errors='ignore').decode('ascii')
+    return name
 
 
 def _body_to_html(body_text: str) -> str:
