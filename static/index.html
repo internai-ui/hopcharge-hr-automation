@@ -205,7 +205,7 @@ body.nav-open .sb-item:nth-of-type(6){animation-delay:0.43s}
 body.nav-open #sidebar-scrim { opacity:1; visibility:visible; }
 
 /* ════════════════ LAYOUT / PAGES ════════════════ */
-.shell { position:relative; z-index:1; max-width:1160px; margin:0 auto; padding:0 44px; }
+.shell { position:relative; z-index:1; max-width:1160px; margin:0 auto; padding:0 44px 80px; }
 .page { display:none; position:relative; z-index:1; }
 .page.active { display:block; animation:pageIn 0.55s var(--ease-out); }
 @keyframes pageIn { from{opacity:0; transform:translateY(16px)} to{opacity:1; transform:translateY(0)} }
@@ -329,7 +329,7 @@ body[data-theme="dark"] .welcome-logo-dark { display:block; }
 .btn-ghost:hover { color:var(--text-on); border-color:var(--glass-border-hi); background:var(--glass-2); }
 
 /* Stats */
-#stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:40px; animation:fadeUp 0.5s var(--ease-out) both; }
+#stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:28px; margin-bottom:40px; animation:fadeUp 0.5s var(--ease-out) both; }
 .stat { background:#1F2D59; border:1px solid #1F2D59; border-radius:var(--r-md); padding:22px 24px; position:relative; overflow:hidden; box-shadow:0 6px 22px rgba(31,45,89,0.18); transition:transform 250ms, box-shadow 250ms; }
 .stat::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:#E8537F; opacity:0; transition:opacity 250ms; }
 .stat:hover { transform:translateY(-3px); box-shadow:0 14px 36px rgba(31,45,89,0.28); }
@@ -409,11 +409,15 @@ tbody tr:hover { background:var(--glass-2); }
 .email-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
 .email-grid.full { grid-template-columns:1fr; }
 .field-group { display:flex; flex-direction:column; gap:6px; }
-.field-label { font-family:'Poppins',sans-serif; font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim); }
+/* display:block is required here: <label>/<span> are inline by default, so
+   vertical margin (including the many inline style="margin-top:18px" used
+   throughout the app to space field groups apart) silently has no effect
+   without it — labels were visually merging into the previous line's text. */
+.field-label { display:block; font-family:'Poppins',sans-serif; font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim); margin-bottom:6px; }
 .field-input { background:var(--glass-2); border:1px solid var(--border-mid); border-radius:var(--r-sm); padding:11px 14px; font-family:'Poppins',sans-serif; font-size:13px; color:var(--text-on); outline:none; transition:border-color 150ms, box-shadow 150ms; width:100%; }
 .field-input::placeholder { color:var(--text-dim); }
 .field-input:focus { border-color:var(--glass-border-hi); box-shadow:0 0 0 3px rgba(31,45,89,0.1); }
-.field-hint { font-size:11px; color:var(--text-dim); margin-top:1px; }
+.field-hint { display:block; font-size:11px; color:var(--text-dim); margin-top:6px; }
 .preview-toggle { display:inline-flex; align-items:center; gap:6px; font-family:'Poppins',sans-serif; font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-dim); background:transparent; border:none; padding:0; margin-bottom:18px; transition:color 150ms; }
 .preview-toggle:hover { color:var(--violet); }
 .email-preview-box { background:var(--bg-deep); border:1px solid var(--border-dim); border-radius:var(--r-sm); padding:18px; margin-bottom:18px; font-size:12px; color:var(--text-mid); line-height:1.65; max-height:220px; overflow-y:auto; }
@@ -488,7 +492,7 @@ tbody tr:hover { background:var(--glass-2); }
 ::-webkit-scrollbar-thumb:hover { background:rgba(31,45,89,0.6); }
 
 @media (max-width:768px) {
-  .shell { padding:0 20px; }
+  .shell { padding:0 20px 80px; }
   #stats-row { grid-template-columns:repeat(2,1fr); }
   .cards-grid { grid-template-columns:1fr; }
   .action-row { flex-wrap:wrap; }
@@ -1354,6 +1358,7 @@ tbody tr:hover { background:var(--glass-2); }
 
 <!-- ═══ ANALYTICS ═══ -->
 <section id="page-analytics" class="page page-pad-top">
+  <div class="shell">
   <div class="page-head">
     <div class="eyebrow">Insights</div>
     <h1>Analytics</h1>
@@ -1394,6 +1399,7 @@ tbody tr:hover { background:var(--glass-2); }
   </div>
 
   <p id="an-note" style="font-size:11px;color:var(--text-dim);line-height:1.6"></p>
+  </div>
 </section>
 
 <section id="page-colleges" class="page">
@@ -4671,6 +4677,7 @@ refreshEmailCount();
 
 <!-- ═══════════ EMPLOYEE DATABASE ═══════════ -->
 <section id="page-employees" class="page page-pad-top">
+  <div class="shell">
   <div class="page-head">
     <div class="eyebrow">Master Sheet</div>
     <h1>Employee <span class="grad-text">Database</span></h1>
@@ -4694,6 +4701,7 @@ refreshEmailCount();
   <div id="emp-tiles" class="emp-tiles"></div>
   <div id="emp-sheet-wrap" class="emp-sheet-wrap" style="display:none">
     <table class="emp-table"><thead><tr id="emp-thead"></tr></thead><tbody id="emp-tbody"></tbody></table>
+  </div>
   </div>
 </section>
 
