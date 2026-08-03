@@ -1061,18 +1061,17 @@ tbody tr:hover { background:var(--glass-2); }
         </div>
 
         <div class="track-toggle-row" style="display:flex;align-items:center;gap:10px;margin:-4px 0 14px;padding:11px 14px;background:rgba(31,45,89,0.06);border:1px solid rgba(31,45,89,0.18);border-radius:8px">
-          <!-- Tracking is always ON. The checkbox is kept (hidden, checked) so
-               the existing send logic that reads trackEnable.checked still
-               works without changes. The on/off control was removed by request. -->
-          <input type="checkbox" id="track-enable" checked style="display:none">
-          <div style="font-size:15px;flex-shrink:0;line-height:1">⏱</div>
+          <label class="switch" style="position:relative;display:inline-block;width:38px;height:21px;flex-shrink:0">
+            <input type="checkbox" id="track-enable" style="opacity:0;width:0;height:0">
+            <span class="slider" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.15);border-radius:21px;transition:.25s"></span>
+          </label>
           <div style="flex:1">
-            <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--violet)">TRACK FORM COMPLETION TIME <span style="font-size:10px;color:#34d399;border:1px solid rgba(52,211,153,.4);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle">ALWAYS ON</span></div>
-            <div style="font-size:11px;color:var(--muted);margin-top:1px">Every candidate gets a tracking link that measures how long they take to fill the form</div>
+            <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--violet)">⏱ TRACK FORM COMPLETION TIME</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:1px">Off by default — emails link straight to your Google Form, no public server needed. Turn on to measure how long each candidate takes to fill the form (requires this server to be reachable at a public URL).</div>
           </div>
         </div>
 
-        <div id="track-fields" class="email-grid full" style="margin-bottom:18px;gap:14px">
+        <div id="track-fields" class="email-grid full hidden" style="margin-bottom:18px;gap:14px">
           <div class="field-group"><label class="field-label" for="track-base">Your Server Public URL</label><input id="track-base" class="field-input" type="url" placeholder="http://localhost:8000"><span class="field-hint">Where this app is reachable. Candidates' links point here, then redirect to the form. Use your deployed domain in production (e.g. https://hr.hopcharge.com).</span></div>
           <div class="field-group"><label class="field-label" for="track-entry">Form Email Field ID <span style="opacity:.6">(optional)</span></label><input id="track-entry" class="field-input" type="text" placeholder="entry.123456789"><span class="field-hint">Pre-fills each candidate's email so submissions match their click. Get it from the form's "Get pre-filled link" option. Leave blank if your form auto-collects emails.</span></div>
         </div>
@@ -1515,7 +1514,10 @@ tbody tr:hover { background:var(--glass-2); }
         <div id="api-config-section" class="ai-api-config hidden" style="margin-top:24px;padding-top:24px;border-top:1px solid var(--border-dim)">
           <label class="field-label">Provider</label>
           <div class="ai-provider-toggle">
-            <button class="ai-prov-btn active" data-provider="anthropic">
+            <button class="ai-prov-btn active" data-provider="huggingface">
+              <span class="ai-prov-name">Hugging Face <span style="opacity:.6;font-weight:600">(free)</span></span>
+            </button>
+            <button class="ai-prov-btn" data-provider="anthropic">
               <span class="ai-prov-name">Anthropic Claude</span>
             </button>
             <button class="ai-prov-btn" data-provider="openai">
@@ -1528,6 +1530,7 @@ tbody tr:hover { background:var(--glass-2); }
               <span class="ai-prov-name">Groq</span>
             </button>
           </div>
+          <span class="field-hint">Hugging Face uses a free-tier shared inference API (no billing) — get a token at huggingface.co/settings/tokens with "Inference Providers" permission.</span>
 
           <label class="field-label" style="margin-top:18px">Model</label>
           <input id="ai-model" class="field-input" list="ai-model-list" placeholder="e.g. claude-3-5-sonnet-latest" autocomplete="off">
@@ -2062,7 +2065,7 @@ function parseManualEmails(){
 function manualActive(){ return manualEnable && manualEnable.checked; }
 const sendBtn=document.getElementById('send-btn'), sendInfo=document.getElementById('send-info');
 const previewBtn=document.getElementById('preview-toggle'), previewBox=document.getElementById('email-preview');
-/* time-tracking controls — tracking is ALWAYS ON (toggle removed by request) */
+/* time-tracking controls — off by default, persisted server-side (survives restarts/reloads) */
 const trackEnable=document.getElementById('track-enable'), trackFields=document.getElementById('track-fields');
 const trackBaseEl=document.getElementById('track-base'), trackEntryEl=document.getElementById('track-entry');
 // Inject the slider knob style (still used by the manual-emails toggle).
@@ -2087,6 +2090,26 @@ if(manualEnable){
   };
   manualEnable.addEventListener('change',_syncManualUI);
   _syncManualUI();
+}
+// Form-tracking runtime wiring — off by default, persisted server-side.
+if(trackEnable){
+  const _syncTrackUI=function(){
+    trackFields.classList.toggle('hidden',!trackEnable.checked);
+    const knob=trackEnable.closest('.switch').querySelector('.slider');
+    if(knob){ knob.style.setProperty('--knob', trackEnable.checked?'translateX(17px)':'translateX(0)'); knob.style.background=trackEnable.checked?'#60a5fa':'rgba(255,255,255,0.15)'; }
+  };
+  trackEnable.addEventListener('change', async () => {
+    _syncTrackUI();
+    try {
+      await fetch('/api/tracking/enabled', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled: trackEnable.checked})});
+    } catch(e){ console.error('Failed to save tracking toggle:', e); }
+  });
+  // Load the persisted choice so it survives restarts/reloads (defaults to
+  // off — trackEnable.checked is already false from the unchecked HTML).
+  fetch('/api/tracking/enabled').then(r=>r.json()).then(d=>{
+    trackEnable.checked = !!d.enabled;
+    _syncTrackUI();
+  }).catch(()=>{ _syncTrackUI(); });
 }
 if(manualEmailsEl){
   manualEmailsEl.addEventListener('input',()=>{
@@ -4208,11 +4231,12 @@ refreshEmailCount();
 (function () {
   if (!document.getElementById('page-aisettings')) return;
   const $ = id => document.getElementById(id);
-  const MODELS = { anthropic:['claude-3-5-sonnet-latest','claude-3-5-haiku-latest','claude-3-opus-latest','claude-sonnet-4-20250514'],
+  const MODELS = { huggingface:['Qwen/Qwen2.5-7B-Instruct-1M','meta-llama/Llama-3.1-8B-Instruct','google/gemma-2-2b-it','deepseek-ai/DeepSeek-R1'],
+                   anthropic:['claude-3-5-sonnet-latest','claude-3-5-haiku-latest','claude-3-opus-latest','claude-sonnet-4-20250514'],
                    openai:['gpt-4o','gpt-4o-mini','gpt-4-turbo','gpt-5','gpt-5-mini'],
                    gemini:['gemini-2.0-flash','gemini-2.5-flash','gemini-2.5-pro','gemini-1.5-flash','gemini-1.5-pro'],
                    groq:['llama-3.3-70b-versatile','llama-3.1-8b-instant','gemma2-9b-it','deepseek-r1-distill-llama-70b','qwen-2.5-32b'] };
-  let _provider = 'anthropic';
+  let _provider = 'huggingface';
   let _currentMode = 'offline';  // offline or api
   let _loaded = false;
   let _featureEnabled = false;   // master AI-scoring toggle — off by default, persisted server-side
