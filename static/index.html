@@ -1367,13 +1367,13 @@ tbody tr:hover { background:var(--glass-2); }
 
     <div id="ob-recipients" style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--glass-border);font-size:12px;line-height:1.5;color:var(--text-mid)"></div>
 
-    <label class="field-label" style="margin-top:14px">Gmail Address</label>
+    <label class="field-label" for="ob-gmail" style="margin-top:14px">Gmail Address</label>
     <input class="field-input" id="ob-gmail" type="email" placeholder="hr@hopcharge.com">
 
-    <label class="field-label" style="margin-top:10px">Gmail App Password</label>
+    <label class="field-label" for="ob-pass" style="margin-top:10px">Gmail App Password</label>
     <input class="field-input" id="ob-pass" type="password" placeholder="xxxx xxxx xxxx xxxx">
 
-    <label class="field-label" style="margin-top:10px">Onboarding Form Link</label>
+    <label class="field-label" for="ob-form" style="margin-top:10px">Onboarding Form Link</label>
     <input class="field-input" id="ob-form" type="url" placeholder="https://forms.google.com/…">
     <span class="field-hint" style="font-size:11px;color:var(--text-dim);margin-top:3px;display:block">This is the new-employee onboarding form, not the recruitment form.</span>
 
@@ -1577,16 +1577,16 @@ tbody tr:hover { background:var(--glass-2); }
           </div>
           <span class="field-hint">Hugging Face uses a free-tier shared inference API (no billing) — get a token at huggingface.co/settings/tokens with "Inference Providers" permission.</span>
 
-          <label class="field-label" style="margin-top:18px">Model</label>
+          <label class="field-label" for="ai-model" style="margin-top:18px">Model</label>
           <input id="ai-model" class="field-input" list="ai-model-list" placeholder="e.g. claude-3-5-sonnet-latest" autocomplete="off">
           <datalist id="ai-model-list"></datalist>
           <span class="field-hint">Pick a suggestion or type the exact model id from your provider console.</span>
 
-          <label class="field-label" style="margin-top:18px">API Key</label>
+          <label class="field-label" for="ai-key" style="margin-top:18px">API Key</label>
           <input id="ai-key" class="field-input" type="password" placeholder="Enter your API key">
           <span class="field-hint">Stored encrypted · never displayed after save</span>
 
-          <label class="field-label" style="margin-top:18px">Temperature <span id="ai-temp-val" style="color:var(--violet)">0.2</span></label>
+          <label class="field-label" for="ai-temp" style="margin-top:18px">Temperature <span id="ai-temp-val" style="color:var(--violet)">0.2</span></label>
           <input id="ai-temp" type="range" min="0" max="1" step="0.05" value="0.2" class="ai-slider">
           <div class="ai-temp-labels"><span>Precise (0.0)</span><span>Creative (1.0)</span></div>
 
@@ -1664,22 +1664,22 @@ tbody tr:hover { background:var(--glass-2); }
     <button class="cand-modal-close" onclick="closeColModal()" aria-label="Close">✕</button>
     <div class="cand-modal-name" id="col-modal-title" style="margin-bottom:22px">Add College</div>
     <div class="col-form-grid">
-      <div class="field-group"><label class="field-label">College Name *</label><input id="cf-name" class="field-input" placeholder="IIT Delhi"></div>
-      <div class="field-group"><label class="field-label">Type</label>
+      <div class="field-group"><label class="field-label" for="cf-name">College Name *</label><input id="cf-name" class="field-input" placeholder="IIT Delhi"></div>
+      <div class="field-group"><label class="field-label" for="cf-type">Type</label>
         <select id="cf-type" class="field-input"><option>IIT</option><option>NIT</option><option>IIIT</option><option>Government</option><option selected>Private</option><option>Other</option></select>
       </div>
-      <div class="field-group"><label class="field-label">Placement Officer</label><input id="cf-officer" class="field-input" placeholder="Dr. R. Sharma"></div>
-      <div class="field-group"><label class="field-label">Designation</label><input id="cf-designation" class="field-input" placeholder="TPO"></div>
-      <div class="field-group"><label class="field-label">Email</label><input id="cf-email" class="field-input" placeholder="tnp@college.ac.in"></div>
-      <div class="field-group"><label class="field-label">Phone</label><input id="cf-phone" class="field-input" placeholder="011-2659…"></div>
-      <div class="field-group"><label class="field-label">City</label><input id="cf-city" class="field-input" placeholder="New Delhi"></div>
-      <div class="field-group"><label class="field-label">State</label><input id="cf-state" class="field-input" placeholder="Delhi"></div>
-      <div class="field-group"><label class="field-label">Website</label><input id="cf-website" class="field-input" placeholder="https://…"></div>
-      <div class="field-group"><label class="field-label">Placement Page URL</label><input id="cf-ppurl" class="field-input" placeholder="https://…/placement"></div>
-      <div class="field-group"><label class="field-label">Engineering Intake</label><input id="cf-intake" class="field-input" type="number" placeholder="1100"></div>
-      <div class="field-group"><label class="field-label">Internship Opportunities</label><input id="cf-interns" class="field-input" type="number" placeholder="180"></div>
-      <div class="field-group"><label class="field-label">Placement Quality (0–100)</label><input id="cf-quality" class="field-input" type="number" min="0" max="100" placeholder="90"></div>
-      <div class="field-group"><label class="field-label">Historical Engagement</label><input id="cf-engagement" class="field-input" type="number" placeholder="0"></div>
+      <div class="field-group"><label class="field-label" for="cf-officer">Placement Officer</label><input id="cf-officer" class="field-input" placeholder="Dr. R. Sharma"></div>
+      <div class="field-group"><label class="field-label" for="cf-designation">Designation</label><input id="cf-designation" class="field-input" placeholder="TPO"></div>
+      <div class="field-group"><label class="field-label" for="cf-email">Email</label><input id="cf-email" class="field-input" placeholder="tnp@college.ac.in"></div>
+      <div class="field-group"><label class="field-label" for="cf-phone">Phone</label><input id="cf-phone" class="field-input" placeholder="011-2659…"></div>
+      <div class="field-group"><label class="field-label" for="cf-city">City</label><input id="cf-city" class="field-input" placeholder="New Delhi"></div>
+      <div class="field-group"><label class="field-label" for="cf-state">State</label><input id="cf-state" class="field-input" placeholder="Delhi"></div>
+      <div class="field-group"><label class="field-label" for="cf-website">Website</label><input id="cf-website" class="field-input" placeholder="https://…"></div>
+      <div class="field-group"><label class="field-label" for="cf-ppurl">Placement Page URL</label><input id="cf-ppurl" class="field-input" placeholder="https://…/placement"></div>
+      <div class="field-group"><label class="field-label" for="cf-intake">Engineering Intake</label><input id="cf-intake" class="field-input" type="number" placeholder="1100"></div>
+      <div class="field-group"><label class="field-label" for="cf-interns">Internship Opportunities</label><input id="cf-interns" class="field-input" type="number" placeholder="180"></div>
+      <div class="field-group"><label class="field-label" for="cf-quality">Placement Quality (0–100)</label><input id="cf-quality" class="field-input" type="number" min="0" max="100" placeholder="90"></div>
+      <div class="field-group"><label class="field-label" for="cf-engagement">Historical Engagement</label><input id="cf-engagement" class="field-input" type="number" placeholder="0"></div>
     </div>
     <div class="send-row" style="margin-top:20px">
       <button id="col-save-btn" class="btn-parse">Save College</button>
@@ -1697,7 +1697,7 @@ tbody tr:hover { background:var(--glass-2); }
       <span style="font-size:18px">➜</span>
       <span style="font-size:12.5px;color:#6ee7b7">Enters the <b>HR Round</b> tab. Promote them to Round 1 and Round 2 from there.</span>
     </div>
-    <label class="field-label" style="font-size:11px">Note <span style="opacity:.55">(optional)</span></label>
+    <label class="field-label" for="accd-note" style="font-size:11px">Note <span style="opacity:.55">(optional)</span></label>
     <textarea id="accd-note" rows="2" placeholder="e.g. Strong communication; schedule HR round…"></textarea>
     <div class="rejd-actions">
       <button class="rejd-cancel" onclick="closeAcceptDialog()">Cancel</button>
@@ -1718,29 +1718,29 @@ tbody tr:hover { background:var(--glass-2); }
     </div>
 
     <div id="r1-free-sec">
-      <label class="field-label" style="font-size:11px">Customer Support Executive &mdash; Calendly link</label>
+      <label class="field-label" for="r1-link-cse" style="font-size:11px">Customer Support Executive &mdash; Calendly link</label>
       <input id="r1-link-cse" class="field-input" type="url" placeholder="https://calendly.com/hopcharge-hr/cse-round-1">
       <div class="field-hint" id="r1-cse-hint" style="margin-top:4px">Goes to Round 1 candidates who applied for Customer Support Executive.</div>
 
-      <label class="field-label" style="font-size:11px;margin-top:14px">Operations Specialist &mdash; Calendly link</label>
+      <label class="field-label" for="r1-link-ops" style="font-size:11px;margin-top:14px">Operations Specialist &mdash; Calendly link</label>
       <input id="r1-link-ops" class="field-input" type="url" placeholder="https://calendly.com/hopcharge-hr/ops-round-1">
       <div class="field-hint" id="r1-ops-hint" style="margin-top:4px">Goes to Round 1 candidates who applied for Operations Specialist.</div>
     </div>
 
     <div id="r1-api-sec" style="display:none">
-      <label class="field-label" style="font-size:11px">Calendly API token <span style="opacity:.55">(Pro/Team &mdash; Integrations &rarr; API &amp; webhooks)</span></label>
+      <label class="field-label" for="r1-token" style="font-size:11px">Calendly API token <span style="opacity:.55">(Pro/Team &mdash; Integrations &rarr; API &amp; webhooks)</span></label>
       <div style="display:flex;gap:8px">
         <input id="r1-token" class="field-input" type="password" placeholder="leave blank if already saved" style="flex:1">
         <button type="button" id="r1-load-events" class="rejd-cancel" style="white-space:nowrap">Load events</button>
       </div>
-      <label class="field-label" style="font-size:11px;margin-top:10px">Event type</label>
+      <label class="field-label" for="r1-event" style="font-size:11px;margin-top:10px">Event type</label>
       <select id="r1-event" class="field-input"><option value="">&mdash; load events first &mdash;</option></select>
       <div class="field-hint" id="r1-api-status" style="margin-top:6px">Each candidate gets a unique single-use link &mdash; so you can tell who booked.</div>
     </div>
 
     <div style="display:flex;gap:10px;margin-top:12px">
-      <div style="flex:1"><label class="field-label" style="font-size:11px">Sender Gmail</label><input id="r1-sender" class="field-input" type="email" placeholder="hr@hopcharge.com"></div>
-      <div style="flex:1"><label class="field-label" style="font-size:11px">App Password</label><input id="r1-pass" class="field-input" type="password" placeholder="xxxx xxxx xxxx xxxx"></div>
+      <div style="flex:1"><label class="field-label" for="r1-sender" style="font-size:11px">Sender Gmail</label><input id="r1-sender" class="field-input" type="email" placeholder="hr@hopcharge.com"></div>
+      <div style="flex:1"><label class="field-label" for="r1-pass" style="font-size:11px">App Password</label><input id="r1-pass" class="field-input" type="password" placeholder="xxxx xxxx xxxx xxxx"></div>
     </div>
     <div class="field-hint" style="margin-top:6px">Sender + App Password reused from your Send Emails tab when available.</div>
 
@@ -1761,9 +1761,9 @@ tbody tr:hover { background:var(--glass-2); }
   <div class="rejd-card">
     <div class="rejd-title">✕ REJECT CANDIDATE</div>
     <div class="rejd-sub" id="rejd-who">Move this candidate to the Rejected tab. Their full application is preserved.</div>
-    <label class="field-label" style="font-size:11px">Rejected in which round?</label>
+    <label class="field-label" for="rejd-round" style="font-size:11px">Rejected in which round?</label>
     <select id="rejd-round"></select>
-    <label class="field-label" style="font-size:11px">Reason <span style="opacity:.55">(optional)</span></label>
+    <label class="field-label" for="rejd-reason" style="font-size:11px">Reason <span style="opacity:.55">(optional)</span></label>
     <textarea id="rejd-reason" rows="2" placeholder="e.g. Low score in problem solving; weak communication…"></textarea>
     <div class="rejd-actions">
       <button class="rejd-cancel" onclick="closeRejectDialog()">Cancel</button>
@@ -4622,7 +4622,7 @@ refreshEmailCount();
   <div class="rejd-card" style="border-color:rgba(96,165,250,.32);max-width:540px">
     <div class="rejd-title" style="color:#60a5fa">&#9729; SYNC CVs FROM GOOGLE DRIVE</div>
     <div class="rejd-sub" id="drive-sub">Pull new CV PDFs from a shared Drive folder and parse them automatically. Only files not imported before are fetched.</div>
-    <label class="field-label" style="font-size:11px">Google Drive folder link or ID</label>
+    <label class="field-label" for="drive-folder" style="font-size:11px">Google Drive folder link or ID</label>
     <div style="display:flex;gap:8px">
       <input id="drive-folder" class="field-input" type="text" placeholder="https://drive.google.com/drive/folders/…" style="flex:1">
       <button type="button" id="drive-test-btn" class="rejd-cancel" style="white-space:nowrap">Test access</button>
@@ -4886,7 +4886,7 @@ refreshEmailCount();
   <div class="rejd-card">
     <div class="rejd-title">Import from Google Form</div>
     <div class="rejd-sub">Paste the Google Form link or ID. Questions are auto-matched to master-sheet fields. Share the form with the service account as a Viewer.</div>
-    <label class="field-label">Google Form link or ID</label>
+    <label class="field-label" for="emp-form-id">Google Form link or ID</label>
     <input class="field-input" id="emp-form-id" placeholder="https://docs.google.com/forms/d/…">
     <div id="emp-import-status" class="emp-status-box" style="display:none"></div>
     <div class="rejd-actions">
@@ -4902,7 +4902,7 @@ refreshEmailCount();
   <div class="rejd-card">
     <div class="rejd-title">Import from Google Sheet</div>
     <div class="rejd-sub">Paste a Google Sheet link. The sheet must be shared <b>&ldquo;Anyone with the link&rdquo; (Viewer)</b> &mdash; no service account needed. The first row should be column headers (Name, Email, Designation, PAN, etc.); they&rsquo;re auto-matched to employee fields.</div>
-    <label class="field-label">Public Google Sheet link</label>
+    <label class="field-label" for="emp-csv-url">Public Google Sheet link</label>
     <input class="field-input" id="emp-csv-url" placeholder="https://docs.google.com/spreadsheets/d/…">
     <div id="emp-csv-status" class="emp-status-box" style="display:none"></div>
     <div class="rejd-actions">
@@ -4918,9 +4918,9 @@ refreshEmailCount();
   <div class="rejd-card">
     <div class="rejd-title">Google Sheet Backup</div>
     <div class="rejd-sub">The full master sheet is written to this Google Sheet on every change. Share the sheet with the service account as an Editor.</div>
-    <label class="field-label">Backup Google Sheet link or ID</label>
+    <label class="field-label" for="emp-sheet-id">Backup Google Sheet link or ID</label>
     <input class="field-input" id="emp-sheet-id" placeholder="https://docs.google.com/spreadsheets/d/…">
-    <label class="field-label" style="margin-top:10px">Worksheet / tab name</label>
+    <label class="field-label" for="emp-sheet-ws" style="margin-top:10px">Worksheet / tab name</label>
     <input class="field-input" id="emp-sheet-ws" placeholder="Master">
     <div id="emp-sheet-status" class="emp-status-box" style="display:none"></div>
     <div class="rejd-actions">
@@ -5060,12 +5060,13 @@ refreshEmailCount();
     _empFields.forEach(fl=>{
       const wrap=document.createElement('div'); wrap.className='emp-fg'+(TEXTAREAS.has(fl.key)?' wide':'');
       const val=emp?(emp[fl.key]||''):'';
+      const fid=`emp-f-${eA(fl.key)}`;
       let input;
-      if(fl.derived){ input=`<input class="field-input" value="${eA(val)}" disabled><span class="emp-hint">auto-calculated</span>`; }
-      else if(SELECTS[fl.key]){ input=`<select class="field-input" data-k="${fl.key}">`+SELECTS[fl.key].map(o=>`<option ${o===val?'selected':''}>${eT(o)}</option>`).join('')+`</select>`; }
-      else if(TEXTAREAS.has(fl.key)){ input=`<textarea class="field-input" data-k="${fl.key}" rows="2">${eT(val)}</textarea>`; }
-      else { input=`<input class="field-input" data-k="${fl.key}" value="${eA(val)}">`; }
-      wrap.innerHTML=`<label class="field-label">${eT(fl.label)}${fl.sensitive?' 🔒':''}</label>${input}`;
+      if(fl.derived){ input=`<input id="${fid}" class="field-input" value="${eA(val)}" disabled><span class="emp-hint">auto-calculated</span>`; }
+      else if(SELECTS[fl.key]){ input=`<select id="${fid}" class="field-input" data-k="${fl.key}">`+SELECTS[fl.key].map(o=>`<option ${o===val?'selected':''}>${eT(o)}</option>`).join('')+`</select>`; }
+      else if(TEXTAREAS.has(fl.key)){ input=`<textarea id="${fid}" class="field-input" data-k="${fl.key}" rows="2">${eT(val)}</textarea>`; }
+      else { input=`<input id="${fid}" class="field-input" data-k="${fl.key}" value="${eA(val)}">`; }
+      wrap.innerHTML=`<label class="field-label" for="${fid}">${eT(fl.label)}${fl.sensitive?' 🔒':''}</label>${input}`;
       f.appendChild(wrap);
     });
   }
