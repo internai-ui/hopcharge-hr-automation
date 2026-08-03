@@ -31,7 +31,11 @@
   --green:#16a34a; --green-dim:rgba(22,163,74,0.12);
   --red:#e11d48; --cyan:#2F5BEA; --cyan-dim:rgba(47,91,234,0.10);
 
-  --text-on:#1f2a44; --text-mid:#5b6472; --text-dim:#8a93a6;
+  /* text-dim was #8a93a6 (2.9-3.1:1 against its actual backgrounds) which
+     fails WCAG AA (4.5:1) for the small/normal-size text it's used on
+     everywhere (hints, timestamps, table headers). #676e7c clears 4.5:1+
+     on both bg-base and glass-2 while keeping the same de-emphasized hue. */
+  --text-on:#1f2a44; --text-mid:#5b6472; --text-dim:#676e7c;
   --border-dim:rgba(31,45,89,0.10); --border-mid:rgba(31,45,89,0.16);
 
   --r-sm:6px; --r-md:12px; --r-lg:20px;
@@ -56,7 +60,9 @@ body[data-theme="dark"] {
   --grad-text:linear-gradient(120deg,#ffffff,#c5cee6);
   --green:#34d399; --green-dim:rgba(52,211,153,0.14);
   --red:#fb7185; --cyan:#5b8def; --cyan-dim:rgba(91,141,239,0.14);
-  --text-on:#eef2fb; --text-mid:#a9b4d0; --text-dim:#6b7aa0;
+  /* Same fix as light theme: #6b7aa0 was only 3.3-4.1:1; #8b9ed0 clears
+     4.5:1+ against both bg-void and glass-2. */
+  --text-on:#eef2fb; --text-mid:#a9b4d0; --text-dim:#8b9ed0;
   --border-dim:rgba(255,255,255,0.08); --border-mid:rgba(255,255,255,0.14);
   background:
     radial-gradient(900px 360px at 18% -8%, rgba(232,83,127,0.10), transparent 70%),
@@ -298,8 +304,15 @@ body[data-theme="dark"] .welcome-logo-dark { display:block; }
 
 /* ════════════════ PAGE HEADERS ════════════════ */
 .page-head { margin-bottom:36px; position:relative; z-index:1; }
-.page-head .eyebrow { display:flex; align-items:center; gap:9px; font-family:'Poppins',sans-serif; font-size:11px; font-weight:700; letter-spacing:4px; text-transform:uppercase; color:#E8537F; margin-bottom:14px; }
-.page-head .eyebrow::before { content:''; height:1px; width:30px; background:linear-gradient(90deg,transparent,#E8537F); }
+/* #E8537F on white is only 3.51:1, failing WCAG AA (4.5:1) for this
+   11px/bold text — it's not large enough to qualify for the 3:1 large-text
+   threshold. #b94265 clears 5.2:1 on white; dark theme overrides back to
+   the brighter #E8537F below, since that already passes (5.0:1) on the
+   dark background and matches the rest of the dark palette. */
+.page-head .eyebrow { display:flex; align-items:center; gap:9px; font-family:'Poppins',sans-serif; font-size:11px; font-weight:700; letter-spacing:4px; text-transform:uppercase; color:#b94265; margin-bottom:14px; }
+.page-head .eyebrow::before { content:''; height:1px; width:30px; background:linear-gradient(90deg,transparent,#b94265); }
+body[data-theme="dark"] .page-head .eyebrow { color:#E8537F; }
+body[data-theme="dark"] .page-head .eyebrow::before { background:linear-gradient(90deg,transparent,#E8537F); }
 .page-head h1 { font-family:'Poppins',sans-serif; font-weight:800; font-size:clamp(40px,6vw,68px); letter-spacing:-1px; line-height:1; color:#1F2D59; margin-bottom:14px; }
 .page-head p { font-size:15px; color:var(--text-mid); max-width:520px; line-height:1.65; }
 
@@ -803,7 +816,7 @@ tbody tr:hover { background:var(--glass-2); }
 </button>
 
 <!-- ── SIDEBAR ── -->
-<aside id="sidebar">
+<aside id="sidebar" inert>
   <div class="sb-head">
     <img src="/static/assets/hopcharge-white.png" class="sb-logo" alt="Hopcharge">
     <div class="sb-tag">HR BAU Automation</div>
@@ -1863,8 +1876,13 @@ const body = document.body;
 const sidebarHotzone = document.getElementById('sidebar-hotzone');
 const sidebarEl = document.getElementById('sidebar');
 const scrim = document.getElementById('sidebar-scrim');
-function openNav(){ body.classList.add('nav-open'); }
-function closeNav(){ body.classList.remove('nav-open'); }
+/* The sidebar sits off-screen (translateX(-100%)) when closed, but without
+   `inert` its buttons still sat in the keyboard tab order — a keyboard-only
+   user tabbing through the page would silently land on invisible, off-screen
+   nav items with no visual indication. `inert` removes the whole subtree
+   from both the tab order and the accessibility tree while closed. */
+function openNav(){ body.classList.add('nav-open'); if (sidebarEl) sidebarEl.inert = false; }
+function closeNav(){ body.classList.remove('nav-open'); if (sidebarEl) sidebarEl.inert = true; }
 
 /* Hover-to-expand: cursor reaching the left edge opens the sidebar; moving the
    cursor beyond the sidebar's right edge retracts it after a short grace delay
