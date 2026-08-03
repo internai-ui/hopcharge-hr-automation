@@ -1,0 +1,31 @@
+# systemd unit for the HopCharge HR Dashboard.
+# Installed by deploy/setup_server.sh to /etc/systemd/system/hopcharge.service
+#
+# Layout on the server:
+#   /opt/hopcharge/app    ← the application code (uploaded from your Mac)
+#   /opt/hopcharge/venv   ← Python virtual environment (created by setup script)
+#   /opt/hopcharge/data   ← HOPCHARGE_HOME: neon.env, credentials, output data.
+#                           Kept OUTSIDE the app folder so code updates can
+#                           never touch your data or secrets.
+
+[Unit]
+Description=HopCharge HR Dashboard (FastAPI / uvicorn)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/hopcharge/app
+Environment=HOPCHARGE_HOME=/opt/hopcharge/data
+# --proxy-headers makes the app see the real visitor IP and https scheme from
+# nginx (needed for correct login rate-limiting and Secure cookies).
+ExecStart=/opt/hopcharge/venv/bin/uvicorn app:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=always
+RestartSec=3
+# First start loads the spaCy NLP model — allow a slow boot.
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target

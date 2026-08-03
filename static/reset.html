@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hopcharge — Reset password</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+:root {
+  --navy:#1F2D59; --blue:#2F5BEA; --pink:#E8537F;
+  --bg:#f4f6fa; --text:#1f2a44; --text-mid:#5b6472; --text-dim:#8a93a6;
+  --border:rgba(31,45,89,0.14); --red:#e11d48; --green:#16a34a;
+}
+body {
+  font-family:'Poppins',sans-serif; background:var(--bg); color:var(--text);
+  min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+  background-image:
+    radial-gradient(900px 500px at 85% -10%, rgba(47,91,234,0.10), transparent 60%),
+    radial-gradient(700px 420px at -10% 110%, rgba(31,45,89,0.10), transparent 60%);
+}
+.card {
+  width:100%; max-width:400px; background:#fff; border:1px solid var(--border);
+  border-radius:20px; overflow:hidden; box-shadow:0 18px 50px rgba(31,45,89,0.16);
+}
+.card-head {
+  background:linear-gradient(135deg,#1F2D59 0%,#243769 60%,#2F5BEA 140%);
+  padding:34px 32px 28px; text-align:center;
+}
+.card-head img { height:44px; max-width:80%; object-fit:contain; }
+.card-head p { margin-top:10px; color:rgba(255,255,255,0.75); font-size:12.5px; letter-spacing:0.4px; }
+.card-body { padding:30px 32px 34px; }
+h1 { font-size:17px; font-weight:600; margin-bottom:8px; }
+.hint { font-size:12.5px; color:var(--text-mid); line-height:1.6; margin-bottom:10px; }
+label { display:block; font-size:12px; font-weight:500; color:var(--text-mid); margin:14px 0 6px; }
+input {
+  width:100%; padding:11px 14px; font:inherit; font-size:14px; color:var(--text);
+  border:1px solid var(--border); border-radius:10px; background:#fbfcfe; outline:none;
+  transition:border-color .15s, box-shadow .15s;
+}
+input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(47,91,234,0.14); }
+button {
+  width:100%; margin-top:22px; padding:12px; font:inherit; font-size:14px; font-weight:600;
+  color:#fff; background:linear-gradient(120deg,var(--navy),#2a3d78); border:0; border-radius:10px;
+  cursor:pointer; transition:transform .1s, box-shadow .15s, opacity .15s;
+}
+button:hover { box-shadow:0 8px 20px rgba(31,45,89,0.28); transform:translateY(-1px); }
+button:disabled { opacity:.6; cursor:wait; transform:none; box-shadow:none; }
+.msg {
+  display:none; margin-top:14px; padding:10px 12px; font-size:12.5px; border-radius:10px;
+}
+.msg.err { color:var(--red); background:rgba(225,29,72,0.07); border:1px solid rgba(225,29,72,0.25); }
+.msg.ok { color:var(--green); background:rgba(22,163,74,0.07); border:1px solid rgba(22,163,74,0.25); }
+.msg.show { display:block; }
+.links { margin-top:18px; text-align:center; font-size:12px; }
+.links a { color:var(--blue); text-decoration:none; font-weight:500; }
+.links a:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-head">
+      <img src="/static/hopcharge-white.png" alt="HopCharge">
+      <p>HR BAU AUTOMATION DASHBOARD</p>
+    </div>
+    <div class="card-body">
+
+      <!-- Mode A: ask for a reset link -->
+      <form id="ask" novalidate style="display:none">
+        <h1>Forgot your password?</h1>
+        <div class="hint">Enter your account email and we'll send you a link to choose a new password.</div>
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="username" placeholder="you@hopcharge.com" required>
+        <button id="askBtn" type="submit">Email me a reset link</button>
+        <div id="askMsg" class="msg"></div>
+      </form>
+
+      <!-- Mode B: token present — choose the new password -->
+      <form id="set" novalidate style="display:none">
+        <h1>Choose a new password</h1>
+        <div class="hint">At least 8 characters. You'll sign in with it right after.</div>
+        <label for="pw1">New password</label>
+        <input id="pw1" type="password" autocomplete="new-password" placeholder="••••••••" required>
+        <label for="pw2">Repeat new password</label>
+        <input id="pw2" type="password" autocomplete="new-password" placeholder="••••••••" required>
+        <button id="setBtn" type="submit">Set password</button>
+        <div id="setMsg" class="msg"></div>
+      </form>
+
+      <div class="links"><a href="/login">&larr; Back to sign in</a></div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  var token = new URLSearchParams(location.search).get('token') || '';
+  var askForm = document.getElementById('ask'), setForm = document.getElementById('set');
+  (token ? setForm : askForm).style.display = 'block';
+
+  function show(el, text, ok) {
+    el.textContent = text;
+    el.className = 'msg show ' + (ok ? 'ok' : 'err');
+  }
+
+  askForm.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var btn = document.getElementById('askBtn'), msg = document.getElementById('askMsg');
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      var resp = await fetch('/api/auth/forgot', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: document.getElementById('email').value.trim() })
+      });
+      var data = {}; try { data = await resp.json(); } catch (_) {}
+      if (resp.ok) {
+        show(msg, data.note || 'If that email has an account, a reset link is on its way.', true);
+      } else {
+        show(msg, data.detail || 'Something went wrong. Please try again.', false);
+      }
+    } catch (_) {
+      show(msg, 'Could not reach the server. Please try again.', false);
+    }
+    btn.disabled = false; btn.textContent = 'Email me a reset link';
+  });
+
+  setForm.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var btn = document.getElementById('setBtn'), msg = document.getElementById('setMsg');
+    var p1 = document.getElementById('pw1').value, p2 = document.getElementById('pw2').value;
+    if (p1.length < 8) { show(msg, 'Password must be at least 8 characters.', false); return; }
+    if (p1 !== p2) { show(msg, 'Passwords do not match.', false); return; }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      var resp = await fetch('/api/auth/reset', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token, new_password: p1 })
+      });
+      var data = {}; try { data = await resp.json(); } catch (_) {}
+      if (resp.ok) {
+        show(msg, 'Password set! Taking you to sign in…', true);
+        setTimeout(function () { location.href = '/login'; }, 1500);
+        return;
+      }
+      show(msg, data.detail || 'This link is invalid or has expired.', false);
+    } catch (_) {
+      show(msg, 'Could not reach the server. Please try again.', false);
+    }
+    btn.disabled = false; btn.textContent = 'Set password';
+  });
+})();
+</script>
+</body>
+</html>

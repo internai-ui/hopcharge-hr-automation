@@ -1,0 +1,33 @@
+# ── Secrets & credentials — never commit ──
+neon.env
+*.env
+*.key
+auth_users.json
+Gdrive service acc.json
+Gforms service acc.json
+credentials/
+
+# ── Live application data / PII — this is runtime data, not source ──
+output/
+input_resumes/
+CVs/
+
+# ── Python ──
+__pycache__/
+*.pyc
+.venv/
+.venv-check/
+*.egg-info/
+
+# ── Build artifacts (PyInstaller) ──
+dist/
+build/
+
+# ── Logs ──
+*.log
+
+# ── OS / editor junk ──
+.DS_Store
+
+# ── Personal Claude Code settings (machine-specific, not app source) ──
+.claude/settings.local.json

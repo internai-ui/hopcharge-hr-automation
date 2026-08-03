@@ -1,0 +1,49 @@
+# ============================================================
+#  HopCharge HR BAU Automation Dashboard — Python dependencies
+#  Install:  pip install -r requirements.txt
+#  (The Windows installer does this automatically.)
+# ============================================================
+
+# ── Web server (app.py, launcher.py) ──
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.9          # required for UploadFile / file uploads
+pydantic>=2.6.0                  # FastAPI v2 models used throughout
+
+# ── PDF text extraction (extractor.py) ──
+pdfplumber>=0.10.0
+PyMuPDF>=1.23.0                  # imported as "fitz"
+
+# ── OCR fallback (extractor.py) ──
+pytesseract>=0.3.10             # NOTE: also needs the Tesseract program installed on the PC
+Pillow>=10.0.0
+
+# ── NLP for resume parsing (config.py SPACY_MODEL; parser.py) ──
+spacy>=3.7.0
+# The model itself is fetched by the installer:
+#   python -m spacy download en_core_web_sm
+
+# ── Data handling & export (exporter.py, services.py, verify_migration.py) ──
+pandas>=2.1.0
+openpyxl>=3.1.0
+
+# ── Postgres / Neon (database.py uses postgresql+psycopg = psycopg v3) ──
+SQLAlchemy>=2.0.0
+psycopg[binary]>=3.1.0
+
+# ── Encryption (crypto.py, scoring/config_store.py) ──
+cryptography>=42.0.0
+
+# ── Google Forms / Sheets / Drive (forms_retriever, drive_sync, employee_db) ──
+google-api-python-client>=2.120.0
+google-auth>=2.29.0
+google-auth-httplib2>=0.2.0
+google-auth-oauthlib>=1.2.0
+
+# ── College discovery engine (colleges/discovery.py, extract.py) ──
+requests>=2.31.0
+beautifulsoup4>=4.12.0          # imported as "bs4"
+
+# ── Phone/date utilities (commonly used by resume parsers) ──
+phonenumbers>=8.13.0
+python-dateutil>=2.8.0

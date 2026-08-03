@@ -1,0 +1,6 @@
+college_name,college_type,city,state,placement_officer_name,designation,email,phone,website,placement_page_url,engineering_intake,internship_opportunities,placement_quality_score,historical_engagement
+IIT Delhi,IIT,New Delhi,Delhi,Dr. R. Sharma,Training & Placement Officer,tnp@iitd.ac.in,011-26591700,https://home.iitd.ac.in,https://tnp.iitd.ac.in,1100,180,90,3
+NIT Trichy,NIT,Tiruchirappalli,Tamil Nadu,Prof. K. Kumar,TPO,placement@nitt.edu,0431-2503000,https://www.nitt.edu,https://nitt.edu/home/placement,950,140,82,2
+IIIT Hyderabad,IIIT,Hyderabad,Telangana,Ms. S. Reddy,Placement Coordinator,placements@iiit.ac.in,040-66531000,https://www.iiit.ac.in,https://placements.iiit.ac.in,400,150,88,1
+VIT Vellore,Private,Vellore,Tamil Nadu,Mr. A. Pillai,Placement Director,placements@vit.ac.in,0416-2202020,https://vit.ac.in,https://vit.ac.in/placement,5000,300,75,0
+BITS Pilani,Private,Pilani,Rajasthan,Dr. M. Gupta,Head - Placement,placement@pilani.bits-pilani.ac.in,01596-242210,https://www.bits-pilani.ac.in,https://www.bits-pilani.ac.in/placement,1200,160,85,2
