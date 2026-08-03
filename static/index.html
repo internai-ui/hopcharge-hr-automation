@@ -172,6 +172,20 @@ body.nav-open #sidebar-hotzone { pointer-events:none; }
      edge tap/swipe opener for mobile users. */
   #sidebar-hotzone { width:26px; }
 }
+/* Visible, always-present affordance so a first-time user can tell there is
+   a sidebar at all (the hover-zone above is invisible by design). Sits at
+   the same corner the sidebar itself opens from; fades out once open since
+   the sidebar covers this same corner anyway. */
+#sidebar-toggle-btn {
+  position:fixed; top:20px; left:24px; z-index:320;
+  display:inline-flex; align-items:center; justify-content:center;
+  width:38px; height:38px; padding:0;
+  color:var(--text-mid); background:var(--glass); border:1px solid var(--border-mid);
+  border-radius:999px; cursor:pointer;
+  box-shadow:0 4px 16px rgba(31,45,89,0.10); transition:all 180ms var(--ease-out);
+}
+#sidebar-toggle-btn:hover { color:var(--text-on); border-color:var(--glass-border-hi); transform:translateY(-1px); }
+body.nav-open #sidebar-toggle-btn { opacity:0; pointer-events:none; }
 .sb-head { padding:30px 24px 24px; border-bottom:1px solid rgba(255,255,255,0.10); }
 .sb-logo { height:30px; width:auto; display:block; margin-bottom:14px; }
 .sb-tag { font-family:'Poppins',sans-serif; font-size:9px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#9FB0D8; }
@@ -782,8 +796,11 @@ tbody tr:hover { background:var(--glass-2); }
 <div id="glow-dot"></div>
 <div id="progress-rail"><div id="progress-fill"></div></div>
 
-<!-- ── SIDEBAR HOVER ZONE (move cursor to left edge to open; no visible button) ── -->
+<!-- ── SIDEBAR HOVER ZONE (move cursor to left edge to open) ── -->
 <div id="sidebar-hotzone"></div>
+<button id="sidebar-toggle-btn" type="button" aria-label="Open navigation menu" title="Menu">
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+</button>
 
 <!-- ── SIDEBAR ── -->
 <aside id="sidebar">
@@ -1866,6 +1883,8 @@ if (sidebarHotzone) {
   /* Tap/click the edge still opens it (covers touch + non-hover fallbacks). */
   sidebarHotzone.addEventListener('click', openNav);
 }
+const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', openNav);
 
 /* Reliable retract: while the sidebar is open, watch the pointer and close it
    once it moves past the sidebar's right edge (plus a small buffer). This works
