@@ -541,7 +541,8 @@ if __name__ == "__main__":
 
 class FormsRequest(BaseModel):
     form_id:          str
-    credentials_json: str   # service-account JSON string (or file path)
+    auth_mode:        str = "service_account"   # "oauth" (same connection as Send Emails) or "service_account" (fallback)
+    credentials_json: Optional[str] = None      # required only when auth_mode == "service_account"
 
 
 @app.post("/api/forms/fetch")
@@ -554,13 +555,22 @@ async def fetch_form_responses(req: FormsRequest):
 
     if not req.form_id.strip():
         raise HTTPException(status_code=400, detail="form_id is required.")
-    if not req.credentials_json.strip():
-        raise HTTPException(status_code=400, detail="credentials_json is required.")
+    if req.auth_mode == "oauth":
+        import gmail_oauth
+        if not gmail_oauth.is_connected():
+            raise HTTPException(
+                status_code=400,
+                detail="Google account is not connected. Connect it on the Send Emails page first."
+            )
+    else:
+        if not req.credentials_json or not req.credentials_json.strip():
+            raise HTTPException(status_code=400, detail="credentials_json is required.")
 
     try:
         result = sync_form_responses(
             form_id=req.form_id.strip(),
-            credentials_json=req.credentials_json.strip(),
+            credentials_json=(req.credentials_json or "").strip(),
+            auth_mode=req.auth_mode,
         )
 
         # Auto-match the freshly fetched responses against tracking records so

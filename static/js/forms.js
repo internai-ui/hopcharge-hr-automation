@@ -8,12 +8,69 @@
   const infoEl     = document.getElementById('forms-info');
   const lastEl     = document.getElementById('forms-last');
 
+  /* ── Google account access (same OAuth connection as Send Emails) ── */
+  const FORMS_SCOPE = 'https://www.googleapis.com/auth/forms.responses.readonly';
+  const formsOauthPill = document.getElementById('forms-oauth-pill'), formsOauthDetail = document.getElementById('forms-oauth-detail');
+  const formsOauthConnectBtn = document.getElementById('forms-oauth-connect-btn');
+  const svcAcctEnable = document.getElementById('forms-svcacct-enable'), svcAcctFields = document.getElementById('forms-svcacct-fields');
+  let _formsOAuthUsable = false;
+
+  function usingOAuthForms(){ return _formsOAuthUsable && !(svcAcctEnable && svcAcctEnable.checked); }
+
+  function _syncSvcAcctUI(){
+    const on = svcAcctEnable && svcAcctEnable.checked;
+    svcAcctFields.classList.toggle('hidden', !on);
+    const knob = svcAcctEnable.closest('.switch').querySelector('.slider');
+    if(knob){ knob.style.setProperty('--knob', on?'translateX(17px)':'translateX(0)'); knob.style.background=on?'#60a5fa':'rgba(255,255,255,0.15)'; }
+    validate();
+  }
+  if (svcAcctEnable) svcAcctEnable.addEventListener('change', ()=>{ svcAcctEnable._userTouched = true; _syncSvcAcctUI(); });
+
+  window.refreshFormsOAuthStatus = async function(){
+    try{
+      const res = await fetch('/api/gmail-oauth/status');
+      const d = await res.json();
+      _formsOAuthUsable = !!d.connected && (d.scopes||[]).includes(FORMS_SCOPE);
+
+      if (_formsOAuthUsable){
+        formsOauthPill.textContent = 'Connected';
+        formsOauthPill.style.background = 'rgba(52,211,153,0.15)'; formsOauthPill.style.color = '#34d399';
+        formsOauthDetail.textContent = d.connected_email ? `Using ${d.connected_email}` : 'Connected';
+        formsOauthConnectBtn.classList.add('hidden');
+        if (svcAcctEnable && !svcAcctEnable._userTouched) svcAcctEnable.checked = false;
+      } else if (d.connected){
+        formsOauthPill.textContent = 'Reconnect needed';
+        formsOauthPill.style.background = 'rgba(251,191,36,0.15)'; formsOauthPill.style.color = '#fbbf24';
+        formsOauthDetail.textContent = 'Connected, but without Forms permission yet — reconnect to grant it.';
+        formsOauthConnectBtn.textContent = 'Reconnect Google';
+        formsOauthConnectBtn.classList.remove('hidden');
+        if (svcAcctEnable && !svcAcctEnable._userTouched) svcAcctEnable.checked = true;
+      } else {
+        formsOauthPill.textContent = 'Not connected';
+        formsOauthPill.style.background = 'rgba(248,113,113,0.15)'; formsOauthPill.style.color = '#f87171';
+        formsOauthDetail.textContent = 'Connect your Google account on the Send Emails page, or use a service account below.';
+        formsOauthConnectBtn.textContent = 'Connect Google';
+        formsOauthConnectBtn.classList.remove('hidden');
+        if (svcAcctEnable && !svcAcctEnable._userTouched) svcAcctEnable.checked = true;
+      }
+      _syncSvcAcctUI();
+    }catch(e){
+      formsOauthPill.textContent = 'Unavailable';
+      formsOauthDetail.textContent = 'Could not reach the server to check Google connection status.';
+    }
+  };
+  if (formsOauthConnectBtn) formsOauthConnectBtn.addEventListener('click', ()=>{ window.location.href = '/api/gmail-oauth/authorize'; });
+  refreshFormsOAuthStatus();
+
   function validate() {
-    fetchBtn.disabled = !(formIdEl.value.trim() && credsEl.value.trim().startsWith('{'));
+    const idOk = !!formIdEl.value.trim();
+    const credsOk = usingOAuthForms() ? true : credsEl.value.trim().startsWith('{');
+    fetchBtn.disabled = !(idOk && credsOk);
   }
   [formIdEl, credsEl].forEach(el => el.addEventListener('input', validate));
   formIdEl.addEventListener('blur', () => { if (formIdEl.value.trim()) clearFieldError(formIdEl); else showFieldError(formIdEl, 'Enter the Google Form ID or edit URL.'); });
   credsEl.addEventListener('blur', () => {
+    if (usingOAuthForms()) { clearFieldError(credsEl); return; }
     const v = credsEl.value.trim();
     if (!v) showFieldError(credsEl, 'Paste the service account JSON key.');
     else if (!v.startsWith('{')) showFieldError(credsEl, 'This doesn\'t look like JSON — it should start with {.');
@@ -794,14 +851,18 @@
 
   // Sync from Google
   fetchBtn.addEventListener('click', async () => {
-    const ok = validateRequired([
+    const usingOAuth = usingOAuthForms();
+    const requiredFields = [
       { input: formIdEl, message: 'Enter the Google Form ID or edit URL.' },
-      { input: credsEl, message: 'Paste the service account JSON key (should start with {).',
-        test: v => v.startsWith('{') },
-    ]);
-    if (!ok) return;
+    ];
+    if (!usingOAuth) {
+      requiredFields.push({ input: credsEl, message: 'Paste the service account JSON key (should start with {).',
+        test: v => v.startsWith('{') });
+    }
+    if (!validateRequired(requiredFields)) return;
     const form_id = formIdEl.value.trim();
-    const credentials_json = credsEl.value.trim();
+    const payload = { form_id, auth_mode: usingOAuth ? 'oauth' : 'service_account' };
+    if (!usingOAuth) payload.credentials_json = credsEl.value.trim();
     fetchBtn.disabled = true;
     fetchBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 15 15" fill="none" style="animation:spin 0.9s linear infinite;flex-shrink:0"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="2" stroke-dasharray="18 8" stroke-linecap="round"/></svg> Syncing…`;
     document.getElementById('progress-rail').classList.add('on');
@@ -810,7 +871,7 @@
       const res = await fetch('/api/forms/fetch', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ form_id, credentials_json }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(errDetail(data, res.status));

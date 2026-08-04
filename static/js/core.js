@@ -210,6 +210,7 @@ function goToPage(name) {
   window.scrollTo({ top:0, behavior:'auto' });
   closeNav();
   if (name === 'email') { refreshEmailCount(); if (window.refreshGmailStatus) window.refreshGmailStatus(); }
+  if (name === 'forms' && window.refreshFormsOAuthStatus) window.refreshFormsOAuthStatus();
   if (name === 'replies' && window.loadRepliesPage) window.loadRepliesPage();
   if (name === 'admin' && window.loadAdminSettings) window.loadAdminSettings();
 }

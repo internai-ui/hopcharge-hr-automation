@@ -439,13 +439,48 @@
       <p>Retrieve candidate answers from your Google Form assessment. Responses are stored locally and structured for AI-based scoring in the next step.</p>
     </div>
 
-    <div class="smtp-note" style="margin-bottom:28px">
-      <span class="note-icon">⚠</span>
-      <span>Requires a <strong>Google Cloud Service Account</strong> with <em>Google Forms API</em> and <em>Google Drive API</em> enabled. Share the form with the service-account email (Viewer). See <strong>FORMS_SETUP.md</strong> in the project folder.</span>
-    </div>
-
     <div class="email-panel" style="margin-bottom:28px">
       <div class="email-body">
+        <div class="gmail-connect-panel" id="forms-oauth-panel" style="margin:-4px 0 16px;padding:16px 18px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span id="forms-oauth-pill" class="dec-badge" style="background:rgba(255,255,255,0.08);color:var(--text-dim)">Checking…</span>
+              <div>
+                <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:#34d399">📋 GOOGLE ACCOUNT ACCESS</div>
+                <div id="forms-oauth-detail" style="font-size:11px;color:var(--muted);margin-top:1px">Checking connection status…</div>
+              </div>
+            </div>
+            <button type="button" id="forms-oauth-connect-btn" class="btn-ghost hidden">Connect Google</button>
+          </div>
+          <div style="font-size:10.5px;color:var(--text-dim);margin-top:10px">Uses the same Google connection as Send Emails — connecting/reconnecting there also applies here. The connected account must own or have edit access to this form.</div>
+        </div>
+
+        <div class="apppass-toggle-row" style="display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid var(--border-dim);border-radius:8px">
+          <label class="switch" style="position:relative;display:inline-block;width:38px;height:21px;flex-shrink:0">
+            <input type="checkbox" id="forms-svcacct-enable" style="opacity:0;width:0;height:0">
+            <span class="slider" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.15);border-radius:21px;transition:.25s"></span>
+          </label>
+          <div style="flex:1">
+            <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--text-mid)">🔑 USE SERVICE ACCOUNT INSTEAD (FALLBACK)</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:1px">Collapses once your Google account has Forms access. Turn on to use a service-account key instead (e.g. for a form you don't personally own).</div>
+          </div>
+        </div>
+
+        <div id="forms-svcacct-fields" class="hidden">
+          <div class="smtp-note" style="margin-bottom:18px">
+            <span class="note-icon">⚠</span>
+            <span>Requires a <strong>Google Cloud Service Account</strong> with <em>Google Forms API</em> and <em>Google Drive API</em> enabled. Share the form with the service-account email (Viewer). See <strong>FORMS_SETUP.md</strong> in the project folder.</span>
+          </div>
+          <div class="forms-grid full" style="margin-bottom:18px">
+            <div class="field-group forms-creds">
+              <label class="field-label" for="forms-creds">Service Account JSON<span class="req-mark">*</span></label>
+              <textarea id="forms-creds" required placeholder='Paste the full service account JSON key contents here:
+{ "type": "service_account", "project_id": "...", "private_key": "...", "client_email": "..." }'></textarea>
+              <span class="field-hint">Stays local — only used to call Google's own API.</span>
+            </div>
+          </div>
+        </div>
+
         <div class="forms-grid">
           <div class="field-group">
             <label class="field-label" for="forms-id">Google Form ID or Edit URL<span class="req-mark">*</span></label>
@@ -455,14 +490,6 @@
           <div class="field-group">
             <label class="field-label" for="forms-last">Last Synced</label>
             <input id="forms-last" class="field-input" type="text" placeholder="Not synced yet" readonly style="opacity:0.6">
-          </div>
-        </div>
-        <div class="forms-grid full" style="margin-bottom:18px">
-          <div class="field-group forms-creds">
-            <label class="field-label" for="forms-creds">Service Account JSON<span class="req-mark">*</span></label>
-            <textarea id="forms-creds" required placeholder='Paste the full service account JSON key contents here:
-{ "type": "service_account", "project_id": "...", "private_key": "...", "client_email": "..." }'></textarea>
-            <span class="field-hint">Stays local — only used to call Google's own API.</span>
           </div>
         </div>
         <div class="send-row">

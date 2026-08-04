@@ -1,11 +1,16 @@
 """
-gmail_oauth.py — Gmail OAuth 2.0 "Connect Gmail" integration.
+gmail_oauth.py — shared Google OAuth 2.0 "Connect Gmail" integration.
 
 Replaces (optionally — App Password stays as a fallback, see emailer.py and
 app.py's /api/send-emails) raw SMTP + Gmail App Password with a real OAuth
 user-consent flow: the HR user clicks "Connect Gmail", goes through Google's
-own consent screen, and this app is granted a refresh token scoped to
-gmail.send + gmail.readonly. No password is ever typed into this app.
+own consent screen, and this app is granted a refresh token. No password is
+ever typed into this app.
+
+This is a SHARED Google connection, not Gmail-only: forms_retriever.py's
+OAuth path (Form Responses page) reuses the exact same token via
+get_credentials() to call the Forms API, so reconnecting once here also
+grants Forms read access — see SCOPES below.
 
 Mirrors scoring/config_store.py's pattern exactly:
   • Persist config to output/gmail_oauth.json
@@ -34,10 +39,19 @@ app_paths._is_frozen():
 Tokens are namespaced the same way so a refresh token issued under one
 client is never replayed against the other's credentials.
 
-Scopes are deliberately narrow: gmail.send + gmail.readonly only. There is
-NO gmail.modify — this app never archives, labels, or marks anything read
-in the user's actual Gmail account. "Marking a reply handled" (see
-email_replies.py) is purely an in-app database flag.
+Scopes are deliberately narrow and all read/send-only: gmail.send,
+gmail.readonly, forms.responses.readonly, forms.body.readonly. There is NO
+gmail.modify and NO forms.body (write) — this app never archives, labels, or
+marks anything read in the user's actual Gmail account, and never edits the
+form itself. "Marking a reply handled" (see email_replies.py) is purely an
+in-app database flag.
+
+Adding the two Forms scopes to an existing connection means an
+ALREADY-CONNECTED account's refresh token was issued under the old, narrower
+scope set — Google does not retroactively widen a live grant, so a
+reconnect (disconnect + Connect Gmail again) is required once for Forms
+calls to stop 403'ing. forms_retriever.py's OAuth path surfaces this as a
+clear "reconnect" error rather than a cryptic API failure.
 
 Known limitation (Google policy, not something to engineer around): while
 the Google Cloud OAuth consent screen stays in "Testing" publishing status,
@@ -81,6 +95,8 @@ SECRET_KEY_FILE: Path = OUTPUT_DIR / ".gmail_oauth_secret.key"
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.send",
     "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/forms.responses.readonly",
+    "https://www.googleapis.com/auth/forms.body.readonly",
 ]
 AUTH_URI = "https://accounts.google.com/o/oauth2/auth"
 TOKEN_URI = "https://oauth2.googleapis.com/token"
@@ -382,20 +398,33 @@ def get_credentials() -> Credentials:
     the stored refresh token. Always refreshes rather than caching the last
     access token: simpler and avoids subtle "stale token" bugs, and Google's
     token endpoint easily absorbs this app's call volume (a handful of sends
-    /polls every few minutes, nowhere near any rate limit)."""
+    /polls every few minutes, nowhere near any rate limit).
+
+    Uses the scopes ACTUALLY granted at connect time (granted_scopes), not
+    the module-wide SCOPES list — Google's token endpoint rejects a refresh
+    whose requested scope is wider than what that refresh token was really
+    issued for (invalid_scope), which happens whenever SCOPES has grown
+    (e.g. Forms access added later) but this connection predates that and
+    hasn't been reconnected yet. Using the real granted set keeps refresh
+    working for such a connection; a call to an API outside that set (e.g.
+    Forms) then fails with a clean, catchable 403 instead of a raw
+    RefreshError here."""
     mode = _client_mode()
+    cfg = _read()
+    mcfg = _mode_cfg(cfg, mode)
     refresh_token = get_decrypted_refresh_token(mode)
     active = _active_client(mode)
     if not (refresh_token and active):
         raise GmailNotConnectedError("Gmail is not connected. Connect it on the Send Emails page first.")
 
+    granted_scopes = mcfg.get("granted_scopes") or SCOPES
     creds = Credentials(
         token=None,
         refresh_token=refresh_token,
         token_uri=TOKEN_URI,
         client_id=active["client_id"],
         client_secret=active["client_secret"],
-        scopes=SCOPES,
+        scopes=granted_scopes,
     )
     creds.refresh(GoogleAuthRequest())
     return creds

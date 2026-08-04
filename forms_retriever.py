@@ -185,6 +185,25 @@ def build_service(credentials_json: str):
     return build("forms", "v1", credentials=credentials, cache_discovery=False)
 
 
+def build_service_from_oauth():
+    """Build the Forms API client using the SAME Google OAuth connection the
+    Send Emails page uses (see gmail_oauth.py) — no separate credential to
+    share the form with; the connected account itself must own or have edit
+    access to the form. Raises ValueError with an actionable message,
+    matching build_service()'s error type, so sync_form_responses() doesn't
+    need auth_mode-specific exception handling for this step."""
+    import gmail_oauth
+    if not gmail_oauth.is_connected():
+        raise ValueError(
+            "Google account not connected. Connect it on the Send Emails page first."
+        )
+    try:
+        credentials = gmail_oauth.get_credentials()
+    except gmail_oauth.GmailNotConnectedError as exc:
+        raise ValueError(str(exc)) from exc
+    return build("forms", "v1", credentials=credentials, cache_discovery=False)
+
+
 # ──────────────────────────────────────────────
 # Form structure  (questions)
 # ──────────────────────────────────────────────
@@ -338,10 +357,12 @@ def upsert_responses(store: dict, new_responses: list[dict]) -> int:
 # Main entry point
 # ──────────────────────────────────────────────
 
-def sync_form_responses(form_id: str, credentials_json: str) -> dict:
+def sync_form_responses(form_id: str, credentials_json: str = "", auth_mode: str = "service_account") -> dict:
     """
     Full pipeline:
-      1. Authenticate
+      1. Authenticate — via OAuth (auth_mode="oauth", same connection as Send
+         Emails) or a service-account key (auth_mode="service_account",
+         fallback; credentials_json required in that case)
       2. Fetch form structure (questions)
       3. Fetch all responses
       4. Parse + upsert into the local store
@@ -354,8 +375,11 @@ def sync_form_responses(form_id: str, credentials_json: str) -> dict:
     # 0. Normalise whatever the user pasted into a real Form ID
     form_id = extract_form_id(form_id)
 
-    # 1. Authenticate (build_service raises ValueError with clear messages)
-    service = build_service(credentials_json)
+    # 1. Authenticate (both builders raise ValueError with clear messages)
+    if auth_mode == "oauth":
+        service = build_service_from_oauth()
+    else:
+        service = build_service(credentials_json)
 
     # 2. Fetch the form structure
     try:
@@ -365,11 +389,21 @@ def sync_form_responses(form_id: str, credentials_json: str) -> dict:
         if status == 404:
             raise ValueError(
                 f"Form not found (id: {form_id}).\n"
-                "  • Double-check the Form ID is the EDIT id (/forms/d/<ID>/edit).\n"
-                "  • Make sure you shared the form with the service-account email "
-                "(Viewer access)."
+                "  • Double-check the Form ID is the EDIT id (/forms/d/<ID>/edit)." + (
+                    "\n  • Your connected Google account must own or have edit access to this form."
+                    if auth_mode == "oauth" else
+                    "\n  • Make sure you shared the form with the service-account email (Viewer access)."
+                )
             ) from exc
         if status == 403:
+            if auth_mode == "oauth":
+                raise ValueError(
+                    "Permission denied (403).\n"
+                    "  • Your connected Google account needs edit access to this form — it must "
+                    "be the form owner or a collaborator with edit rights.\n"
+                    "  • If you connected before Forms access was added to this app, reconnect "
+                    "Gmail on the Send Emails page so the new permission takes effect."
+                ) from exc
             raise ValueError(
                 "Permission denied (403).\n"
                 "  • Enable the Google Forms API AND Google Drive API in your "
