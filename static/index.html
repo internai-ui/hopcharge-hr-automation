@@ -277,52 +277,8 @@
 
     <div class="email-panel">
       <div class="email-body">
-        <div class="gmail-connect-panel" id="gmail-connect-panel" style="margin:-4px 0 16px;padding:16px 18px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:10px">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
-            <div style="display:flex;align-items:center;gap:10px">
-              <span id="gmail-status-pill" class="dec-badge" style="background:rgba(255,255,255,0.08);color:var(--text-dim)">Checking…</span>
-              <div>
-                <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:#34d399">✉ CONNECT GMAIL</div>
-                <div id="gmail-status-detail" style="font-size:11px;color:var(--muted);margin-top:1px">Checking connection status…</div>
-              </div>
-            </div>
-            <div style="display:flex;gap:8px;flex-shrink:0">
-              <button type="button" id="gmail-connect-btn" class="btn-ghost hidden">Connect Gmail</button>
-              <button type="button" id="gmail-disconnect-btn" class="btn-ghost hidden" style="border-color:rgba(248,113,113,.4);color:#f87171">Disconnect</button>
-            </div>
-          </div>
-          <div style="font-size:10.5px;color:var(--text-dim);margin-top:10px">Uses Google OAuth — no password is ever typed into this app. Drop the client-secret JSON Google gives you into <code>credentials/</code> (same folder as your Forms/Drive service-account file) and it's picked up automatically — no copy-pasting needed. While your Google Cloud OAuth consent screen is in "Testing" status, the connection may need reconnecting roughly every 7 days.</div>
+        <div class="google-auth-widget"></div>
 
-          <button type="button" class="preview-toggle" id="gmail-oauth-settings-toggle" style="margin-top:12px">⚙ Paste OAuth client manually instead</button>
-          <div id="gmail-oauth-settings" class="email-grid full hidden" style="margin-top:12px;gap:14px">
-            <div class="field-group"><label class="field-label" for="gmail-oauth-client-id">OAuth Client ID<span class="req-mark">*</span></label><input id="gmail-oauth-client-id" class="field-input" type="text" placeholder="xxxxxxxx.apps.googleusercontent.com" autocomplete="off"></div>
-            <div class="field-group"><label class="field-label" for="gmail-oauth-client-secret">OAuth Client Secret<span class="req-mark">*</span></label><input id="gmail-oauth-client-secret" class="field-input" type="password" placeholder="GOCSPX-…" autocomplete="off"><span class="field-hint" id="gmail-oauth-mode-hint">Only needed if you don't have a credentials/*.json file for this deployment mode.</span></div>
-            <div style="display:flex;justify-content:flex-end"><button type="button" id="gmail-oauth-save-btn" class="btn-ghost">Save Client Config</button></div>
-          </div>
-        </div>
-
-        <div class="apppass-toggle-row" style="display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid var(--border-dim);border-radius:8px">
-          <label class="switch" style="position:relative;display:inline-block;width:38px;height:21px;flex-shrink:0">
-            <input type="checkbox" id="apppass-enable" style="opacity:0;width:0;height:0">
-            <span class="slider" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.15);border-radius:21px;transition:.25s"></span>
-          </label>
-          <div style="flex:1">
-            <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--text-mid)">🔑 USE APP PASSWORD INSTEAD (FALLBACK)</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:1px">Collapses once Gmail is connected via OAuth above. Turn on to send via SMTP with a Gmail App Password instead.</div>
-          </div>
-        </div>
-
-        <div id="apppass-fields" class="hidden">
-          <div class="smtp-note">
-            <span class="note-icon">⚠</span>
-            <span>This uses <strong>Gmail SMTP</strong>. You must use a <a href="https://myaccount.google.com/apppasswords" target="_blank">Gmail App Password</a> — not your account password. Generate one via Google Account → Security → 2-Step Verification → App Passwords.</span>
-          </div>
-
-          <div class="email-grid">
-            <div class="field-group"><label class="field-label" for="gmail-addr">Sender Gmail Address<span class="req-mark">*</span></label><input id="gmail-addr" class="field-input" type="email" placeholder="hr@hopcharge.com" autocomplete="email" required></div>
-            <div class="field-group"><label class="field-label" for="gmail-pass">Gmail App Password<span class="req-mark">*</span></label><input id="gmail-pass" class="field-input" type="password" placeholder="xxxx xxxx xxxx xxxx" autocomplete="off" required><span class="field-hint">16-character app password, not your Gmail login</span></div>
-          </div>
-        </div>
         <div class="email-grid full" style="margin-bottom:18px">
           <div class="field-group"><label class="field-label" for="form-link">Google Forms Assessment Link<span class="req-mark">*</span></label><input id="form-link" class="field-input" type="url" placeholder="https://docs.google.com/forms/d/…" required><span class="field-hint">Embedded as a CTA button in every email</span></div>
         </div>
@@ -398,6 +354,8 @@
       <p>Replies candidates send back to a Gmail-connected campaign, in one place. Reading and marking a reply here only updates this dashboard — it never touches your real Gmail inbox.</p>
     </div>
 
+    <div class="google-auth-widget"></div>
+
     <div id="reply-stats" class="forms-stats" style="margin-bottom:18px">
       <div class="fstat"><div class="fstat-label">Total Sent</div><div class="fstat-val" id="reply-total">0</div></div>
       <div class="fstat"><div class="fstat-label">Replied</div><div class="fstat-val" id="reply-replied">0</div></div>
@@ -443,22 +401,10 @@
       <p>Retrieve candidate answers from your Google Form assessment. Responses are stored locally and structured for AI-based scoring in the next step.</p>
     </div>
 
+    <div class="google-auth-widget"></div>
+
     <div class="email-panel" style="margin-bottom:28px">
       <div class="email-body">
-        <div class="gmail-connect-panel" id="forms-oauth-panel" style="margin:-4px 0 16px;padding:16px 18px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:10px">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
-            <div style="display:flex;align-items:center;gap:10px">
-              <span id="forms-oauth-pill" class="dec-badge" style="background:rgba(255,255,255,0.08);color:var(--text-dim)">Checking…</span>
-              <div>
-                <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:#34d399">📋 GOOGLE ACCOUNT ACCESS</div>
-                <div id="forms-oauth-detail" style="font-size:11px;color:var(--muted);margin-top:1px">Checking connection status…</div>
-              </div>
-            </div>
-            <button type="button" id="forms-oauth-connect-btn" class="btn-ghost hidden">Connect Google</button>
-          </div>
-          <div style="font-size:10.5px;color:var(--text-dim);margin-top:10px">Uses the same Google connection as Send Emails — connecting/reconnecting there also applies here. The connected account must own or have edit access to this form.</div>
-        </div>
-
         <div class="apppass-toggle-row" style="display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid var(--border-dim);border-radius:8px">
           <label class="switch" style="position:relative;display:inline-block;width:38px;height:21px;flex-shrink:0">
             <input type="checkbox" id="forms-svcacct-enable" style="opacity:0;width:0;height:0">
@@ -623,15 +569,9 @@
 <div id="rejection-email-dialog" class="rejd-overlay" style="display:none;z-index:340;">
   <div class="rejd-card" style="max-width:500px;width:94vw;">
     <div class="rejd-title" style="color:#f87171;">&#x1F6AB; Send Rejection Email</div>
-    <div class="rejd-sub">Sends a considerate decline notice to the candidates you&rsquo;ve checked below. Nothing is sent automatically — only the candidates you explicitly select receive this.</div>
+    <div class="rejd-sub">Sends a considerate decline notice to the candidates you&rsquo;ve checked below via your connected Google account. Nothing is sent automatically — only candidates you explicitly select receive this.</div>
 
     <div id="rej-email-recipients" style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--glass-border);font-size:12px;line-height:1.5;color:var(--text-mid)"></div>
-
-    <label class="field-label" for="rej-email-gmail" style="margin-top:14px">Gmail Address<span class="req-mark">*</span></label>
-    <input class="field-input" id="rej-email-gmail" type="email" placeholder="hr@hopcharge.com" required>
-
-    <label class="field-label" for="rej-email-pass" style="margin-top:10px">Gmail App Password<span class="req-mark">*</span></label>
-    <input class="field-input" id="rej-email-pass" type="password" placeholder="xxxx xxxx xxxx xxxx" required>
 
     <div id="rej-email-status" style="display:none;margin:14px 0 0;padding:11px 14px;border-radius:9px;font-size:13px;line-height:1.6;background:var(--glass-2);border:1px solid var(--glass-border);color:var(--text-mid)"></div>
 
@@ -702,15 +642,9 @@
 <div id="onboard-dialog" class="rejd-overlay" style="display:none;z-index:340;">
   <div class="rejd-card" style="max-width:500px;width:94vw;">
     <div class="rejd-title" style="color:#1F2D59;">&#127881; Send Onboarding Email</div>
-    <div class="rejd-sub">Sends the welcome-to-the-family email with the onboarding form link to the Round 2 candidates you&rsquo;ve marked <b>&#9733; SELECTED</b>. Uses the same Gmail credentials as your Send Emails tab.</div>
+    <div class="rejd-sub">Sends the welcome-to-the-family email with the onboarding form link to the Round 2 candidates you&rsquo;ve marked <b>&#9733; SELECTED</b> via your connected Google account.</div>
 
     <div id="ob-recipients" style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--glass-border);font-size:12px;line-height:1.5;color:var(--text-mid)"></div>
-
-    <label class="field-label" for="ob-gmail" style="margin-top:14px">Gmail Address<span class="req-mark">*</span></label>
-    <input class="field-input" id="ob-gmail" type="email" placeholder="hr@hopcharge.com" required>
-
-    <label class="field-label" for="ob-pass" style="margin-top:10px">Gmail App Password<span class="req-mark">*</span></label>
-    <input class="field-input" id="ob-pass" type="password" placeholder="xxxx xxxx xxxx xxxx" required>
 
     <label class="field-label" for="ob-form" style="margin-top:10px">Onboarding Form Link<span class="req-mark">*</span></label>
     <input class="field-input" id="ob-form" type="url" placeholder="https://forms.google.com/…" required>
@@ -1077,11 +1011,7 @@
       <div class="field-hint" id="r1-api-status" style="margin-top:6px">Each candidate gets a unique single-use link &mdash; so you can tell who booked.</div>
     </div>
 
-    <div style="display:flex;gap:10px;margin-top:12px">
-      <div style="flex:1"><label class="field-label" for="r1-sender" style="font-size:11px">Sender Gmail<span class="req-mark">*</span></label><input id="r1-sender" class="field-input" type="email" placeholder="hr@hopcharge.com" required></div>
-      <div style="flex:1"><label class="field-label" for="r1-pass" style="font-size:11px">App Password<span class="req-mark">*</span></label><input id="r1-pass" class="field-input" type="password" placeholder="xxxx xxxx xxxx xxxx" required></div>
-    </div>
-    <div class="field-hint" style="margin-top:6px">Sender + App Password reused from your Send Emails tab when available.</div>
+    <div class="field-hint" style="margin-top:6px">Emails are sent via your connected Google account (OAuth). Connect on the Send Emails page if not already done.</div>
 
     <div class="rejd-actions">
       <button class="rejd-cancel" onclick="closeR1Invite()">Cancel</button>
@@ -1149,6 +1079,7 @@
 <div id="toast-box"></div>
 
 <script src="/static/js/core.js"></script>
+<script src="/static/js/google-auth.js"></script>
 <script src="/static/js/parser.js"></script>
 <script src="/static/js/email.js"></script>
 <script src="/static/js/replies.js"></script>

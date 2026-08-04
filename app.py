@@ -431,55 +431,37 @@ async def download_results(fmt: str):
 # ──────────────────────────────────────────────
 
 class EmailRequest(BaseModel):
-    send_via: str = "app_password"   # "oauth" (default in the UI) or "app_password" (fallback)
-    gmail_address: Optional[str] = None   # required only when send_via == "app_password"
-    app_password:  Optional[str] = None   # required only when send_via == "app_password"
-    form_link:     str
+    send_via:          Optional[str] = "oauth"
+    gmail_address:     Optional[str] = None
+    app_password:      Optional[str] = None
+    form_link:         str
     tracking_base_url: Optional[str] = None   # e.g. http://localhost:8000
     email_entry_id:    Optional[str] = None   # e.g. entry.123456789 (form email field)
-    manual_emails: Optional[str]  = None   # newline/comma-separated — send without parsed CVs
+    manual_emails:     Optional[str] = None   # newline/comma-separated — send without parsed CVs
 
 
 @app.post("/api/send-emails")
 async def send_emails(req: EmailRequest):
     """
     Send a personalised HopCharge recruitment email to every parsed candidate
-    that has a valid email address.
-
-    Two transports, selected by req.send_via:
-      "oauth"        — uses the connected Gmail account (see gmail_oauth.py);
-                       no password ever passed through this app.
-      "app_password" — SMTP with a Gmail App Password (fallback, unchanged
-                       from before this feature existed).
+    that has a valid email address via the connected Google account (Gmail OAuth).
     """
     from emailer import send_campaign
+    import gmail_oauth
 
     if not req.form_link or not req.form_link.startswith("http"):
         raise HTTPException(status_code=400, detail="A valid Google Forms URL is required.")
 
-    gmail_service = None
-    sender_address = req.gmail_address
+    if not gmail_oauth.is_connected():
+        raise HTTPException(
+            status_code=400,
+            detail="Google account is not connected. Click 'Connect Google Account' above first."
+        )
+    try:
+        gmail_service = gmail_oauth.get_gmail_service()
+    except gmail_oauth.GmailNotConnectedError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
-    if req.send_via == "oauth":
-        import gmail_oauth
-        if not gmail_oauth.is_connected():
-            raise HTTPException(
-                status_code=400,
-                detail="Gmail is not connected. Connect it on the Send Emails page first."
-            )
-        try:
-            gmail_service = gmail_oauth.get_gmail_service()
-        except gmail_oauth.GmailNotConnectedError as exc:
-            raise HTTPException(status_code=400, detail=str(exc))
-        # Use the connected account's own address — never user-typed for OAuth.
-        sender_address = gmail_oauth.public_status().get("connected_email")
-    else:
-        if not req.gmail_address or "@" not in req.gmail_address:
-            raise HTTPException(status_code=400, detail="Invalid sender email address.")
-        if not req.app_password:
-            raise HTTPException(status_code=400, detail="App password is required.")
-
-    # Build manual candidates list if provided (name defaults to email prefix)
     manual_candidates = None
     if req.manual_emails and req.manual_emails.strip():
         import re as _re
@@ -646,28 +628,26 @@ async def delete_form_response(response_id: str):
 # ──────────────────────────────────────────────
 
 class OnboardingEmailRequest(BaseModel):
-    gmail_address: str
-    app_password: str
-    form_link: str
-    response_ids: Optional[List[str]] = None   # required: only these candidates are emailed
+    gmail_address: Optional[str] = None
+    app_password:  Optional[str] = None
+    form_link:     str
+    response_ids:  Optional[List[str]] = None   # required: only these candidates are emailed
 
 
 @app.post("/api/send-onboarding")
 async def send_onboarding_emails(req: OnboardingEmailRequest):
     """
-    Send the onboarding congratulations email to selected (or all) Round 2 candidates.
-    Reads candidate list directly from accepted_candidates.json so no additional
-    state needs to be passed from the frontend.
+    Send the onboarding congratulations email to selected Round 2 candidates via connected Google account.
     """
     from emailer import send_onboarding
     from accepted_store import list_accepted
+    import gmail_oauth
+
+    if not gmail_oauth.is_connected():
+        raise HTTPException(status_code=400, detail="Google account is not connected.")
 
     try:
         all_r2 = list_accepted(stage="round2")
-        # Onboarding must target an explicit set of candidates (the ones marked
-        # SELECTED in the UI). We deliberately do NOT fall back to "everyone in
-        # Round 2" — that previously caused onboarding mail to go to unselected
-        # candidates. An empty/missing list is rejected.
         if not req.response_ids:
             raise HTTPException(
                 status_code=400,
@@ -683,8 +663,6 @@ async def send_onboarding_emails(req: OnboardingEmailRequest):
             )
 
         result = send_onboarding(
-            gmail_address=req.gmail_address.strip(),
-            app_password=req.app_password.strip(),
             form_link=req.form_link.strip(),
             candidates=candidates,
         )
@@ -706,9 +684,9 @@ async def send_onboarding_emails(req: OnboardingEmailRequest):
 # ──────────────────────────────────────────────
 
 class RejectionEmailRequest(BaseModel):
-    gmail_address: str
-    app_password: str
-    response_ids: Optional[List[str]] = None   # required: only these candidates are emailed
+    gmail_address: Optional[str] = None
+    app_password:  Optional[str] = None
+    response_ids:  Optional[List[str]] = None   # required: only these candidates are emailed
 
 
 @app.post("/api/send-rejection")

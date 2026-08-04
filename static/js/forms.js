@@ -10,64 +10,39 @@
 
   /* ── Google account access (same OAuth connection as Send Emails) ── */
   const FORMS_SCOPE = 'https://www.googleapis.com/auth/forms.responses.readonly';
-  const formsOauthPill = document.getElementById('forms-oauth-pill'), formsOauthDetail = document.getElementById('forms-oauth-detail');
-  const formsOauthConnectBtn = document.getElementById('forms-oauth-connect-btn');
   const svcAcctEnable = document.getElementById('forms-svcacct-enable'), svcAcctFields = document.getElementById('forms-svcacct-fields');
-  let _formsOAuthUsable = false;
 
-  function usingOAuthForms(){ return _formsOAuthUsable && !(svcAcctEnable && svcAcctEnable.checked); }
+  function usingOAuthForms(){
+    const auth = window.getGoogleAuthStatus ? window.getGoogleAuthStatus() : { connected: false };
+    const usable = !!auth.connected && (auth.scopes||[]).includes(FORMS_SCOPE);
+    return usable && !(svcAcctEnable && svcAcctEnable.checked);
+  }
 
   function _syncSvcAcctUI(){
     const on = svcAcctEnable && svcAcctEnable.checked;
-    svcAcctFields.classList.toggle('hidden', !on);
-    const knob = svcAcctEnable.closest('.switch').querySelector('.slider');
+    if (svcAcctFields) svcAcctFields.classList.toggle('hidden', !on);
+    const knob = svcAcctEnable?.closest('.switch')?.querySelector('.slider');
     if(knob){ knob.style.setProperty('--knob', on?'translateX(17px)':'translateX(0)'); knob.style.background=on?'#60a5fa':'rgba(255,255,255,0.15)'; }
     validate();
   }
   if (svcAcctEnable) svcAcctEnable.addEventListener('change', ()=>{ svcAcctEnable._userTouched = true; _syncSvcAcctUI(); });
 
-  window.refreshFormsOAuthStatus = async function(){
-    try{
-      const res = await fetch('/api/gmail-oauth/status');
-      const d = await res.json();
-      _formsOAuthUsable = !!d.connected && (d.scopes||[]).includes(FORMS_SCOPE);
-
-      if (_formsOAuthUsable){
-        formsOauthPill.textContent = 'Connected';
-        formsOauthPill.style.background = 'rgba(52,211,153,0.15)'; formsOauthPill.style.color = '#34d399';
-        formsOauthDetail.textContent = d.connected_email ? `Using ${d.connected_email}` : 'Connected';
-        formsOauthConnectBtn.classList.add('hidden');
-        if (svcAcctEnable && !svcAcctEnable._userTouched) svcAcctEnable.checked = false;
-      } else if (d.connected){
-        formsOauthPill.textContent = 'Reconnect needed';
-        formsOauthPill.style.background = 'rgba(251,191,36,0.15)'; formsOauthPill.style.color = '#fbbf24';
-        formsOauthDetail.textContent = 'Connected, but without Forms permission yet — reconnect to grant it.';
-        formsOauthConnectBtn.textContent = 'Reconnect Google';
-        formsOauthConnectBtn.classList.remove('hidden');
-        if (svcAcctEnable && !svcAcctEnable._userTouched) svcAcctEnable.checked = true;
-      } else {
-        formsOauthPill.textContent = 'Not connected';
-        formsOauthPill.style.background = 'rgba(248,113,113,0.15)'; formsOauthPill.style.color = '#f87171';
-        formsOauthDetail.textContent = 'Connect your Google account on the Send Emails page, or use a service account below.';
-        formsOauthConnectBtn.textContent = 'Connect Google';
-        formsOauthConnectBtn.classList.remove('hidden');
-        if (svcAcctEnable && !svcAcctEnable._userTouched) svcAcctEnable.checked = true;
-      }
+  window.addEventListener('google-auth-changed', (e) => {
+    const d = e.detail || {};
+    const usable = !!d.connected && (d.scopes||[]).includes(FORMS_SCOPE);
+    if (svcAcctEnable && !svcAcctEnable._userTouched) {
+      svcAcctEnable.checked = !usable;
       _syncSvcAcctUI();
-    }catch(e){
-      formsOauthPill.textContent = 'Unavailable';
-      formsOauthDetail.textContent = 'Could not reach the server to check Google connection status.';
     }
-  };
-  if (formsOauthConnectBtn) formsOauthConnectBtn.addEventListener('click', ()=>{ window.location.href = '/api/gmail-oauth/authorize'; });
-  refreshFormsOAuthStatus();
+    validate();
+  });
 
   function validate() {
     const idOk = !!formIdEl.value.trim();
-    const credsOk = usingOAuthForms() ? true : credsEl.value.trim().startsWith('{');
+    const credsOk = usingOAuthForms() ? true : (credsEl && credsEl.value.trim().startsWith('{'));
     fetchBtn.disabled = !(idOk && credsOk);
   }
-  [formIdEl, credsEl].forEach(el => el.addEventListener('input', validate));
+  [formIdEl, credsEl].filter(Boolean).forEach(el => el.addEventListener('input', validate));
   formIdEl.addEventListener('blur', () => { if (formIdEl.value.trim()) clearFieldError(formIdEl); else showFieldError(formIdEl, 'Enter the Google Form ID or edit URL.'); });
   credsEl.addEventListener('blur', () => {
     if (usingOAuthForms()) { clearFieldError(credsEl); return; }

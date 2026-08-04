@@ -123,14 +123,6 @@
   _rejEmailDialog?.addEventListener('click', e=>{ if (e.target === _rejEmailDialog) _rejEmailDialog.style.display = 'none'; });
 
   document.getElementById('rej-email-send')?.addEventListener('click', async ()=>{
-    const gmailEl = document.getElementById('rej-email-gmail'), passEl = document.getElementById('rej-email-pass');
-    if (!validateRequired([
-      { input: gmailEl, message: 'Enter the sender Gmail address.' },
-      { input: passEl, message: 'Enter the Gmail App Password.' },
-    ])) return;
-    const gmail = gmailEl.value.trim();
-    const pass  = passEl.value.trim();
-
     const selectedIds = Array.from(_rejSelectedSet);
     if (!selectedIds.length){
       toast('Check at least one candidate first', 'err');
@@ -146,7 +138,7 @@
       const res = await fetch('/api/send-rejection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gmail_address: gmail, app_password: pass, response_ids: selectedIds })
+        body: JSON.stringify({ response_ids: selectedIds })
       });
       const d = await res.json();
       if (!res.ok) throw new Error(errDetail(d, res.status));

@@ -108,70 +108,6 @@ def _upsert(session, model, rows, conflict_col):
     return n
 
 
-def migrate_form_responses(session, src, dry):
-    data = load_json(src / "form_responses.json")
-    if not data:
-        return 0
-    questions = data.get("questions", [])
-    form_id = data.get("form_id")
-    form_title = data.get("form_title")
-    last_synced = parse_dt(data.get("last_synced"))
-    rows = []
-    for resp in data.get("responses", []):
-        rows.append(dict(
-            response_id=resp.get("response_id") or resp.get("responseId"),
-            form_id=form_id, form_title=form_title,
-            name=resp.get("name"), email=resp.get("email"),
-            phone=resp.get("phone"), role=resp.get("role"),
-            answers=resp.get("answers", []), questions=questions,
-            objective_score=resp.get("objective_score"),
-            ai_score=resp.get("ai_score"), total_score=resp.get("total_score"),
-            recommendation=resp.get("recommendation"),
-            submitted_at=parse_dt(resp.get("submitted_at") or resp.get("submittedAt")),
-            last_synced=last_synced,
-        ))
-    rows = [r for r in rows if r["response_id"]]
-    if dry:
-        return len(rows)
-    return _upsert(session, models.FormResponse, rows, "response_id")
-
-
-def migrate_candidates(session, src, dry):
-    data = load_json(src / "candidates.json")
-    if not data:
-        return 0
-    rows = []
-    for c in data:
-        rows.append(dict(
-            full_name=c.get("full_name"), email=c.get("email"),
-            phone_number=c.get("phone_number"), location_city=c.get("location_city"),
-            linkedin_profile=c.get("linkedin_profile"), source_file=c.get("source_file"),
-            summary_objective_profile=c.get("summary_objective_profile"),
-            work_experience=c.get("work_experience", []),
-            education=c.get("education", []), skills=c.get("skills", []),
-            languages=c.get("languages", []),
-            certifications_courses=c.get("certifications_courses", []),
-            internships_projects=c.get("internships_projects", []),
-            awards_achievements=c.get("awards_achievements", []),
-            personal_details=c.get("personal_details", {}),
-            field_confidence=c.get("field_confidence", {}),
-            raw_text=c.get("raw_text"),
-        ))
-    if dry:
-        return len(rows)
-    # candidates has no natural unique key (email can repeat across CVs), so we
-    # de-dupe on (source_file, email): delete-then-insert is overkill for a
-    # one-time migration, so we just insert. Re-running --only candidates would
-    # duplicate; guard by checking emptiness first.
-    existing = session.execute(select(models.Candidate.id)).first()
-    if existing:
-        print("  ℹ️  candidates table already populated — skipping to avoid dupes")
-        return 0
-    for r in rows:
-        session.add(models.Candidate(**r))
-    return len(rows)
-
-
 def migrate_pipeline(session, src, dry, fname, model):
     data = load_json(src / fname)
     if not data:
@@ -320,107 +256,8 @@ def migrate_colleges(session, src, dry):
     return n
 
 
-def migrate_form_tracking(session, src, dry):
-    data = load_json(src / "form_tracking.json")
-    if not data:
-        return 0
-    rows = []
-    for token, t in data.get("tokens", {}).items():
-        rows.append(dict(
-            token=token, email=t.get("email"), name=t.get("name"),
-            issued_at=parse_dt(t.get("issued_at")),
-            click_time=parse_dt(t.get("click_time")),
-            click_count=t.get("click_count", 0),
-            last_click_time=parse_dt(t.get("last_click_time")),
-            submit_time=parse_dt(t.get("submit_time")),
-            time_taken_seconds=t.get("time_taken_seconds"),
-            status=t.get("status"),
-        ))
-    if dry:
-        return len(rows)
-    return _upsert(session, models.FormTracking, rows, "token")
-
-
-def migrate_status_tokens(session, src, dry):
-    data = load_json(src / "status_tokens.json")
-    if not data:
-        return 0
-    rows = []
-    for token, t in data.get("tokens", {}).items():
-        rows.append(dict(
-            token=token, email=t.get("email"),
-        ))
-    if dry:
-        return len(rows)
-    return _upsert(session, models.StatusToken, rows, "token")
-
-
-def migrate_rubrics(session, src, dry):
-    data = load_json(src / "rubrics.json")
-    if not data:
-        return 0
-    rows = []
-    for role_key, r in data.items():
-        rows.append(dict(
-            role_key=role_key, role_name=r.get("role_name"),
-            objective_max=r.get("objective_max"), ai_max=r.get("ai_max"),
-            rubric=r,
-        ))
-    if dry:
-        return len(rows)
-    return _upsert(session, models.ScoringRubric, rows, "role_key")
-
-
-def migrate_calendly(session, src, dry):
-    data = load_json(src / "calendly_invite_log.json")
-    if not data:
-        return 0
-    if dry:
-        return len(data)
-    # Append-only log; skip if already populated to avoid dupes (no natural key).
-    existing = session.execute(select(models.CalendlyInvite.id)).first()
-    if existing:
-        print("  ℹ️  calendly_invites already populated — skipping")
-        return 0
-    for it in data:
-        session.add(models.CalendlyInvite(
-            sent_at=parse_dt(it.get("at")), sender=it.get("sender"),
-            mode=it.get("mode"), link=it.get("link"),
-            total=it.get("total"), sent=it.get("sent"), failed=it.get("failed"),
-            results=it.get("results", []),
-        ))
-    return len(data)
-
-
-def migrate_configs(session, src, dry):
-    cfg_files = {
-        "ai_config": "ai_config.json",
-        "tracking_config": "tracking_config.json",
-        "drive_settings": "drive_settings.json",
-        "drive_sync_state": "drive_sync_state.json",
-        "calendly_settings": "calendly_settings.json",
-        "employee_sheet_settings": "employee_sheet_settings.json",
-    }
-    n = 0
-    for key, fname in cfg_files.items():
-        data = load_json(src / fname)
-        if data is None:
-            continue
-        if not dry:
-            stmt = pg_insert(models.AppConfig).values(
-                config_key=key, value=data
-            ).on_conflict_do_update(
-                index_elements=["config_key"], set_={"value": data}
-            )
-            session.execute(stmt)
-        n += 1
-    return n
-
-
 # ── orchestration ─────────────────────────────────────────────────────────────
 DATASETS = [
-    ("form_responses",     "form_responses.json",     migrate_form_responses),
-    ("candidates",         "candidates.json",         migrate_candidates),
     ("accepted",           "accepted_candidates.json",
         lambda s, src, dry: migrate_pipeline(s, src, dry, "accepted_candidates.json", models.AcceptedCandidate)),
     ("rejected",           "rejected_candidates.json",
@@ -428,11 +265,6 @@ DATASETS = [
     ("selected",           "selected_candidates.json", migrate_selected),
     ("employees",          "employees.json",          migrate_employees),
     ("colleges",           "colleges.json",           migrate_colleges),
-    ("form_tracking",      "form_tracking.json",      migrate_form_tracking),
-    ("status_tokens",      "status_tokens.json",      migrate_status_tokens),
-    ("rubrics",            "rubrics.json",            migrate_rubrics),
-    ("calendly",           "calendly_invite_log.json", migrate_calendly),
-    ("config",             "(several)",               migrate_configs),
 ]
 
 

@@ -98,7 +98,7 @@
     if (rec.form_link){
       const fl = document.createElement('div');
       fl.className = 'cand-qa-item full';
-      fl.innerHTML = `<div class="cand-qa-q">Form Link Sent</div><div class="cand-qa-a" style="word-break:break-all;font-size:12px">${esc(rec.form_link)}</div>`;
+      fl.innerHTML = `<div class="cand-qa-q">Form Link Sent</div><div class="cand-qa-a"><a href="${esc(rec.form_link)}" target="_blank" rel="noopener" style="color:#60a5fa;word-break:break-all">${esc(rec.form_link)}</a></div>`;
       body.appendChild(fl);
     }
 

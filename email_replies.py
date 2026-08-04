@@ -125,9 +125,12 @@ def _b64_decode(data: str) -> str:
 # which is a cosmetic issue, not a correctness one.
 _QUOTE_MARKERS_TEXT = [
     re.compile(r"^[ \t]*-{2,}\s*Original Message\s*-{2,}", re.IGNORECASE | re.MULTILINE),
+    re.compile(r"^[ \t]*-{2,}\s*Forwarded message\s*-{2,}", re.IGNORECASE | re.MULTILINE),
     re.compile(r"^_{5,}\s*$", re.MULTILINE),
     re.compile(r"(?:\n|^)[ \t]*On\s+.*?\s+wrote:\s*", re.IGNORECASE | re.DOTALL),
-    re.compile(r"^From:\s.+\n(?:.*\n){0,3}?^(?:Sent|Date|To|Subject):\s.+$", re.IGNORECASE | re.MULTILINE),
+    re.compile(r"\bOn\b.{0,250}?\bwrote:\s*", re.IGNORECASE | re.DOTALL),
+    re.compile(r"^[ \t]*From:\s.+\n(?:.*\n){0,3}?^(?:Sent|Date|To|Subject):\s.+$", re.IGNORECASE | re.MULTILINE),
+    re.compile(r"^[ \t]*From:\s.+$", re.IGNORECASE | re.MULTILINE),
     re.compile(r"^[ \t]*>", re.MULTILINE),
 ]
 _QUOTE_MARKER_HTML = re.compile(
@@ -140,32 +143,14 @@ def _strip_quoted_text(text: str) -> str:
     thread history re-quoted underneath it."""
     if not text:
         return ""
-    
-    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
-    patterns = [
-        r'\n[ \t]*On\s+.*?\s+wrote:\s*',
-        r'^[ \t]*On\s+.*?\s+wrote:\s*',
-        r'\n[ \t]*-{2,}\s*Original Message\s*-{2,}',
-        r'^[ \t]*-{2,}\s*Original Message\s*-{2,}',
-        r'\n[ \t]*From:\s+.*?\n[ \t]*Sent:',
-        r'\n[ \t]*_{5,}',
-        r'\n[ \t]*>',
-    ]
-    
-    clean = normalized
-    for pat in patterns:
-        m = re.search(pat, clean, flags=re.IGNORECASE | re.DOTALL)
-        if m and m.start() >= 0:
-            clean = clean[:m.start()]
-
-    lines = []
-    for line in clean.split("\n"):
-        if line.strip().startswith(">"):
-            continue
-        lines.append(line)
-
-    res = "\n".join(lines).strip()
-    return res if res else text.strip()
+    cut = len(text)
+    for pattern in _QUOTE_MARKERS_TEXT:
+        m = pattern.search(text)
+        if m and m.start() < cut:
+            if m.start() > 0:
+                cut = m.start()
+    cleaned = text[:cut].rstrip()
+    return cleaned if cleaned else text.strip()
 
 
 def _strip_quoted_html(html: str) -> str:
@@ -275,6 +260,17 @@ def _extract_body(payload: dict) -> tuple[str, str]:
     return text, html
 
 
+def _make_preview(body_text: str, fallback: str, limit: int = 160) -> str:
+    """Short one-line preview for the Replies table — derived from the
+    already quote-stripped body_text, not Gmail's own raw snippet (which
+    can include quote-header text like "On Tue, ... wrote:" right after the
+    real reply when a client doesn't put the quote on its own line)."""
+    text = " ".join((_strip_quoted_text(body_text) or "").split())
+    if not text:
+        text = " ".join((fallback or "").split())
+    return text[:limit] + ("…" if len(text) > limit else "")
+
+
 def _internal_date_to_iso(ms: Optional[str]) -> Optional[str]:
     if not ms:
         return None
@@ -329,7 +325,7 @@ def poll_once() -> dict:
             rec["status"] = "replied"
             rec["reply"] = {
                 "from": _header(headers, "From"),
-                "snippet": reply_msg.get("snippet", ""),
+                "snippet": _make_preview(body_text, reply_msg.get("snippet", "")),
                 "clean_text": clean_text,
                 "intent": intent,
                 "body_text": body_text,

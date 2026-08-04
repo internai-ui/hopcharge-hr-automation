@@ -403,17 +403,13 @@
   _obDialog.addEventListener('click', e => { if (e.target === _obDialog) _obDialog.style.display = 'none'; });
 
   document.getElementById('ob-send').addEventListener('click', async () => {
-    const gmailEl = document.getElementById('ob-gmail'), passEl2 = document.getElementById('ob-pass'), formEl2 = document.getElementById('ob-form');
+    const formEl2 = document.getElementById('ob-form');
     if (!validateRequired([
-      { input: gmailEl, message: 'Enter the sender Gmail address.' },
-      { input: passEl2, message: 'Enter the Gmail App Password.' },
       { input: formEl2, message: 'Enter the onboarding form link.' },
     ])) return;
-    const gmail = gmailEl.value.trim();
-    const pass  = passEl2.value.trim();
-    const form  = formEl2.value.trim();
+    const form = formEl2.value.trim();
 
-    // Onboarding goes ONLY to the candidates explicitly marked SELECTED in Round 2.
+    // Onboarding goes ONLY to candidates explicitly marked SELECTED in Round 2.
     const selectedIds = _all
       .filter(r => (r.stage||'hr')==='round2' && _selectedSet.has(r.response_id))
       .map(r => r.response_id);
@@ -431,8 +427,7 @@
       const res = await fetch('/api/send-onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gmail_address: gmail, app_password: pass, form_link: form,
-                               response_ids: selectedIds })
+        body: JSON.stringify({ form_link: form, response_ids: selectedIds })
       });
       const d = await res.json();
       if (!res.ok) throw new Error(errDetail(d, res.status));
