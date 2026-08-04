@@ -595,6 +595,7 @@
     <div class="results-header" style="margin-bottom:14px">
       <span class="results-title">Declined Pipeline</span>
       <div class="header-controls">
+        <button id="rej-email-btn" class="btn-ghost" style="white-space:nowrap;border-color:rgba(248,113,113,.45);color:#f87171" title="Send the rejection notice to checked candidates" aria-label="Send the rejection notice to checked candidates">&#x1F6AB; Send Rejection Email <span id="rej-email-count" style="opacity:.7">(0 selected)</span></button>
         <div class="search-wrap"><span class="search-icon">&#x2315;</span><input id="rej-search" type="text" placeholder="Search name, email, round&#x2026;"></div>
       </div>
     </div>
@@ -602,16 +603,40 @@
     <div class="resp-table-wrap">
       <table class="resp-table">
         <thead><tr>
+          <th style="width:34px"><input type="checkbox" id="rej-select-all" title="Select all" aria-label="Select all candidates"></th>
           <th>#</th><th>Candidate</th><th>Email</th><th>Phone</th><th>Role</th>
-          <th>Score</th><th>Rejected In</th><th>When</th><th></th><th></th>
+          <th>Score</th><th>Rejected In</th><th>When</th><th>Notified</th><th></th><th></th>
         </tr></thead>
         <tbody id="rej-tbody">
-          <tr><td colspan="10" style="text-align:center;padding:34px;color:var(--text-dim)">No rejected candidates yet. Use the ✕ Reject button on the Form Responses tab.</td></tr>
+          <tr><td colspan="11" style="text-align:center;padding:34px;color:var(--text-dim)">No rejected candidates yet. Use the ✕ Reject button on the Form Responses tab.</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </section>
+
+<!-- ═══ REJECTION EMAIL DIALOG ═══ -->
+<div id="rejection-email-dialog" class="rejd-overlay" style="display:none;z-index:340;">
+  <div class="rejd-card" style="max-width:500px;width:94vw;">
+    <div class="rejd-title" style="color:#f87171;">&#x1F6AB; Send Rejection Email</div>
+    <div class="rejd-sub">Sends a considerate decline notice to the candidates you&rsquo;ve checked below. Nothing is sent automatically — only the candidates you explicitly select receive this.</div>
+
+    <div id="rej-email-recipients" style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--glass-border);font-size:12px;line-height:1.5;color:var(--text-mid)"></div>
+
+    <label class="field-label" for="rej-email-gmail" style="margin-top:14px">Gmail Address<span class="req-mark">*</span></label>
+    <input class="field-input" id="rej-email-gmail" type="email" placeholder="hr@hopcharge.com" required>
+
+    <label class="field-label" for="rej-email-pass" style="margin-top:10px">Gmail App Password<span class="req-mark">*</span></label>
+    <input class="field-input" id="rej-email-pass" type="password" placeholder="xxxx xxxx xxxx xxxx" required>
+
+    <div id="rej-email-status" style="display:none;margin:14px 0 0;padding:11px 14px;border-radius:9px;font-size:13px;line-height:1.6;background:var(--glass-2);border:1px solid var(--glass-border);color:var(--text-mid)"></div>
+
+    <div class="rejd-actions" style="margin-top:20px">
+      <button class="rejd-cancel" id="rej-email-cancel">Cancel</button>
+      <button class="rejd-confirm" id="rej-email-send" style="background:#f87171;border:none;">Send to selected</button>
+    </div>
+  </div>
+</div>
 
 <section id="page-accepted" class="page">
   <div class="shell page-pad-top">

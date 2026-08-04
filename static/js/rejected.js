@@ -2,17 +2,33 @@
 (function(){
   if (!document.getElementById('page-rejected')) return;
   let _rows = [];
+  // Ephemeral, page-local selection for bulk-sending the rejection email —
+  // unlike onboarding's persisted ★ SELECTED flag, this doesn't need to
+  // survive a reload; it's just "who am I about to email right now".
+  const _rejSelectedSet = new Set();
 
   window.loadRejectedPage = async function(){
     try{
       const res = await fetch('/api/rejected');
       const d = await res.json();
       _rows = d.rejected || [];
+      _rejSelectedSet.clear();
       renderRejected(_rows);
     }catch(e){ /* leave placeholder row */ }
   };
 
   function esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function _updateRejEmailCount(){
+    const countEl = document.getElementById('rej-email-count');
+    if (countEl) countEl.textContent = `(${_rejSelectedSet.size} selected)`;
+    const selectAll = document.getElementById('rej-select-all');
+    if (selectAll){
+      const visible = Array.from(document.querySelectorAll('#rej-tbody .rej-select-row'));
+      selectAll.checked = visible.length > 0 && visible.every(cb => cb.checked);
+      selectAll.indeterminate = !selectAll.checked && visible.some(cb => cb.checked);
+    }
+  }
 
   function renderRejected(rows){
     // Stats
@@ -23,18 +39,23 @@
 
     const tbody = document.getElementById('rej-tbody');
     if (!rows.length){
-      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:34px;color:var(--text-dim)">No rejected candidates yet. Use the ✕ Reject button on the Form Responses tab.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:34px;color:var(--text-dim)">No rejected candidates yet. Use the ✕ Reject button on the Form Responses tab.</td></tr>';
+      _updateRejEmailCount();
       return;
     }
     tbody.innerHTML = '';
     rows.forEach((r, i)=>{
       const when = r.rejected_at ? new Date(r.rejected_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—';
       const score = (r.total_score!=null) ? `${r.total_score}/100` : (r.ai_score!=null ? `${r.ai_score}` : '—');
+      const notifiedCell = r.rejection_email_sent_at
+        ? `<span title="${esc(r.rejection_email_sent_at)}" style="font-size:10px;color:#34d399">&#10003; ${new Date(r.rejection_email_sent_at).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span>`
+        : '<span style="opacity:.35;font-size:10px">—</span>';
       const tr = document.createElement('tr');
       tr.style.animationDelay = `${i*25}ms`;
       tr.style.cursor = 'pointer';
       tr.onclick = ()=> openRejectedModal(r);
       tr.innerHTML = `
+        <td onclick="event.stopPropagation()"><input type="checkbox" class="rej-select-row" data-rid="${esc(r.response_id)}" aria-label="Select ${esc(r.name)||'candidate'} for rejection email"></td>
         <td style="color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:10px">${i+1}</td>
         <td><div class="cand-name">${esc(r.name)||'Anonymous'}</div></td>
         <td class="td-email">${esc(r.email)||'<span style="opacity:.35">—</span>'}</td>
@@ -43,6 +64,7 @@
         <td style="font-family:'JetBrains Mono',monospace;font-size:11.5px">${score}</td>
         <td><span class="dec-badge dec-rejected">${esc(r.rejected_round)||'—'}</span></td>
         <td style="font-size:10px;white-space:nowrap;color:var(--text-dim)">${when}</td>
+        <td>${notifiedCell}</td>
         <td><button class="td-view-btn" onclick="event.stopPropagation();this.closest('tr').click()">VIEW</button></td>
         <td><button class="td-view-btn rej-restore-btn" data-rid="${esc(r.response_id)}" style="border-color:rgba(52,211,153,.45);color:#34d399" title="Restore to active pipeline" aria-label="Restore to active pipeline">↩ RESTORE</button></td>`;
       // Wire the restore button via a listener (robust to any characters in
@@ -55,9 +77,100 @@
           restoreRejected(restoreBtn.dataset.rid);
         });
       }
+      const selectCb = tr.querySelector('.rej-select-row');
+      if (selectCb){
+        selectCb.checked = _rejSelectedSet.has(r.response_id);
+        selectCb.addEventListener('change', ()=>{
+          if (selectCb.checked) _rejSelectedSet.add(r.response_id);
+          else _rejSelectedSet.delete(r.response_id);
+          _updateRejEmailCount();
+        });
+      }
       tbody.appendChild(tr);
     });
+    _updateRejEmailCount();
   }
+
+  document.getElementById('rej-select-all')?.addEventListener('change', (e)=>{
+    const checked = e.target.checked;
+    document.querySelectorAll('#rej-tbody .rej-select-row').forEach(cb=>{
+      cb.checked = checked;
+      if (checked) _rejSelectedSet.add(cb.dataset.rid);
+      else _rejSelectedSet.delete(cb.dataset.rid);
+    });
+    _updateRejEmailCount();
+  });
+
+  /* ── Send Rejection Email dialog ── */
+  const _rejEmailDialog = document.getElementById('rejection-email-dialog');
+  document.getElementById('rej-email-btn')?.addEventListener('click', ()=>{
+    document.getElementById('rej-email-status').style.display = 'none';
+    const selected = _rows.filter(r => _rejSelectedSet.has(r.response_id));
+    const who = document.getElementById('rej-email-recipients');
+    if (who){
+      if (selected.length){
+        who.innerHTML = `Will send to <b style="color:#f87171">${selected.length} selected</b> candidate${selected.length!==1?'s':''}: `
+          + selected.map(r=>esc(r.name||r.email)).join(', ');
+        who.style.color = 'var(--text-mid)';
+      } else {
+        who.innerHTML = `No candidates checked yet. Use the checkboxes in the table to pick who receives the rejection notice.`;
+        who.style.color = '#fbbf24';
+      }
+    }
+    _rejEmailDialog.style.display = 'flex';
+  });
+  document.getElementById('rej-email-cancel')?.addEventListener('click', ()=>{ _rejEmailDialog.style.display = 'none'; });
+  _rejEmailDialog?.addEventListener('click', e=>{ if (e.target === _rejEmailDialog) _rejEmailDialog.style.display = 'none'; });
+
+  document.getElementById('rej-email-send')?.addEventListener('click', async ()=>{
+    const gmailEl = document.getElementById('rej-email-gmail'), passEl = document.getElementById('rej-email-pass');
+    if (!validateRequired([
+      { input: gmailEl, message: 'Enter the sender Gmail address.' },
+      { input: passEl, message: 'Enter the Gmail App Password.' },
+    ])) return;
+    const gmail = gmailEl.value.trim();
+    const pass  = passEl.value.trim();
+
+    const selectedIds = Array.from(_rejSelectedSet);
+    if (!selectedIds.length){
+      toast('Check at least one candidate first', 'err');
+      return;
+    }
+
+    const btn = document.getElementById('rej-email-send');
+    const statusBox = document.getElementById('rej-email-status');
+    btn.disabled = true; btn.textContent = 'Sending…';
+    statusBox.style.display = 'none';
+
+    try{
+      const res = await fetch('/api/send-rejection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gmail_address: gmail, app_password: pass, response_ids: selectedIds })
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(errDetail(d, res.status));
+
+      const sent = d.sent || 0, failed = d.failed || 0;
+      const rows = (d.results || []).map(r =>
+        `<div style="font-size:12px;margin-top:4px;">
+           ${r.status === 'sent' ? '&#x2713;' : '&#x2717;'}
+           <b>${esc(r.name)}</b> — ${esc(r.email)}
+           ${r.error ? `<span style="color:#f87171"> (${esc(r.error)})</span>` : ''}
+         </div>`).join('');
+      statusBox.innerHTML = `<b style="color:${failed ? '#fbbf24' : '#34d399'}">
+        ${sent} sent${failed ? ', ' + failed + ' failed' : ' — all done!'}</b>${rows}`;
+      statusBox.style.display = 'block';
+      toast(`Rejection email sent to ${sent} candidate${sent !== 1 ? 's' : ''}`, sent && !failed ? 'ok' : 'inf');
+      loadRejectedPage();
+    }catch(e){
+      statusBox.textContent = 'Error: ' + e.message;
+      statusBox.style.display = 'block';
+      toast('Send failed: ' + e.message, 'err');
+    }finally{
+      btn.disabled = false; btn.textContent = 'Send to selected';
+    }
+  });
 
   function _rejInitials(name){
     const p = String(name||'').trim().split(/\s+/).filter(Boolean);
