@@ -45,6 +45,10 @@
       <span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4" width="14" height="10" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 5l6.5 5 6.5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
       <span class="label-wrap">Send Emails<span class="sub">Automated form dispatch</span></span>
     </button>
+    <button class="sb-item" data-page="replies">
+      <span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 15.5c-3.9 0-7-2.6-7-6s3.1-6 7-6 7 2.6 7 6c0 1.4-.5 2.7-1.4 3.7l.6 2.8-2.9-1.1c-1 .4-2.1.6-3.3.6Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg></span>
+      <span class="label-wrap">Replies<span class="sub" id="sb-replies-unread">Campaign reply inbox</span></span>
+    </button>
     <button class="sb-item" data-page="forms">
       <span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1l7 4v4c0 4-3 7-7 8-4-1-7-4-7-8V5l7-4Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M6 9l2 2 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       <span class="label-wrap">Form Responses<span class="sub">Retrieve &amp; store answers</span></span>
@@ -273,14 +277,51 @@
 
     <div class="email-panel">
       <div class="email-body">
-        <div class="smtp-note">
-          <span class="note-icon">⚠</span>
-          <span>This uses <strong>Gmail SMTP</strong>. You must use a <a href="https://myaccount.google.com/apppasswords" target="_blank">Gmail App Password</a> — not your account password. Generate one via Google Account → Security → 2-Step Verification → App Passwords.</span>
+        <div class="gmail-connect-panel" id="gmail-connect-panel" style="margin:-4px 0 16px;padding:16px 18px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span id="gmail-status-pill" class="dec-badge" style="background:rgba(255,255,255,0.08);color:var(--text-dim)">Checking…</span>
+              <div>
+                <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:#34d399">✉ CONNECT GMAIL</div>
+                <div id="gmail-status-detail" style="font-size:11px;color:var(--muted);margin-top:1px">Checking connection status…</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-shrink:0">
+              <button type="button" id="gmail-connect-btn" class="btn-ghost hidden">Connect Gmail</button>
+              <button type="button" id="gmail-disconnect-btn" class="btn-ghost hidden" style="border-color:rgba(248,113,113,.4);color:#f87171">Disconnect</button>
+            </div>
+          </div>
+          <div style="font-size:10.5px;color:var(--text-dim);margin-top:10px">Uses Google OAuth — no password is ever typed into this app. Drop the client-secret JSON Google gives you into <code>credentials/</code> (same folder as your Forms/Drive service-account file) and it's picked up automatically — no copy-pasting needed. While your Google Cloud OAuth consent screen is in "Testing" status, the connection may need reconnecting roughly every 7 days.</div>
+
+          <button type="button" class="preview-toggle" id="gmail-oauth-settings-toggle" style="margin-top:12px">⚙ Paste OAuth client manually instead</button>
+          <div id="gmail-oauth-settings" class="email-grid full hidden" style="margin-top:12px;gap:14px">
+            <div class="field-group"><label class="field-label" for="gmail-oauth-client-id">OAuth Client ID<span class="req-mark">*</span></label><input id="gmail-oauth-client-id" class="field-input" type="text" placeholder="xxxxxxxx.apps.googleusercontent.com" autocomplete="off"></div>
+            <div class="field-group"><label class="field-label" for="gmail-oauth-client-secret">OAuth Client Secret<span class="req-mark">*</span></label><input id="gmail-oauth-client-secret" class="field-input" type="password" placeholder="GOCSPX-…" autocomplete="off"><span class="field-hint" id="gmail-oauth-mode-hint">Only needed if you don't have a credentials/*.json file for this deployment mode.</span></div>
+            <div style="display:flex;justify-content:flex-end"><button type="button" id="gmail-oauth-save-btn" class="btn-ghost">Save Client Config</button></div>
+          </div>
         </div>
 
-        <div class="email-grid">
-          <div class="field-group"><label class="field-label" for="gmail-addr">Sender Gmail Address<span class="req-mark">*</span></label><input id="gmail-addr" class="field-input" type="email" placeholder="hr@hopcharge.com" autocomplete="email" required></div>
-          <div class="field-group"><label class="field-label" for="gmail-pass">Gmail App Password<span class="req-mark">*</span></label><input id="gmail-pass" class="field-input" type="password" placeholder="xxxx xxxx xxxx xxxx" autocomplete="off" required><span class="field-hint">16-character app password, not your Gmail login</span></div>
+        <div class="apppass-toggle-row" style="display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid var(--border-dim);border-radius:8px">
+          <label class="switch" style="position:relative;display:inline-block;width:38px;height:21px;flex-shrink:0">
+            <input type="checkbox" id="apppass-enable" style="opacity:0;width:0;height:0">
+            <span class="slider" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.15);border-radius:21px;transition:.25s"></span>
+          </label>
+          <div style="flex:1">
+            <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--text-mid)">🔑 USE APP PASSWORD INSTEAD (FALLBACK)</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:1px">Collapses once Gmail is connected via OAuth above. Turn on to send via SMTP with a Gmail App Password instead.</div>
+          </div>
+        </div>
+
+        <div id="apppass-fields" class="hidden">
+          <div class="smtp-note">
+            <span class="note-icon">⚠</span>
+            <span>This uses <strong>Gmail SMTP</strong>. You must use a <a href="https://myaccount.google.com/apppasswords" target="_blank">Gmail App Password</a> — not your account password. Generate one via Google Account → Security → 2-Step Verification → App Passwords.</span>
+          </div>
+
+          <div class="email-grid">
+            <div class="field-group"><label class="field-label" for="gmail-addr">Sender Gmail Address<span class="req-mark">*</span></label><input id="gmail-addr" class="field-input" type="email" placeholder="hr@hopcharge.com" autocomplete="email" required></div>
+            <div class="field-group"><label class="field-label" for="gmail-pass">Gmail App Password<span class="req-mark">*</span></label><input id="gmail-pass" class="field-input" type="password" placeholder="xxxx xxxx xxxx xxxx" autocomplete="off" required><span class="field-hint">16-character app password, not your Gmail login</span></div>
+          </div>
         </div>
         <div class="email-grid full" style="margin-bottom:18px">
           <div class="field-group"><label class="field-label" for="form-link">Google Forms Assessment Link<span class="req-mark">*</span></label><input id="form-link" class="field-input" type="url" placeholder="https://docs.google.com/forms/d/…" required><span class="field-hint">Embedded as a CTA button in every email</span></div>
@@ -343,6 +384,47 @@
           <div id="er-rows"></div>
         </div>
       </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══ EMAIL REPLIES ═══ -->
+<section id="page-replies" class="page">
+  <div class="shell page-pad-top">
+    <div class="page-head">
+      <div class="eyebrow">Module 02b</div>
+      <h1>Email <span class="grad-text">Replies</span></h1>
+      <p>Replies candidates send back to a Gmail-connected campaign, in one place. Reading and marking a reply here only updates this dashboard — it never touches your real Gmail inbox.</p>
+    </div>
+
+    <div id="reply-stats" class="forms-stats" style="margin-bottom:18px">
+      <div class="fstat"><div class="fstat-label">Total Sent</div><div class="fstat-val" id="reply-total">0</div></div>
+      <div class="fstat"><div class="fstat-label">Replied</div><div class="fstat-val" id="reply-replied">0</div></div>
+      <div class="fstat"><div class="fstat-label">Unread</div><div class="fstat-val" id="reply-unread">0</div></div>
+    </div>
+
+    <div class="results-header" style="margin-bottom:14px">
+      <span class="results-title">Inbox</span>
+      <div class="header-controls">
+        <select id="reply-filter" title="Filter" style="background:var(--glass-2);border:1px solid var(--border-dim);border-radius:9px;color:var(--text-on);font-size:13px;padding:8px 12px;cursor:pointer">
+          <option value="all">All</option>
+          <option value="unread">Unread replies</option>
+        </select>
+        <div class="search-wrap"><span class="search-icon">&#x2315;</span><input id="reply-search" type="text" placeholder="Search name, email&#x2026;"></div>
+        <button id="reply-check-now" class="btn-ghost" title="Check Gmail for new replies now" aria-label="Check Gmail for new replies now">&#x21bb; Check now</button>
+      </div>
+    </div>
+
+    <div class="resp-table-wrap">
+      <table class="resp-table">
+        <thead><tr>
+          <th>#</th><th>Candidate</th><th>Email</th><th>Status</th><th>Reply Preview</th><th>Received</th><th></th>
+        </tr></thead>
+        <tbody id="reply-tbody">
+          <tr><td colspan="7" style="text-align:center;padding:34px;color:var(--text-dim)">No campaign emails tracked yet. Connect Gmail and send a campaign from the Send Emails tab.</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </section>
@@ -982,6 +1064,21 @@
   </div>
 </div>
 
+<div id="reply-modal">
+  <div class="cand-modal-scrim" onclick="closeReplyModal()"></div>
+  <div class="cand-modal-box">
+    <button class="cand-modal-close" onclick="closeReplyModal()" aria-label="Close">✕</button>
+    <div class="cand-modal-header">
+      <div class="cand-modal-avatar" id="rm-avatar"></div>
+      <div>
+        <div class="cand-modal-name" id="rm-name">—</div>
+        <div class="cand-modal-meta" id="rm-meta">—</div>
+      </div>
+    </div>
+    <div id="rm-body"></div>
+  </div>
+</div>
+
 <!-- ── MODAL ── -->
 <div id="overlay">
   <div class="modal">
@@ -998,6 +1095,7 @@
 <script src="/static/js/core.js"></script>
 <script src="/static/js/parser.js"></script>
 <script src="/static/js/email.js"></script>
+<script src="/static/js/replies.js"></script>
 <script src="/static/js/forms.js"></script>
 <script src="/static/js/accepted.js"></script>
 <script src="/static/js/analytics.js"></script>

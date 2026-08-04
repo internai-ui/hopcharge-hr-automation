@@ -135,6 +135,14 @@ app.include_router(status_router)
 from employee_db import router as employee_router
 app.include_router(employee_router)
 
+# Gmail OAuth "Connect Gmail" (send + reply tracking) — App Password stays as
+# a fallback, see EmailRequest.send_via below.
+from gmail_oauth import router as gmail_oauth_router
+app.include_router(gmail_oauth_router)
+
+from email_replies import router as email_replies_router
+app.include_router(email_replies_router)
+
 # Sign-in protection (email + password, cookie sessions). OFF by default so
 # local/desktop use is unchanged; set DASHBOARD_AUTH=on in neon.env to require
 # a login when the dashboard is hosted on the web. See auth.py for details.
@@ -423,8 +431,9 @@ async def download_results(fmt: str):
 # ──────────────────────────────────────────────
 
 class EmailRequest(BaseModel):
-    gmail_address: str
-    app_password:  str
+    send_via: str = "app_password"   # "oauth" (default in the UI) or "app_password" (fallback)
+    gmail_address: Optional[str] = None   # required only when send_via == "app_password"
+    app_password:  Optional[str] = None   # required only when send_via == "app_password"
     form_link:     str
     tracking_base_url: Optional[str] = None   # e.g. http://localhost:8000
     email_entry_id:    Optional[str] = None   # e.g. entry.123456789 (form email field)
@@ -437,17 +446,38 @@ async def send_emails(req: EmailRequest):
     Send a personalised HopCharge recruitment email to every parsed candidate
     that has a valid email address.
 
-    Requires a Gmail address and a Gmail App Password (not the account password).
-    See emailer.py for setup instructions.
+    Two transports, selected by req.send_via:
+      "oauth"        — uses the connected Gmail account (see gmail_oauth.py);
+                       no password ever passed through this app.
+      "app_password" — SMTP with a Gmail App Password (fallback, unchanged
+                       from before this feature existed).
     """
     from emailer import send_campaign
 
-    if not req.gmail_address or "@" not in req.gmail_address:
-        raise HTTPException(status_code=400, detail="Invalid sender email address.")
-    if not req.app_password:
-        raise HTTPException(status_code=400, detail="App password is required.")
     if not req.form_link or not req.form_link.startswith("http"):
         raise HTTPException(status_code=400, detail="A valid Google Forms URL is required.")
+
+    gmail_service = None
+    sender_address = req.gmail_address
+
+    if req.send_via == "oauth":
+        import gmail_oauth
+        if not gmail_oauth.is_connected():
+            raise HTTPException(
+                status_code=400,
+                detail="Gmail is not connected. Connect it on the Send Emails page first."
+            )
+        try:
+            gmail_service = gmail_oauth.get_gmail_service()
+        except gmail_oauth.GmailNotConnectedError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        # Use the connected account's own address — never user-typed for OAuth.
+        sender_address = gmail_oauth.public_status().get("connected_email")
+    else:
+        if not req.gmail_address or "@" not in req.gmail_address:
+            raise HTTPException(status_code=400, detail="Invalid sender email address.")
+        if not req.app_password:
+            raise HTTPException(status_code=400, detail="App password is required.")
 
     # Build manual candidates list if provided (name defaults to email prefix)
     manual_candidates = None
@@ -470,11 +500,12 @@ async def send_emails(req: EmailRequest):
             })
 
         summary = send_campaign(
-            gmail_address=req.gmail_address,
+            gmail_address=sender_address,
             app_password=req.app_password,
             form_link=req.form_link,
             tracking_base_url=req.tracking_base_url,
             candidates=manual_candidates,
+            gmail_service=gmail_service,
         )
         try:
             import analytics_hr
