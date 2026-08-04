@@ -27,6 +27,7 @@ Storage shape (output/rejected_candidates.json):
       "rejected_round":  "Round 0 — Form Screening",
       "rejected_reason": "optional free text",
       "rejected_at":     "2026-06-10T09:15:00Z",
+      "rejection_email_sent_at": null,   # set once the rejection notice is sent
     }, ...
   ]
 }
@@ -163,6 +164,7 @@ def _build_reject_entry(src: dict, round_name: str, reason: str = "") -> dict:
         "rejected_round":  (round_name or "").strip() or DEFAULT_ROUNDS[0],
         "rejected_reason": (reason or "").strip(),
         "rejected_at":     _now_iso(),
+        "rejection_email_sent_at": None,   # set by mark_rejection_emailed() once notified
     }
 
 
@@ -181,7 +183,13 @@ def reject_candidate(response_id: str, round_name: str,
 
     with _lock:
         data = _load()
-        # Idempotent: replace existing entry for the same response_id
+        # Idempotent: replace existing entry for the same response_id — but
+        # carry forward rejection_email_sent_at so re-rejecting (e.g. a
+        # different round/reason) doesn't erase the record that a rejection
+        # notice was already sent.
+        existing = next((r for r in data["rejected"] if r.get("response_id") == response_id), None)
+        if existing is not None:
+            entry["rejection_email_sent_at"] = existing.get("rejection_email_sent_at")
         data["rejected"] = [r for r in data["rejected"]
                             if r.get("response_id") != response_id]
         data["rejected"].append(entry)
@@ -205,6 +213,21 @@ def restore_candidate(response_id: str) -> bool:
     if removed:
         logger.info("Restored candidate %s from rejected list", response_id)
     return removed
+
+
+def mark_rejection_emailed(response_id: str) -> bool:
+    """Stamp a rejected candidate as having been sent the rejection notice.
+    Called by app.py's /api/send-rejection after a genuinely successful
+    send (not on failure) so the UI can show who's already been notified.
+    True if the candidate was found and updated."""
+    with _lock:
+        data = _load()
+        entry = next((r for r in data["rejected"] if r.get("response_id") == response_id), None)
+        if entry is None:
+            return False
+        entry["rejection_email_sent_at"] = _now_iso()
+        _save(data)
+    return True
 
 
 def list_rejected() -> list[dict]:

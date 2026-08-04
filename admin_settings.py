@@ -10,7 +10,8 @@ Stored shape (output/admin_settings.json):
 {
   "email": {
     "recruitment": { "subject": "...", "body": "..." },
-    "onboarding":  { "subject": "...", "body": "..." }
+    "onboarding":  { "subject": "...", "body": "..." },
+    "rejection":   { "subject": "...", "body": "..." }
   },
   "thresholds": { "auto_reject": 30, "auto_move": 65 }
 }
@@ -38,7 +39,9 @@ _lock = threading.Lock()
 # DEFAULTS — the editable prose + threshold defaults.
 # The email "body" is the human-readable message; the surrounding HTML chrome
 # (header, button, footer) stays fixed in emailer.py. Placeholders allowed in
-# body: {name}. The button + form link are added by the template automatically.
+# body: {name} (all kinds), {role} (onboarding + rejection only — substituted
+# by emailer.py, left as literal text if absent from a candidate's record).
+# The button + form link are added by the template automatically.
 # ──────────────────────────────────────────────
 
 DEFAULT_RECRUITMENT_SUBJECT = "Thank You for Applying to Hopcharge — Next Steps"
@@ -58,9 +61,19 @@ DEFAULT_RECRUITMENT_BODY = (
 DEFAULT_ONBOARDING_SUBJECT = "Welcome to the Hopcharge Family 🎉"
 DEFAULT_ONBOARDING_BODY = (
     "Congratulations! After a competitive selection process, you stood out — and we "
-    "could not be more excited to welcome you to the Hopcharge family.\n\n"
+    "could not be more excited to welcome you to the Hopcharge family as {role}.\n\n"
     "Before your first day, we need a few details from you to complete the onboarding "
-    "process. Please complete your onboarding form within 3 business days."
+    "process. Please complete your onboarding form within 3 business days so we can "
+    "prepare everything for your arrival on time."
+)
+
+DEFAULT_REJECTION_SUBJECT = "Update on Your Hopcharge Application"
+DEFAULT_REJECTION_BODY = (
+    "Thank you for your interest in joining Hopcharge and for taking the time to apply "
+    "for {role}. After careful consideration, we have decided not to move forward with "
+    "your application at this time.\n\n"
+    "This decision does not diminish the qualities you bring, and we encourage you to "
+    "apply again for future opportunities that match your profile."
 )
 
 DEFAULT_AUTO_REJECT = 30
@@ -70,6 +83,7 @@ DEFAULTS = {
     "email": {
         "recruitment": {"subject": DEFAULT_RECRUITMENT_SUBJECT, "body": DEFAULT_RECRUITMENT_BODY},
         "onboarding":  {"subject": DEFAULT_ONBOARDING_SUBJECT,  "body": DEFAULT_ONBOARDING_BODY},
+        "rejection":   {"subject": DEFAULT_REJECTION_SUBJECT,   "body": DEFAULT_REJECTION_BODY},
     },
     "thresholds": {"auto_reject": DEFAULT_AUTO_REJECT, "auto_move": DEFAULT_AUTO_MOVE},
 }
@@ -103,11 +117,12 @@ def _merged() -> dict:
         "email": {
             "recruitment": dict(DEFAULTS["email"]["recruitment"]),
             "onboarding":  dict(DEFAULTS["email"]["onboarding"]),
+            "rejection":   dict(DEFAULTS["email"]["rejection"]),
         },
         "thresholds": dict(DEFAULTS["thresholds"]),
     }
     e = raw.get("email", {})
-    for k in ("recruitment", "onboarding"):
+    for k in ("recruitment", "onboarding", "rejection"):
         if isinstance(e.get(k), dict):
             for fld in ("subject", "body"):
                 if e[k].get(fld) is not None:
@@ -131,7 +146,7 @@ def get_settings() -> dict:
 
 
 def get_email(kind: str) -> dict:
-    """kind = 'recruitment' | 'onboarding' → {subject, body}."""
+    """kind = 'recruitment' | 'onboarding' | 'rejection' → {subject, body}."""
     return _merged()["email"].get(kind, DEFAULTS["email"].get(kind, {}))
 
 
@@ -245,7 +260,7 @@ async def get_all_settings():
 
 @router.put("/email/{kind}")
 async def update_email(kind: str, body: EmailSettings):
-    if kind not in ("recruitment", "onboarding"):
+    if kind not in ("recruitment", "onboarding", "rejection"):
         raise HTTPException(status_code=404, detail="Unknown email type.")
     with _lock:
         raw = _load_raw()
@@ -255,9 +270,29 @@ async def update_email(kind: str, body: EmailSettings):
     return {"success": True, "email": _merged()["email"][kind]}
 
 
+class EmailPreviewBody(BaseModel):
+    subject: str = Field("", max_length=300)
+    body:    str = Field("", max_length=8000)
+
+
+@router.post("/email/{kind}/preview")
+async def preview_email(kind: str, body: EmailPreviewBody):
+    """Render the ACTUAL email HTML (same templates the real send path
+    uses) with the given draft subject/body plus sample candidate data —
+    never persists anything, purely for the admin editor's live preview."""
+    if kind not in ("recruitment", "onboarding", "rejection"):
+        raise HTTPException(status_code=404, detail="Unknown email type.")
+    try:
+        from emailer import render_email_preview
+        preview = render_email_preview(kind, body.subject, body.body)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Could not render preview: {exc}")
+    return {"success": True, **preview}
+
+
 @router.post("/email/{kind}/reset")
 async def reset_email(kind: str):
-    if kind not in ("recruitment", "onboarding"):
+    if kind not in ("recruitment", "onboarding", "rejection"):
         raise HTTPException(status_code=404, detail="Unknown email type.")
     with _lock:
         raw = _load_raw()

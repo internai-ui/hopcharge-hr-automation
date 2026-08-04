@@ -699,3 +699,63 @@ async def send_onboarding_emails(req: OnboardingEmailRequest):
         raise HTTPException(status_code=400, detail=str(exc))
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ──────────────────────────────────────────────
+# Rejection email — sent to explicitly-selected rejected candidates
+# ──────────────────────────────────────────────
+
+class RejectionEmailRequest(BaseModel):
+    gmail_address: str
+    app_password: str
+    response_ids: Optional[List[str]] = None   # required: only these candidates are emailed
+
+
+@app.post("/api/send-rejection")
+async def send_rejection_emails(req: RejectionEmailRequest):
+    """
+    Send the rejection notice to explicitly-selected candidates from the
+    Rejected tab. Mirrors /api/send-onboarding's safety pattern: an
+    empty/missing response_ids list is rejected outright rather than
+    defaulting to "everyone rejected" — sending mail is a one-way action
+    that must be an explicit choice, not an accidental bulk default.
+    """
+    from emailer import send_rejection
+    import rejected_store
+
+    if not req.response_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="No candidates selected. Check candidates in the Rejected tab before sending."
+        )
+    wanted = set(req.response_ids)
+    candidates = [c for c in rejected_store.list_rejected() if c.get("response_id") in wanted]
+
+    if not candidates:
+        raise HTTPException(
+            status_code=400,
+            detail="None of the selected candidates are in the Rejected list."
+        )
+
+    try:
+        result = send_rejection(
+            gmail_address=req.gmail_address.strip(),
+            app_password=req.app_password.strip(),
+            candidates=candidates,
+        )
+        # Only stamp candidates whose send genuinely succeeded — a failed
+        # send must stay retryable, not silently marked as notified.
+        for r in result.get("results", []):
+            if r.get("status") == "sent" and r.get("response_id"):
+                rejected_store.mark_rejection_emailed(r["response_id"])
+        try:
+            import analytics_hr
+            analytics_hr.log_event("email_sent", {"count": int(result.get("sent", 0)), "kind": "rejection"})
+        except Exception:
+            pass
+        return JSONResponse(content={"success": True, **result})
+
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc))

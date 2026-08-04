@@ -495,17 +495,7 @@ ONBOARD_HTML = """\
           <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#5b6472;">
             Dear <strong style="color:#1F2D59;">{name}</strong>,
           </p>
-          <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#5b6472;">
-            We are thrilled to welcome you to <strong style="color:#1F2D59;">Hopcharge</strong>.
-            After a competitive selection process, you stood out — and we could not be more
-            excited to have you join us as <strong style="color:#1F2D59;">{role_display}</strong>.
-          </p>
-          <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#5b6472;">
-            Before your first day, we need a few details from you to complete the onboarding
-            process. Please take a few minutes to fill in the form below — it covers everything
-            HR needs to get you set up from day one.
-          </p>
-
+          {body_html}
           <!-- CTA -->
           <div style="margin:0 0 22px;">
             <a href="{form_link}"
@@ -516,11 +506,6 @@ ONBOARD_HTML = """\
           </div>
 
           {status_block}
-
-          <p style="margin:0;font-size:13px;line-height:1.7;color:#5b6472;">
-            Please complete this form within <strong style="color:#3a4150;">3 business days</strong>
-            so we can prepare everything for your arrival on time.
-          </p>
         </td></tr>
 
         <!-- ── MILESTONE STRIP ── -->
@@ -584,9 +569,9 @@ Welcome to the Hopcharge Family!
 
 Dear {name},
 
-We are thrilled to welcome you to Hopcharge as {role_display}.
+{body_text}
 
-Please complete your onboarding form within 3 business days:
+Complete your onboarding form here:
 {form_link}
 
 What happens next:
@@ -624,9 +609,16 @@ def _build_onboarding_message(
 
     try:
         from admin_settings import get_email
-        _ob_subject = get_email("onboarding").get("subject") or ONBOARD_SUBJECT
+        _ob_cfg = get_email("onboarding")
+        _ob_subject = _ob_cfg.get("subject") or ONBOARD_SUBJECT
+        _ob_body = (_ob_cfg.get("body") or "").replace("{name}", safe_name).replace("{role}", role_display)
     except Exception:
         _ob_subject = ONBOARD_SUBJECT
+        _ob_body = (
+            "Congratulations! After a competitive selection process, you stood out — and we "
+            "could not be more excited to welcome you to Hopcharge as " + role_display + "."
+        )
+    body_html = _body_to_html(_ob_body)
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = _ob_subject
@@ -637,7 +629,7 @@ def _build_onboarding_message(
         ONBOARD_TEXT.format(
             name=safe_name, first_name=first_name,
             email=recipient_email, form_link=form_link,
-            role_display=role_display,
+            role_display=role_display, body_text=_ob_body,
         ),
         "plain", _charset="utf-8",
     ))
@@ -647,6 +639,7 @@ def _build_onboarding_message(
             email=recipient_email, form_link=form_link,
             role_display=role_display,
             sender=sender_address, status_block=status_block,
+            body_html=body_html,
         ),
         "html", _charset="utf-8",
     ))
@@ -702,3 +695,207 @@ def send_onboarding(
     failed = sum(1 for r in results if r["status"] == "failed")
     return {"total": len(candidates), "sent": sent, "failed": failed,
             "skipped_no_email": skipped, "results": results}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# REJECTION EMAIL — sent to candidates HR has decided not to move forward with
+# ══════════════════════════════════════════════════════════════════════════════
+
+REJECTION_SUBJECT = "Update on Your Hopcharge Application"
+
+REJECTION_HTML = """\
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Hopcharge — Application Update</title></head>
+<body style="margin:0;padding:0;background:#eef1f6;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f6;padding:28px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #e6e9f0;border-radius:12px;overflow:hidden;">
+        <tr><td style="background:#1F2D59;padding:30px 40px;">
+          <img src="cid:hopcharge_logo_white" alt="Hopcharge" height="30" style="display:block;height:30px;width:auto;border:0;outline:none;text-decoration:none;">
+          <div style="color:#9FB0D8;font-size:11px;letter-spacing:3px;text-transform:uppercase;margin-top:10px;">Recruitment</div>
+        </td></tr>
+        <tr><td style="padding:34px 40px;">
+          <div style="color:#1F2D59;font-size:22px;font-weight:700;margin-bottom:16px;">Dear {name},</div>
+          {body_html}
+          <hr style="border:none;border-top:1px solid #e6e9f0;margin:24px 0;">
+          <p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#5b6472;">We appreciate the time and effort you invested in your application, and we wish you the very best in your future endeavors.</p>
+          <p style="margin:0;font-size:15px;line-height:1.7;color:#5b6472;">Warm regards,<br><strong style="color:#1F2D59;">Hopcharge Recruitment Team</strong></p>
+        </td></tr>
+        <tr><td style="padding:20px 40px 26px;border-top:1px solid #eef1f6;">
+          <p style="margin:0 0 8px;font-size:13px;color:#5b6472;">Questions? Reply to this email.</p>
+          <p style="margin:0;font-size:11px;line-height:1.6;color:#9aa3b6;">This email was sent to {email} regarding your Hopcharge application.<br>&#169; 2026 Hopcharge. All rights reserved.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
+"""
+
+REJECTION_TEXT = """\
+Dear {name},
+
+{body_text}
+
+We appreciate the time and effort you invested in your application, and we wish you the very best in your future endeavors.
+
+Warm regards,
+Hopcharge Recruitment Team
+"""
+
+
+def _build_rejection_message(
+    sender_address: str,
+    recipient_name: str,
+    recipient_email: str,
+    role: str = "",
+) -> MIMEMultipart:
+    """Compose the considerate rejection notice. No CTA button — there is
+    nothing left for the candidate to do — but the same brand chrome + inline
+    logo as the recruitment email."""
+    safe_name = _sanitize_name(recipient_name)
+    role_display = role.replace("_", " ").title() if role else ""
+
+    try:
+        from admin_settings import get_email
+        _rej_cfg = get_email("rejection")
+        _rej_subject = _rej_cfg.get("subject") or REJECTION_SUBJECT
+        _rej_body = (_rej_cfg.get("body") or "").replace("{name}", safe_name).replace("{role}", role_display)
+    except Exception:
+        _rej_subject = REJECTION_SUBJECT
+        _rej_body = (
+            "Thank you for your interest in joining Hopcharge and for taking the time to "
+            "apply. After careful consideration, we have decided not to move forward with "
+            "your application at this time."
+        )
+    body_html = _body_to_html(_rej_body)
+
+    msg = MIMEMultipart("related")
+    msg["Subject"] = _rej_subject
+    msg["From"] = f"Hopcharge Recruitment <{sender_address}>"
+    msg["To"] = recipient_email
+
+    alt = MIMEMultipart("alternative")
+    alt.attach(MIMEText(
+        REJECTION_TEXT.format(name=safe_name, body_text=_rej_body),
+        "plain", _charset="utf-8",
+    ))
+    alt.attach(MIMEText(
+        REJECTION_HTML.format(name=safe_name, email=recipient_email, body_html=body_html),
+        "html", _charset="utf-8",
+    ))
+    msg.attach(alt)
+
+    lp = _logo_path()
+    if lp is not None:
+        try:
+            img = MIMEImage(lp.read_bytes())
+            img.add_header("Content-ID", f"<{LOGO_CID}>")
+            img.add_header("Content-Disposition", "inline", filename="hopcharge-white.png")
+            msg.attach(img)
+        except Exception as exc:
+            logger.warning("Could not embed email logo: %s", exc)
+    return msg
+
+
+def send_rejection(
+    gmail_address: str,
+    app_password: str,
+    candidates: list,
+) -> dict:
+    """
+    Send the rejection notice to a list of candidates.
+    `candidates` should be a list of rejected-candidate dicts (name, email,
+    role, response_id) — see rejected_store.py.
+    """
+    valid = [c for c in candidates if c.get("email") and "@" in c["email"]]
+    skipped = len(candidates) - len(valid)
+
+    results = []
+    context = ssl.create_default_context()
+
+    try:
+        with SMTP_IPv4("smtp.gmail.com", 587, timeout=10) as server:
+            server.ehlo()
+            server.starttls(context=context)
+            if server.has_extn("SMTPUTF8"):
+                server.enable_smtputf8()
+            server.login(gmail_address, app_password)
+
+            for cand in valid:
+                name  = (cand.get("name") or "").strip() or "Candidate"
+                email = cand["email"].strip()
+                role  = cand.get("role", "")
+                try:
+                    msg = _build_rejection_message(gmail_address, name, email, role)
+                    server.sendmail(gmail_address, email, msg.as_bytes())
+                    results.append({"name": name, "email": email,
+                                     "response_id": cand.get("response_id"), "status": "sent"})
+                    logger.info("Rejection sent → %s <%s>", name, email)
+                except Exception as exc:
+                    results.append({"name": name, "email": email,
+                                     "response_id": cand.get("response_id"),
+                                     "status": "failed", "error": str(exc)})
+                    logger.error("Rejection failed → %s <%s>: %s", name, email, exc)
+
+    except smtplib.SMTPAuthenticationError:
+        raise ValueError(
+            "Gmail authentication failed. Check the sender address and App Password.")
+    except OSError as exc:
+        raise RuntimeError(f"Network error: {exc}")
+
+    sent   = sum(1 for r in results if r["status"] == "sent")
+    failed = sum(1 for r in results if r["status"] == "failed")
+    return {"total": len(candidates), "sent": sent, "failed": failed,
+            "skipped_no_email": skipped, "results": results}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# EMAIL PREVIEW — renders the exact HTML the real send path produces, with
+# sample candidate data, for the Admin Settings editor. Never touches
+# admin_settings.py itself and never sends anything.
+# ══════════════════════════════════════════════════════════════════════════════
+
+_PREVIEW_SAMPLE = {
+    "name": "Jordan Rivera",
+    "email": "candidate@example.com",
+    "role": "Operations Specialist",
+    "form_link": "https://docs.google.com/forms/d/e/1FAIpQLSample/viewform",
+}
+
+
+def render_email_preview(kind: str, subject: str, body: str) -> dict:
+    """Render {subject, html} for kind in ('recruitment', 'onboarding',
+    'rejection') using the CALLER-SUPPLIED subject/body (not whatever is
+    currently saved) plus fixed sample candidate data, through the same
+    HTML_TEMPLATE/ONBOARD_HTML/REJECTION_HTML the real send path uses — so
+    what the admin sees is pixel-accurate, not a hand-approximated preview."""
+    s = _PREVIEW_SAMPLE
+    safe_name = _sanitize_name(s["name"])
+    body_text = (body or "").replace("{name}", safe_name).replace("{role}", s["role"])
+    body_html = _body_to_html(body_text)
+
+    if kind == "recruitment":
+        html = HTML_TEMPLATE.format(
+            name=safe_name, email=s["email"], form_link=s["form_link"],
+            sender=s["email"], status_block="", body_html=body_html,
+        )
+    elif kind == "onboarding":
+        first_name = safe_name.split()[0] if safe_name else "there"
+        html = ONBOARD_HTML.format(
+            name=safe_name, first_name=first_name, email=s["email"],
+            form_link=s["form_link"], role_display=s["role"],
+            sender=s["email"], status_block="", body_html=body_html,
+        )
+    elif kind == "rejection":
+        html = REJECTION_HTML.format(name=safe_name, email=s["email"], body_html=body_html)
+    else:
+        raise ValueError(f"Unknown email kind: {kind!r}")
+
+    # The real templates embed the logo via a MIME attachment (cid:); a preview
+    # has no attachment context, so point it at the same static asset the
+    # sidebar uses instead of leaving a broken image icon.
+    html = html.replace("cid:hopcharge_logo_white", "/static/assets/hopcharge-white.png")
+
+    return {"subject": subject or "", "html": html}

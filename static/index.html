@@ -1226,14 +1226,23 @@
         <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;color:var(--text-on)">Recruitment email</div>
         <span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);background:var(--violet-dim);border-radius:5px;padding:3px 9px">Sent at form dispatch</span>
       </div>
-      <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">The first email candidates receive, with the assessment-form link. Use <code style="background:var(--glass-2);padding:1px 5px;border-radius:4px">{name}</code> to insert the candidate's name. The header, button and footer stay fixed.</div>
+      <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">The first email candidates receive, with the assessment-form link. The header, button and footer stay fixed — only the greeting text below is editable.</div>
       <label for="adm-rec-subject" style="display:block;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">Subject<span class="req-mark">*</span></label>
       <input type="text" id="adm-rec-subject" class="field-input" required style="margin-bottom:16px" placeholder="Email subject line">
-      <label for="adm-rec-body" style="display:block;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">Body (paragraphs separated by a blank line)<span class="req-mark">*</span></label>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+        <label for="adm-rec-body" style="font-size:12px;font-weight:600;color:var(--text-on)">Body (paragraphs separated by a blank line)<span class="req-mark">*</span></label>
+        <div style="display:flex;gap:6px"><button type="button" class="adm-token-btn" data-target="adm-rec-body" data-token="{name}">+ {name}</button></div>
+      </div>
       <textarea id="adm-rec-body" rows="9" class="field-input" required style="resize:vertical;line-height:1.6" placeholder="Email body text…"></textarea>
-      <div style="display:flex;gap:10px;align-items:center;margin-top:14px">
+      <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap">
         <button class="btn-send" id="adm-rec-save">Save recruitment email</button>
         <button class="btn-ghost" id="adm-rec-reset">Reset to default</button>
+        <button class="btn-ghost adm-preview-toggle" type="button" data-kind="recruitment">👁 Preview</button>
+      </div>
+      <div id="adm-recruitment-preview-wrap" class="hidden adm-preview-wrap">
+        <div style="font-size:11px;color:var(--text-dim);margin:14px 0 8px">Live preview — sample candidate data, exact email layout.</div>
+        <div id="adm-recruitment-preview-subject" class="adm-preview-subject">Subject: —</div>
+        <iframe id="adm-recruitment-preview-frame" sandbox="" class="adm-preview-frame"></iframe>
       </div>
     </div>
 
@@ -1243,14 +1252,55 @@
         <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;color:var(--text-on)">Onboarding email</div>
         <span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);background:var(--green-dim);border-radius:5px;padding:3px 9px">Sent on onboarding</span>
       </div>
-      <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">The welcome email sent when a candidate is onboarded. The subject is editable here; the rich body layout is managed in the template.</div>
+      <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">The welcome email sent when a candidate is onboarded. The header, button and footer stay fixed — only the greeting text below is editable.</div>
       <label for="adm-ob-subject" style="display:block;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">Subject<span class="req-mark">*</span></label>
       <input type="text" id="adm-ob-subject" class="field-input" required style="margin-bottom:16px" placeholder="Onboarding subject line">
-      <label for="adm-ob-body" style="display:block;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">Body reference (not yet sent — shown for record)<span class="req-mark">*</span></label>
-      <textarea id="adm-ob-body" rows="5" class="field-input" required style="resize:vertical;line-height:1.6" placeholder="Onboarding body…"></textarea>
-      <div style="display:flex;gap:10px;align-items:center;margin-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+        <label for="adm-ob-body" style="font-size:12px;font-weight:600;color:var(--text-on)">Body (paragraphs separated by a blank line)<span class="req-mark">*</span></label>
+        <div style="display:flex;gap:6px">
+          <button type="button" class="adm-token-btn" data-target="adm-ob-body" data-token="{name}">+ {name}</button>
+          <button type="button" class="adm-token-btn" data-target="adm-ob-body" data-token="{role}">+ {role}</button>
+        </div>
+      </div>
+      <textarea id="adm-ob-body" rows="6" class="field-input" required style="resize:vertical;line-height:1.6" placeholder="Onboarding body…"></textarea>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap">
         <button class="btn-send" id="adm-ob-save">Save onboarding email</button>
         <button class="btn-ghost" id="adm-ob-reset">Reset to default</button>
+        <button class="btn-ghost adm-preview-toggle" type="button" data-kind="onboarding">👁 Preview</button>
+      </div>
+      <div id="adm-onboarding-preview-wrap" class="hidden adm-preview-wrap">
+        <div style="font-size:11px;color:var(--text-dim);margin:14px 0 8px">Live preview — sample candidate data, exact email layout.</div>
+        <div id="adm-onboarding-preview-subject" class="adm-preview-subject">Subject: —</div>
+        <iframe id="adm-onboarding-preview-frame" sandbox="" class="adm-preview-frame"></iframe>
+      </div>
+    </div>
+
+    <!-- Rejection email -->
+    <div class="ccard" style="margin-bottom:22px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;color:var(--text-on)">Rejection email</div>
+        <span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#f87171;background:rgba(248,113,113,.14);border-radius:5px;padding:3px 9px">Sent manually from Rejected tab</span>
+      </div>
+      <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">The considerate decline notice you can send to candidates from the Rejected tab. Nothing is sent automatically — you select who receives it there.</div>
+      <label for="adm-rej-subject" style="display:block;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">Subject<span class="req-mark">*</span></label>
+      <input type="text" id="adm-rej-subject" class="field-input" required style="margin-bottom:16px" placeholder="Rejection subject line">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+        <label for="adm-rej-body" style="font-size:12px;font-weight:600;color:var(--text-on)">Body (paragraphs separated by a blank line)<span class="req-mark">*</span></label>
+        <div style="display:flex;gap:6px">
+          <button type="button" class="adm-token-btn" data-target="adm-rej-body" data-token="{name}">+ {name}</button>
+          <button type="button" class="adm-token-btn" data-target="adm-rej-body" data-token="{role}">+ {role}</button>
+        </div>
+      </div>
+      <textarea id="adm-rej-body" rows="6" class="field-input" required style="resize:vertical;line-height:1.6" placeholder="Rejection body…"></textarea>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap">
+        <button class="btn-send" id="adm-rej-save">Save rejection email</button>
+        <button class="btn-ghost" id="adm-rej-reset">Reset to default</button>
+        <button class="btn-ghost adm-preview-toggle" type="button" data-kind="rejection">👁 Preview</button>
+      </div>
+      <div id="adm-rejection-preview-wrap" class="hidden adm-preview-wrap">
+        <div style="font-size:11px;color:var(--text-dim);margin:14px 0 8px">Live preview — sample candidate data, exact email layout.</div>
+        <div id="adm-rejection-preview-subject" class="adm-preview-subject">Subject: —</div>
+        <iframe id="adm-rejection-preview-frame" sandbox="" class="adm-preview-frame"></iframe>
       </div>
     </div>
 
