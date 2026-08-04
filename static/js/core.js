@@ -209,7 +209,8 @@ function goToPage(name) {
   document.querySelectorAll('.sb-item').forEach(b => b.classList.toggle('active', b.dataset.page === name));
   window.scrollTo({ top:0, behavior:'auto' });
   closeNav();
-  if (name === 'email') refreshEmailCount();
+  if (name === 'email') { refreshEmailCount(); if (window.refreshGmailStatus) window.refreshGmailStatus(); }
+  if (name === 'replies' && window.loadRepliesPage) window.loadRepliesPage();
   if (name === 'admin' && window.loadAdminSettings) window.loadAdminSettings();
 }
 document.querySelectorAll('.sb-item[data-page]').forEach(b => b.addEventListener('click', () => goToPage(b.dataset.page)));

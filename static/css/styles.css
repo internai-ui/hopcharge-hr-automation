@@ -595,8 +595,8 @@ input.invalid:focus, select.invalid:focus, textarea.invalid:focus {
 @keyframes pulse { from{opacity:1} to{opacity:0.55} }
 
 /* ── Candidate detail modal ── */
-#cand-modal, #col-modal, #discover-modal { display:none; position:fixed; inset:0; z-index:9000; align-items:center; justify-content:center; }
-#cand-modal.open, #col-modal.open, #discover-modal.open { display:flex; }
+#cand-modal, #col-modal, #discover-modal, #reply-modal { display:none; position:fixed; inset:0; z-index:9000; align-items:center; justify-content:center; }
+#cand-modal.open, #col-modal.open, #discover-modal.open, #reply-modal.open { display:flex; }
 .cand-modal-scrim { position:absolute; inset:0; background:rgba(31,45,89,.18); backdrop-filter:blur(6px); }
 .cand-modal-box {
   position:relative; z-index:1; background:var(--bg-card,#ffffff);

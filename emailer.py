@@ -12,6 +12,7 @@ Gmail setup (one-time):
      Do NOT use your regular Gmail password — SMTP will reject it.
 """
 
+import base64
 import json
 import logging
 import smtplib
@@ -22,6 +23,8 @@ from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from pathlib import Path
 from typing import Optional
+
+from googleapiclient.errors import HttpError
 
 from config import OUTPUT_DIR
 
@@ -279,6 +282,7 @@ def send_campaign(
     form_link: str,
     candidates: Optional[list[dict]] = None,
     tracking_base_url: Optional[str] = None,
+    gmail_service=None,
 ) -> dict:
     """
     Send a personalised email to every candidate that has a valid email address.
@@ -286,7 +290,10 @@ def send_campaign(
     Parameters
     ----------
     gmail_address     : str   The Gmail account used to send (e.g. hr@hopcharge.com).
-    app_password      : str   A Gmail App Password (not the account password).
+                              With gmail_service set, this is the connected OAuth
+                              account's own address (used only for the "From" header
+                              and the reply-to hint in the template) — not user-typed.
+    app_password      : str   A Gmail App Password. Ignored when gmail_service is set.
     form_link         : str   The Google Forms URL (used as fallback / stored as base).
     candidates        : list  Optional — uses the parsed JSON output if not supplied.
     tracking_base_url : str   Optional — if set (e.g. "https://hr.hopcharge.com" or
@@ -294,6 +301,12 @@ def send_campaign(
                               "{tracking_base_url}/t/{token}" so we can measure the
                               time each candidate takes to complete the form. If not
                               set, the raw form_link is used (no timing).
+    gmail_service      : Resource  Optional — a Gmail API service object (see
+                              gmail_oauth.get_gmail_service()). When provided, mail is
+                              sent via the Gmail API instead of SMTP + App Password,
+                              and each send is registered with email_replies for
+                              reply tracking. When None (default), behaviour is
+                              unchanged from before this feature existed.
 
     Returns
     -------
@@ -317,7 +330,6 @@ def send_campaign(
 
     results = []
     tracked = 0
-    context = ssl.create_default_context()
 
     # If tracking is enabled, import the tracking module lazily
     _ft = None
@@ -329,62 +341,104 @@ def send_campaign(
             logger.warning("Tracking unavailable (%s) — sending raw form links.", exc)
             _ft = None
 
-    try:
-        with SMTP_IPv4("smtp.gmail.com", 587, timeout=10) as server:
-            server.ehlo()
-            server.starttls(context=context)
-            # Enable UTF8 support for headers/content
-            if server.has_extn("SMTPUTF8"):
-                server.enable_smtputf8()
-            server.login(gmail_address, app_password)
+    def _candidate_link(email: str, name: str) -> str:
+        nonlocal tracked
+        if not _ft:
+            return form_link
+        try:
+            token = _ft.issue_token(email, name)
+            tracked += 1
+            return f"{tracking_base_url}/t/{token}"
+        except Exception as exc:
+            logger.warning("Could not issue token for %s: %s", email, exc)
+            return form_link
 
-            for cand in valid:
-                name  = (cand.get("full_name") or "").strip() or "Applicant"
-                email = cand["email"].strip()
-
-                # Build this candidate's link: tracking redirect if enabled,
-                # otherwise the raw form link.
-                candidate_link = form_link
-                if _ft:
-                    try:
-                        token = _ft.issue_token(email, name)
-                        candidate_link = f"{tracking_base_url}/t/{token}"
-                        tracked += 1
-                    except Exception as exc:
-                        logger.warning("Could not issue token for %s: %s", email, exc)
-                        candidate_link = form_link
-
+    if gmail_service is not None:
+        # ── Gmail API transport (OAuth) ──
+        for cand in valid:
+            name  = (cand.get("full_name") or "").strip() or "Applicant"
+            email = cand["email"].strip()
+            candidate_link = _candidate_link(email, name)
+            try:
+                msg = _build_message(gmail_address, name, email, candidate_link)
+                raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("ascii")
+                sent_msg = gmail_service.users().messages().send(
+                    userId="me", body={"raw": raw}
+                ).execute()
+                results.append({"name": name, "email": email, "status": "sent"})
+                logger.info("Sent (Gmail API) → %s <%s>", name, email)
                 try:
-                    msg = _build_message(gmail_address, name, email, candidate_link)
-                    # Use as_bytes() and encode to ensure proper UTF-8 handling with SMTP
-                    msg_bytes = msg.as_bytes()
-                    server.sendmail(gmail_address, email, msg_bytes)
-                    results.append({"name": name, "email": email, "status": "sent"})
-                    logger.info("Sent  → %s <%s>", name, email)
-
+                    import email_replies
+                    email_replies.register_sent(
+                        sent_msg.get("threadId"), sent_msg.get("id"),
+                        email, name, form_link,
+                    )
                 except Exception as exc:
-                    results.append({"name": name, "email": email,
-                                    "status": "failed", "error": str(exc)})
-                    logger.error("Failed → %s <%s>: %s", name, email, exc)
+                    # A broken replies store must never block sending.
+                    logger.warning("Reply tracking registration failed for %s "
+                                    "(send still succeeded): %s", email, exc)
+            except HttpError as exc:
+                if exc.status_code in (401, 403):
+                    raise ValueError(
+                        "Gmail connection has expired or was revoked. "
+                        "Please reconnect Gmail on the Send Emails page."
+                    )
+                results.append({"name": name, "email": email,
+                                "status": "failed", "error": str(exc)})
+                logger.error("Failed (Gmail API) → %s <%s>: %s", name, email, exc)
+            except Exception as exc:
+                results.append({"name": name, "email": email,
+                                "status": "failed", "error": str(exc)})
+                logger.error("Failed (Gmail API) → %s <%s>: %s", name, email, exc)
 
-    except smtplib.SMTPAuthenticationError:
-        raise ValueError(
-            "Gmail authentication failed. Verify the sender address and ensure "
-            "you are using a Gmail App Password, not your account password."
-        )
-    except OSError as exc:
-        # Network connectivity issues
-        raise RuntimeError(
-            f"Network error connecting to Gmail SMTP:\n"
-            f"  Error: {exc}\n"
-            f"  Possible causes:\n"
-            f"    • No internet connection\n"
-            f"    • Firewall blocking port 587\n"
-            f"    • Corporate network restrictions\n"
-            f"  Try: Restart your internet or use a different network"
-        )
-    except Exception as exc:
-        raise RuntimeError(f"SMTP connection error: {exc}")
+    else:
+        # ── SMTP transport (App Password, fallback) ──
+        context = ssl.create_default_context()
+        try:
+            with SMTP_IPv4("smtp.gmail.com", 587, timeout=10) as server:
+                server.ehlo()
+                server.starttls(context=context)
+                # Enable UTF8 support for headers/content
+                if server.has_extn("SMTPUTF8"):
+                    server.enable_smtputf8()
+                server.login(gmail_address, app_password)
+
+                for cand in valid:
+                    name  = (cand.get("full_name") or "").strip() or "Applicant"
+                    email = cand["email"].strip()
+                    candidate_link = _candidate_link(email, name)
+
+                    try:
+                        msg = _build_message(gmail_address, name, email, candidate_link)
+                        # Use as_bytes() and encode to ensure proper UTF-8 handling with SMTP
+                        msg_bytes = msg.as_bytes()
+                        server.sendmail(gmail_address, email, msg_bytes)
+                        results.append({"name": name, "email": email, "status": "sent"})
+                        logger.info("Sent  → %s <%s>", name, email)
+
+                    except Exception as exc:
+                        results.append({"name": name, "email": email,
+                                        "status": "failed", "error": str(exc)})
+                        logger.error("Failed → %s <%s>: %s", name, email, exc)
+
+        except smtplib.SMTPAuthenticationError:
+            raise ValueError(
+                "Gmail authentication failed. Verify the sender address and ensure "
+                "you are using a Gmail App Password, not your account password."
+            )
+        except OSError as exc:
+            # Network connectivity issues
+            raise RuntimeError(
+                f"Network error connecting to Gmail SMTP:\n"
+                f"  Error: {exc}\n"
+                f"  Possible causes:\n"
+                f"    • No internet connection\n"
+                f"    • Firewall blocking port 587\n"
+                f"    • Corporate network restrictions\n"
+                f"  Try: Restart your internet or use a different network"
+            )
+        except Exception as exc:
+            raise RuntimeError(f"SMTP connection error: {exc}")
 
     sent   = sum(1 for r in results if r["status"] == "sent")
     failed = sum(1 for r in results if r["status"] == "failed")

@@ -1,0 +1,184 @@
+/* ───────── EMAIL REPLIES PAGE ───────── */
+(function(){
+  if (!document.getElementById('page-replies')) return;
+  let _rows = [];
+
+  function esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  window.loadRepliesPage = async function(){
+    const filter = document.getElementById('reply-filter').value || 'all';
+    try{
+      const res = await fetch(`/api/email-replies?status=${encodeURIComponent(filter)}`);
+      const d = await res.json();
+      _rows = d.replies || [];
+      renderReplies(_rows, d.summary || {});
+    }catch(e){ /* leave placeholder row */ }
+  };
+
+  function renderReplies(rows, summary){
+    document.getElementById('reply-total').textContent = summary.total ?? rows.length;
+    document.getElementById('reply-replied').textContent = summary.replied ?? rows.filter(r=>r.status==='replied').length;
+    const unread = summary.unread ?? rows.filter(r=>r.status==='replied' && !r.read).length;
+    document.getElementById('reply-unread').textContent = unread;
+    const sbUnread = document.getElementById('sb-replies-unread');
+    if (sbUnread) sbUnread.textContent = unread > 0 ? `${unread} unread` : 'Campaign reply inbox';
+
+    const tbody = document.getElementById('reply-tbody');
+    if (!rows.length){
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:34px;color:var(--text-dim)">No campaign emails tracked yet. Connect Gmail and send a campaign from the Send Emails tab.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = '';
+    rows.forEach((r, i)=>{
+      const when = r.received_at ? new Date(r.received_at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
+                 : (r.sent_at ? new Date(r.sent_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—');
+      const statusBadge = r.status === 'replied'
+        ? `<span class="dec-badge" style="background:${r.read?'rgba(96,165,250,.12)':'rgba(52,211,153,.15)'};color:${r.read?'#60a5fa':'#34d399'}">${r.read?'Replied':'● New reply'}</span>`
+        : `<span class="dec-badge" style="background:rgba(255,255,255,.08);color:var(--text-dim)">Sent — no reply yet</span>`;
+      const tr = document.createElement('tr');
+      tr.style.animationDelay = `${i*25}ms`;
+      tr.style.cursor = 'pointer';
+      tr.onclick = ()=> openReplyModal(r.thread_id);
+      tr.innerHTML = `
+        <td style="color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:10px">${i+1}</td>
+        <td><div class="cand-name">${esc(r.candidate_name)||'Anonymous'}</div></td>
+        <td class="td-email">${esc(r.candidate_email)||'<span style="opacity:.35">—</span>'}</td>
+        <td>${statusBadge}</td>
+        <td style="font-size:12px;color:var(--text-mid);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.reply_snippet)||'<span style="opacity:.35">—</span>'}</td>
+        <td style="font-size:10px;white-space:nowrap;color:var(--text-dim)">${when}</td>
+        <td><button class="td-view-btn" onclick="event.stopPropagation();this.closest('tr').click()">VIEW</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function _initials(name){
+    const p = String(name||'').trim().split(/\s+/).filter(Boolean);
+    return ((p[0]?.[0]||'') + (p[1]?.[0]||'')).toUpperCase() || '?';
+  }
+
+  window.openReplyModal = async function(threadId){
+    if (!threadId) return;
+    document.getElementById('reply-modal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    const body = document.getElementById('rm-body');
+    body.innerHTML = '<div style="font-size:13px;color:var(--text-dim);padding:20px 0">Loading…</div>';
+    try{
+      const res = await fetch(`/api/email-replies/${encodeURIComponent(threadId)}`);
+      const d = await res.json();
+      if (!res.ok) throw new Error(errDetail(d, res.status));
+      renderReplyModal(d.reply);
+      if (d.reply.status === 'replied' && !d.reply.read) markReplyRead(threadId, true, /*silent*/true);
+    }catch(e){
+      body.innerHTML = `<div style="font-size:13px;color:#f87171;padding:20px 0">Could not load this reply: ${esc(e.message)}</div>`;
+    }
+  };
+
+  function renderReplyModal(rec){
+    const av = document.getElementById('rm-avatar');
+    av.style.background = 'linear-gradient(135deg,#1F2D59,#2F5BEA)';
+    av.textContent = _initials(rec.candidate_name);
+    document.getElementById('rm-name').textContent = rec.candidate_name || 'Anonymous';
+    const sentWhen = rec.sent_at ? new Date(rec.sent_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—';
+    document.getElementById('rm-meta').textContent = `${rec.candidate_email || '—'}  ·  Campaign sent ${sentWhen}`;
+
+    const body = document.getElementById('rm-body');
+    body.innerHTML = '';
+
+    if (rec.form_link){
+      const fl = document.createElement('div');
+      fl.className = 'cand-qa-item full';
+      fl.innerHTML = `<div class="cand-qa-q">Form Link Sent</div><div class="cand-qa-a">${esc(rec.form_link)}</div>`;
+      body.appendChild(fl);
+    }
+
+    if (rec.status !== 'replied' || !rec.reply){
+      const empty = document.createElement('div');
+      empty.className = 'cand-qa-item full';
+      empty.style.marginTop = '10px';
+      empty.innerHTML = `<div class="cand-qa-q">Reply</div><div class="cand-qa-a empty">No reply yet — this candidate hasn't responded to the campaign email.</div>`;
+      body.appendChild(empty);
+      return;
+    }
+
+    const reply = rec.reply;
+    const wrap = document.createElement('div');
+    wrap.className = 'cand-qa-item full';
+    wrap.style.cssText = 'margin-top:10px;border-top:1px solid var(--border-dim);padding-top:18px';
+    const receivedWhen = reply.received_at ? new Date(reply.received_at).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    wrap.innerHTML = `<div class="cand-qa-q">Reply <span style="opacity:.55;font-weight:400">— from ${esc(reply.from||'')}, ${esc(receivedWhen)}</span></div>`;
+    const contentBox = document.createElement('div');
+    contentBox.style.cssText = 'margin-top:10px;background:var(--glass-2);border:1px solid var(--border-dim);border-radius:8px;padding:14px 16px';
+    if (reply.body_text){
+      contentBox.style.whiteSpace = 'pre-wrap';
+      contentBox.style.fontSize = '13px';
+      contentBox.style.lineHeight = '1.6';
+      contentBox.style.color = 'var(--text-mid)';
+      contentBox.textContent = reply.body_text;
+    } else if (reply.body_html){
+      // Untrusted email HTML — render inside a fully sandboxed iframe (no scripts,
+      // no same-origin access to the parent page) rather than injecting it into
+      // this page's DOM.
+      const frame = document.createElement('iframe');
+      frame.setAttribute('sandbox', '');
+      frame.style.cssText = 'width:100%;min-height:260px;border:0;background:#fff;border-radius:6px';
+      frame.srcdoc = reply.body_html;
+      contentBox.style.padding = '0';
+      contentBox.appendChild(frame);
+    } else {
+      contentBox.style.fontSize = '13px';
+      contentBox.style.color = 'var(--text-dim)';
+      contentBox.textContent = reply.snippet || 'No content available.';
+    }
+    wrap.appendChild(contentBox);
+    body.appendChild(wrap);
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;justify-content:flex-end;margin-top:14px';
+    actions.innerHTML = `<button class="btn-ghost" id="rm-toggle-read">${rec.read ? 'Mark as unread' : 'Mark as read'}</button>`;
+    body.appendChild(actions);
+    document.getElementById('rm-toggle-read').addEventListener('click', ()=> markReplyRead(rec.thread_id, !rec.read));
+  }
+
+  window.closeReplyModal = function(){
+    document.getElementById('reply-modal').classList.remove('open');
+    document.body.style.overflow = '';
+  };
+
+  window.markReplyRead = async function(threadId, read, silent){
+    try{
+      const res = await fetch(`/api/email-replies/${encodeURIComponent(threadId)}/mark-read?read=${read}`, {method:'POST'});
+      const d = await res.json(); if(!res.ok) throw new Error(errDetail(d, res.status));
+      if (!silent){ toast(read?'Marked as read':'Marked as unread', 'ok'); renderReplyModal(d.reply); }
+      loadRepliesPage();
+    }catch(e){ if(!silent) toast('Could not update: '+e.message, 'err'); }
+  };
+
+  document.getElementById('reply-check-now').addEventListener('click', async ()=>{
+    const btn = document.getElementById('reply-check-now');
+    btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Checking…';
+    try{
+      const res = await fetch('/api/email-replies/check-now', {method:'POST'});
+      const d = await res.json(); if(!res.ok) throw new Error(errDetail(d, res.status));
+      if (d.skipped === 'not_connected'){
+        toast('Connect Gmail first to check for replies.', 'inf');
+      } else {
+        toast(`Checked ${d.checked} thread${d.checked===1?'':'s'} — ${d.new_replies} new repl${d.new_replies===1?'y':'ies'}`, 'ok');
+      }
+      loadRepliesPage();
+    }catch(e){ toast('Check failed: '+e.message, 'err'); }
+    finally{ btn.disabled = false; btn.textContent = orig; }
+  });
+
+  document.getElementById('reply-filter').addEventListener('change', loadRepliesPage);
+
+  const search = document.getElementById('reply-search');
+  if (search) search.addEventListener('input', e=>{
+    const q = e.target.value.toLowerCase();
+    if (!q){ renderReplies(_rows, {}); return; }
+    renderReplies(_rows.filter(r =>
+      JSON.stringify([r.candidate_name, r.candidate_email, r.reply_snippet]).toLowerCase().includes(q)), {});
+  });
+
+  document.querySelector('.sb-item[data-page="replies"]')
+    ?.addEventListener('click', loadRepliesPage);
+})();
