@@ -71,7 +71,7 @@ from googleapiclient.discovery import build
 from pydantic import BaseModel
 
 from config import OUTPUT_DIR
-from app_paths import _is_frozen
+from app_paths import _is_frozen, CREDENTIALS_DIR
 
 logger = logging.getLogger("volt_cv.gmail_oauth")
 
@@ -158,12 +158,60 @@ def _mode_cfg(cfg: dict, mode: Optional[str] = None) -> dict:
     return cfg.setdefault(mode, {})
 
 
+def _discover_client_file(mode: Optional[str] = None) -> Optional[dict]:
+    """Look for the OAuth client-secret JSON Google itself lets you download
+    (Credentials → your client → Download JSON) sitting in credentials/ —
+    the same folder the Forms/Drive service-account JSON already lives in.
+    That file's shape is exactly {"web": {...}} for a Web application client
+    or {"installed": {...}} for a Desktop app client, so we can read
+    client_id/client_secret straight out of it instead of asking the user to
+    copy-paste them into the UI. Returns None if no matching file is found —
+    manual paste (save_client_config) remains the fallback."""
+    mode = mode or _client_mode()
+    top_key = "installed" if mode == "desktop" else "web"
+    if not CREDENTIALS_DIR.exists():
+        return None
+    for path in sorted(CREDENTIALS_DIR.glob("*.json")):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError, UnicodeDecodeError):
+            continue
+        block = data.get(top_key)
+        if isinstance(block, dict) and block.get("client_id") and block.get("client_secret"):
+            return {
+                "client_id": block["client_id"],
+                "client_secret": block["client_secret"],
+                "source_file": path.name,
+            }
+    return None
+
+
+def _active_client(mode: Optional[str] = None) -> Optional[dict]:
+    """The client_id/client_secret actually in effect for this mode — a
+    dropped-in credentials/*.json file always takes precedence over a
+    manually pasted one (it's the authoritative, typo-free artifact Google
+    itself generated). Falls back to the manually saved config."""
+    mode = mode or _client_mode()
+    discovered = _discover_client_file(mode)
+    if discovered:
+        return {"client_id": discovered["client_id"], "client_secret": discovered["client_secret"],
+                "source": "file", "source_file": discovered["source_file"]}
+    cfg = _read()
+    mcfg = _mode_cfg(cfg, mode)
+    client_id = mcfg.get("client_id")
+    client_secret = get_decrypted_client_secret(mode)
+    if client_id and client_secret:
+        return {"client_id": client_id, "client_secret": client_secret, "source": "manual"}
+    return None
+
+
 def save_client_config(client_id: str, client_secret: str, mode: Optional[str] = None) -> dict:
-    """Persist the OAuth Client ID/Secret the user created in Google Cloud
-    Console for the CURRENT deployment mode (web or desktop — see
-    _client_mode()). Does not touch any existing token, and does not touch
-    the other mode's client config — just this instance's app-level client
-    credentials needed to run the OAuth dance at all."""
+    """Persist a manually pasted OAuth Client ID/Secret for the CURRENT
+    deployment mode (web or desktop — see _client_mode()) — the fallback
+    path for when no matching file was dropped into credentials/ (see
+    _discover_client_file(), which always takes precedence when present).
+    Does not touch any existing token, and does not touch the other mode's
+    client config."""
     client_id = (client_id or "").strip()
     client_secret = (client_secret or "").strip()
     if not client_id or not client_secret:
@@ -209,10 +257,13 @@ def public_status() -> dict:
     mode = _client_mode()
     cfg = _read()
     mcfg = _mode_cfg(cfg, mode)
+    active = _active_client(mode)
     return {
         "deployment_mode": mode,
-        "client_configured": bool(mcfg.get("client_id") and mcfg.get("client_secret_encrypted")),
-        "client_id": mcfg.get("client_id"),
+        "client_configured": active is not None,
+        "client_id": active.get("client_id") if active else None,
+        "client_source": active.get("source") if active else None,           # "file" | "manual" | None
+        "client_source_file": active.get("source_file") if active else None,  # e.g. client_secret_....json
         "connected": bool(mcfg.get("refresh_token_encrypted")),
         "connected_email": mcfg.get("connected_email"),
         "connected_at": mcfg.get("connected_at"),
@@ -233,26 +284,40 @@ def is_connected() -> bool:
 # in-memory) and the window between authorize and callback is seconds.
 # ──────────────────────────────────────────────
 
-_pending_states: dict[str, float] = {}
+_pending_states: dict[str, tuple[float, str]] = {}
 _STATE_TTL = 600  # seconds
 
 
 def _cleanup_states() -> None:
     now = time.time()
-    for k in [k for k, exp in _pending_states.items() if exp < now]:
+    for k in [k for k, (exp, _cv) in _pending_states.items() if exp < now]:
         _pending_states.pop(k, None)
 
 
-def _new_state() -> str:
+def _new_state() -> tuple[str, str]:
+    """Returns (state, code_verifier). Both must survive the redirect round
+    trip to Google and back — stored together here, keyed by state, since
+    /authorize and /callback are separate requests (each builds its own Flow
+    object with google_auth_oauthlib.flow.Flow's autogenerate_code_verifier,
+    which would otherwise generate a FRESH, mismatched verifier on callback
+    than the one whose challenge was actually sent to Google in /authorize,
+    causing Google to reject the exchange with "invalid_grant: Missing code
+    verifier")."""
     _cleanup_states()
     state = secrets.token_urlsafe(24)
-    _pending_states[state] = time.time() + _STATE_TTL
-    return state
+    # RFC 7636 requires 43-128 chars from [A-Za-z0-9-._~]; token_urlsafe's
+    # base64url alphabet (no padding) is a safe subset.
+    code_verifier = secrets.token_urlsafe(96)
+    _pending_states[state] = (time.time() + _STATE_TTL, code_verifier)
+    return state, code_verifier
 
 
-def _consume_state(state: str) -> bool:
+def _consume_state(state: str) -> Optional[str]:
+    """Returns the code_verifier for a valid, unexpired state (consuming it),
+    or None if the state is missing/expired."""
     _cleanup_states()
-    return _pending_states.pop(state, None) is not None
+    entry = _pending_states.pop(state, None)
+    return entry[1] if entry else None
 
 
 # ──────────────────────────────────────────────
@@ -275,22 +340,27 @@ def _redirect_uri(request: Request) -> str:
     return f"{base}/api/gmail-oauth/callback"
 
 
-def build_flow(request: Request) -> Flow:
+def build_flow(request: Request, code_verifier: Optional[str] = None) -> Flow:
+    """code_verifier MUST be the same string across the /authorize and
+    /callback requests for one connection attempt (see _new_state()'s
+    docstring) — pass the one returned by _new_state()/_consume_state()
+    rather than leaving this None, or PKCE validation will fail on Google's
+    side with "invalid_grant: Missing code verifier"."""
     mode = _client_mode()
-    cfg = _read()
-    client_id = _mode_cfg(cfg, mode).get("client_id")
-    client_secret = get_decrypted_client_secret(mode)
-    if not client_id or not client_secret:
+    active = _active_client(mode)
+    if not active:
         raise GmailNotConnectedError(
-            "Gmail OAuth Client ID/Secret not configured yet. "
-            "Paste them into Gmail OAuth settings first."
+            "Gmail OAuth Client ID/Secret not configured yet. Drop the client-secret "
+            "JSON Google gave you into credentials/, or paste them into Gmail OAuth settings."
         )
+    client_id = active["client_id"]
+    client_secret = active["client_secret"]
     redirect_uri = _redirect_uri(request)
     # Google's own client-secrets JSON uses "web" for Web application clients
     # and "installed" for Desktop app clients; google-auth-oauthlib's Flow
-    # understands both natively and applies PKCE (autogenerate_code_verifier,
-    # on by default) either way — real protection for the desktop path,
-    # where the client_secret is not confidential.
+    # understands both natively and applies PKCE either way — real
+    # protection for the desktop path, where the client_secret is not
+    # confidential.
     top_key = "installed" if mode == "desktop" else "web"
     client_config = {
         top_key: {
@@ -301,7 +371,10 @@ def build_flow(request: Request) -> Flow:
             "redirect_uris": [redirect_uri],
         }
     }
-    return Flow.from_client_config(client_config, scopes=SCOPES, redirect_uri=redirect_uri)
+    return Flow.from_client_config(
+        client_config, scopes=SCOPES, redirect_uri=redirect_uri,
+        code_verifier=code_verifier, autogenerate_code_verifier=(code_verifier is None),
+    )
 
 
 def get_credentials() -> Credentials:
@@ -311,20 +384,17 @@ def get_credentials() -> Credentials:
     token endpoint easily absorbs this app's call volume (a handful of sends
     /polls every few minutes, nowhere near any rate limit)."""
     mode = _client_mode()
-    cfg = _read()
-    mcfg = _mode_cfg(cfg, mode)
     refresh_token = get_decrypted_refresh_token(mode)
-    client_secret = get_decrypted_client_secret(mode)
-    client_id = mcfg.get("client_id")
-    if not (refresh_token and client_secret and client_id):
+    active = _active_client(mode)
+    if not (refresh_token and active):
         raise GmailNotConnectedError("Gmail is not connected. Connect it on the Send Emails page first.")
 
     creds = Credentials(
         token=None,
         refresh_token=refresh_token,
         token_uri=TOKEN_URI,
-        client_id=client_id,
-        client_secret=client_secret,
+        client_id=active["client_id"],
+        client_secret=active["client_secret"],
         scopes=SCOPES,
     )
     creds.refresh(GoogleAuthRequest())
@@ -390,11 +460,11 @@ async def post_client_config(body: ClientConfigBody):
 
 @router.get("/authorize")
 async def authorize(request: Request):
+    state, code_verifier = _new_state()
     try:
-        flow = build_flow(request)
+        flow = build_flow(request, code_verifier=code_verifier)
     except GmailNotConnectedError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    state = _new_state()
     auth_url, _ = flow.authorization_url(
         access_type="offline",
         prompt="consent",           # force a refresh_token every time — important
@@ -419,11 +489,12 @@ async def callback(request: Request, code: str = "", state: str = "", error: str
 
     if error:
         return _err(f"Google denied access: {error}")
-    if not code or not state or not _consume_state(state):
+    code_verifier = _consume_state(state) if state else None
+    if not code or not state or not code_verifier:
         return _err("Invalid or expired authorization attempt. Please try connecting again.")
 
     try:
-        flow = build_flow(request)
+        flow = build_flow(request, code_verifier=code_verifier)
         flow.fetch_token(code=code)
         creds = flow.credentials
         if not creds.refresh_token:

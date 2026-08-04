@@ -291,12 +291,12 @@
               <button type="button" id="gmail-disconnect-btn" class="btn-ghost hidden" style="border-color:rgba(248,113,113,.4);color:#f87171">Disconnect</button>
             </div>
           </div>
-          <div style="font-size:10.5px;color:var(--text-dim);margin-top:10px">Uses Google OAuth — no password is ever typed into this app. While your Google Cloud OAuth consent screen is in "Testing" status, the connection may need reconnecting roughly every 7 days.</div>
+          <div style="font-size:10.5px;color:var(--text-dim);margin-top:10px">Uses Google OAuth — no password is ever typed into this app. Drop the client-secret JSON Google gives you into <code>credentials/</code> (same folder as your Forms/Drive service-account file) and it's picked up automatically — no copy-pasting needed. While your Google Cloud OAuth consent screen is in "Testing" status, the connection may need reconnecting roughly every 7 days.</div>
 
-          <button type="button" class="preview-toggle" id="gmail-oauth-settings-toggle" style="margin-top:12px">⚙ Gmail OAuth client settings</button>
+          <button type="button" class="preview-toggle" id="gmail-oauth-settings-toggle" style="margin-top:12px">⚙ Paste OAuth client manually instead</button>
           <div id="gmail-oauth-settings" class="email-grid full hidden" style="margin-top:12px;gap:14px">
             <div class="field-group"><label class="field-label" for="gmail-oauth-client-id">OAuth Client ID<span class="req-mark">*</span></label><input id="gmail-oauth-client-id" class="field-input" type="text" placeholder="xxxxxxxx.apps.googleusercontent.com" autocomplete="off"></div>
-            <div class="field-group"><label class="field-label" for="gmail-oauth-client-secret">OAuth Client Secret<span class="req-mark">*</span></label><input id="gmail-oauth-client-secret" class="field-input" type="password" placeholder="GOCSPX-…" autocomplete="off"><span class="field-hint" id="gmail-oauth-mode-hint">Create this in Google Cloud Console → Credentials.</span></div>
+            <div class="field-group"><label class="field-label" for="gmail-oauth-client-secret">OAuth Client Secret<span class="req-mark">*</span></label><input id="gmail-oauth-client-secret" class="field-input" type="password" placeholder="GOCSPX-…" autocomplete="off"><span class="field-hint" id="gmail-oauth-mode-hint">Only needed if you don't have a credentials/*.json file for this deployment mode.</span></div>
             <div style="display:flex;justify-content:flex-end"><button type="button" id="gmail-oauth-save-btn" class="btn-ghost">Save Client Config</button></div>
           </div>
         </div>

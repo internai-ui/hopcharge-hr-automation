@@ -27,8 +27,20 @@ window.refreshGmailStatus = async function(){
     const d = await res.json();
     _gmailConnected = !!d.connected;
     _gmailClientConfigured = !!d.client_configured;
-    if(gmailClientIdEl && !gmailClientIdEl.value && d.client_id) gmailClientIdEl.value = d.client_id;
-    if(gmailOAuthModeHint) gmailOAuthModeHint.textContent = `Deployment mode: ${d.deployment_mode || 'web'}. Create a matching OAuth client in Google Cloud Console → Credentials.`;
+
+    // A client-secret JSON dropped into credentials/ always wins over a
+    // manually pasted one (see gmail_oauth.py's _active_client()) — when
+    // that's the case, the paste fields are moot, so hide them and just
+    // say where the client came from.
+    const fromFile = d.client_source === 'file';
+    if(gmailSettingsToggle) gmailSettingsToggle.classList.toggle('hidden', fromFile);
+    if(gmailSettingsBox && fromFile) gmailSettingsBox.classList.add('hidden');
+    if(gmailClientIdEl && !gmailClientIdEl.value && d.client_id && !fromFile) gmailClientIdEl.value = d.client_id;
+    if(gmailOAuthModeHint){
+      gmailOAuthModeHint.textContent = fromFile
+        ? `Loaded automatically from credentials/${d.client_source_file} (deployment mode: ${d.deployment_mode}).`
+        : `Deployment mode: ${d.deployment_mode || 'web'}. Drop the client-secret JSON Google gives you into credentials/, or paste it below.`;
+    }
 
     if(d.connected){
       gmailStatusPill.textContent = 'Connected';
@@ -44,7 +56,7 @@ window.refreshGmailStatus = async function(){
       gmailStatusPill.style.background = 'rgba(248,113,113,0.15)'; gmailStatusPill.style.color = '#f87171';
       gmailStatusDetail.textContent = d.client_configured
         ? 'Click Connect Gmail to sign in.'
-        : 'Add your OAuth Client ID/Secret below, then connect.';
+        : 'Drop the client-secret JSON from Google Cloud Console into credentials/, or paste your Client ID/Secret below.';
       gmailConnectBtn.classList.remove('hidden');
       gmailDisconnectBtn.classList.add('hidden');
       // No OAuth connection yet — default to the App Password fallback so the
