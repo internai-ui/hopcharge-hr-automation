@@ -2,8 +2,8 @@
 calendly_invite.py — Round 1 bulk Calendly invite.
 
 ONE endpoint group that emails every Round 1 candidate (read straight from
-accepted_store) a Calendly booking link, over the SAME Gmail SMTP path as
-emailer.py (SMTP_IPv4 — keeps the macOS IPv4 fix).
+accepted_store) a Calendly booking link, via the connected Google account
+(Gmail API — see gmail_oauth.py), same as emailer.py's send paths.
 
 Mount in app.py, next to the other routers:
 
@@ -21,20 +21,19 @@ calendly_invite_log.json), alongside your other stores.
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
-import smtplib
-import ssl
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict
 
 from config import OUTPUT_DIR
 from accepted_store import list_accepted
-from emailer import SMTP_IPv4, _sanitize_name
+from emailer import _sanitize_name
 
 logger = logging.getLogger("volt_cv.calendly_invite")
 
@@ -268,11 +267,17 @@ def _append_log(entry: dict) -> None:
 
 
 # ──────────────────────────────────────────────
-# Send (reuses emailer.SMTP_IPv4 — same path as send_campaign)
+# Send (Gmail API via the connected Google account — same path as
+# emailer.send_campaign)
 # ──────────────────────────────────────────────
-def send_round1_invites(gmail_address: str, app_password: str,
-                        calendly_url: Optional[str] = None,
+def send_round1_invites(calendly_url: Optional[str] = None,
                         role_links: Optional[dict] = None) -> dict:
+    import gmail_oauth
+    gmail_service = gmail_oauth.get_gmail_service()
+    sender_address = (gmail_oauth.public_status().get("connected_email") or "").strip()
+    if not sender_address:
+        sender_address = "hr@hopcharge.com"
+
     settings = _load_settings()
     # Apply any role links passed for this send (already persisted by the route,
     # but accept them here too so the function is usable directly).
@@ -303,46 +308,33 @@ def send_round1_invites(gmail_address: str, app_password: str,
 
     results = []
     skipped = []
-    context = ssl.create_default_context()
-    try:
-        with SMTP_IPv4("smtp.gmail.com", 587, timeout=10) as server:
-            server.ehlo()
-            server.starttls(context=context)
-            if server.has_extn("SMTPUTF8"):
-                server.enable_smtputf8()
-            server.login(gmail_address, app_password)
-
-            for c in cands:
-                try:
-                    link = _link_for_api(c, settings) if use_api else _link_for(c, settings)
-                    if not link:
-                        # No link for this candidate's role — skip rather than
-                        # send the wrong booking page.
-                        skipped.append({"name": c["name"], "email": c["email"],
-                                        "role": c["role"], "status": "skipped",
-                                        "error": "No Calendly link set for this role"})
-                        logger.warning("Round1 invite skipped (no link for role %s) → %s",
-                                       c.get("role_key"), c["email"])
-                        continue
-                    msg = _build_message(gmail_address, c["name"], c["role"], c["email"], link)
-                    server.sendmail(gmail_address, c["email"], msg.as_bytes())
-                    results.append({"name": c["name"], "email": c["email"],
-                                    "role": c["role"], "status": "sent"})
-                    logger.info("Round1 invite → %s <%s> [%s]", c["name"], c["email"], c["role"])
-                except Exception as exc:
-                    results.append({"name": c["name"], "email": c["email"],
-                                    "role": c["role"], "status": "failed", "error": str(exc)})
-                    logger.error("Round1 invite failed → %s: %s", c["email"], exc)
-
-    except smtplib.SMTPAuthenticationError:
-        raise ValueError("Gmail authentication failed. Use a Gmail App Password, not your account password.")
-    except OSError as exc:
-        raise RuntimeError(f"Network error connecting to Gmail SMTP: {exc}")
+    for c in cands:
+        try:
+            link = _link_for_api(c, settings) if use_api else _link_for(c, settings)
+            if not link:
+                # No link for this candidate's role — skip rather than
+                # send the wrong booking page.
+                skipped.append({"name": c["name"], "email": c["email"],
+                                "role": c["role"], "status": "skipped",
+                                "error": "No Calendly link set for this role"})
+                logger.warning("Round1 invite skipped (no link for role %s) → %s",
+                               c.get("role_key"), c["email"])
+                continue
+            msg = _build_message(sender_address, c["name"], c["role"], c["email"], link)
+            raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("ascii")
+            gmail_service.users().messages().send(userId="me", body={"raw": raw}).execute()
+            results.append({"name": c["name"], "email": c["email"],
+                            "role": c["role"], "status": "sent"})
+            logger.info("Round1 invite → %s <%s> [%s]", c["name"], c["email"], c["role"])
+        except Exception as exc:
+            results.append({"name": c["name"], "email": c["email"],
+                            "role": c["role"], "status": "failed", "error": str(exc)})
+            logger.error("Round1 invite failed → %s: %s", c["email"], exc)
 
     all_results = results + skipped
     sent = sum(1 for r in results if r["status"] == "sent")
     failed = sum(1 for r in results if r["status"] == "failed")
-    _append_log({"at": _now_iso(), "sender": gmail_address, "mode": mode,
+    _append_log({"at": _now_iso(), "sender": sender_address, "mode": mode,
                  "link": "(per-role links)" if not use_api else "(per-candidate API links)",
                  "total": len(cands), "sent": sent, "failed": failed,
                  "skipped": len(skipped), "results": all_results})
@@ -380,8 +372,6 @@ class SettingsBody(BaseModel):
 
 
 class SendBody(BaseModel):
-    gmail_address: str = Field(..., min_length=3)
-    app_password: str = Field(..., min_length=1)
     calendly_url: Optional[str] = None          # legacy single link (optional)
     role_links: Optional[dict] = None           # {role_key: url}
 
@@ -429,8 +419,12 @@ async def post_settings(body: SettingsBody):
 
 @router.post("/send")
 async def post_send(body: SendBody):
-    if "@" not in body.gmail_address:
-        raise HTTPException(status_code=400, detail="Invalid sender email address.")
+    import gmail_oauth
+    if not gmail_oauth.is_connected():
+        raise HTTPException(
+            status_code=400,
+            detail="Google account is not connected. Connect it on the Send Emails page first."
+        )
 
     role_links = body.role_links or {}
     # Validate + persist the per-role links so future sends go straight through.
@@ -452,8 +446,7 @@ async def post_send(body: SendBody):
         _save_settings(persist)
 
     try:
-        return send_round1_invites(body.gmail_address, body.app_password,
-                                   calendly_url=legacy or None, role_links=role_links)
+        return send_round1_invites(calendly_url=legacy or None, role_links=role_links)
     except ValueError as exc:
         raise HTTPException(status_code=401, detail=str(exc))
     except RuntimeError as exc:

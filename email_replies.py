@@ -127,10 +127,24 @@ _QUOTE_MARKERS_TEXT = [
     re.compile(r"^[ \t]*-{2,}\s*Original Message\s*-{2,}", re.IGNORECASE | re.MULTILINE),
     re.compile(r"^[ \t]*-{2,}\s*Forwarded message\s*-{2,}", re.IGNORECASE | re.MULTILINE),
     re.compile(r"^_{5,}\s*$", re.MULTILINE),
-    re.compile(r"(?:\n|^)[ \t]*On\s+.*?\s+wrote:\s*", re.IGNORECASE | re.DOTALL),
-    re.compile(r"\bOn\b.{0,250}?\bwrote:\s*", re.IGNORECASE | re.DOTALL),
+    # Gmail's quote-attribution line: "On <weekday>, <month> <day>, <year>
+    # at <time> <name> <email> wrote:". Anchored on the distinctive
+    # weekday+month+year date stamp (not just "On ... wrote:") so it can't
+    # false-positive on a candidate's own sentence like "On the form I
+    # wrote: ..." or "...I already wrote a detailed cover letter" — and
+    # deliberately NOT anchored to a line start, since some clients run the
+    # quote header on directly after the reply's last sentence with no
+    # separating newline.
+    re.compile(
+        r"\bOn\s+(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*,?\s+"
+        r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4}"
+        r".{0,150}?\bwrote:",
+        re.IGNORECASE | re.DOTALL,
+    ),
+    # Outlook-style header block: a "From:" line followed within a few lines
+    # by Sent:/Date:/To:/Subject: — narrower than a bare "From:" match so a
+    # candidate's own reply starting a line with "From:" isn't cut short.
     re.compile(r"^[ \t]*From:\s.+\n(?:.*\n){0,3}?^(?:Sent|Date|To|Subject):\s.+$", re.IGNORECASE | re.MULTILINE),
-    re.compile(r"^[ \t]*From:\s.+$", re.IGNORECASE | re.MULTILINE),
     re.compile(r"^[ \t]*>", re.MULTILINE),
 ]
 _QUOTE_MARKER_HTML = re.compile(

@@ -93,7 +93,14 @@
       const settingsBox = card.querySelector('[data-gw="settings-box"]');
       const saveBtn = card.querySelector('[data-gw="save-config"]');
 
-      if (connectBtn) connectBtn.addEventListener('click', () => { window.location.href = '/api/gmail-oauth/authorize'; });
+      if (connectBtn) connectBtn.addEventListener('click', () => {
+        // Send the user back to whichever page/dialog they clicked Connect
+        // from, instead of always landing on the SPA's default page once
+        // Google redirects back to /callback.
+        const current = document.querySelector('.page.active')?.id.replace(/^page-/, '') || '';
+        const qs = current ? ('?return_to=' + encodeURIComponent(current)) : '';
+        window.location.href = '/api/gmail-oauth/authorize' + qs;
+      });
       if (disconnectBtn) disconnectBtn.addEventListener('click', async () => {
         try {
           const res = await fetch('/api/gmail-oauth/disconnect', { method: 'POST' });
@@ -191,16 +198,20 @@
     }
   }
 
-  // Handle redirect feedback params
+  // Handle redirect feedback params — including returning to whichever page
+  // the user clicked Connect from (see the connect button handler above),
+  // instead of leaving them on the SPA's default landing page.
   (function(){
     const params = new URLSearchParams(window.location.search);
     if(params.has('gmail')){
       const status = params.get('gmail');
       if(status === 'connected') toast('Google Account connected successfully', 'ok');
       else if(status === 'error') toast('Google connection failed: '+(params.get('reason')||'unknown error'), 'err');
-      params.delete('gmail'); params.delete('reason');
+      const returnPage = params.get('page');
+      params.delete('gmail'); params.delete('reason'); params.delete('page');
       const qs = params.toString();
       window.history.replaceState({}, '', window.location.pathname + (qs?`?${qs}`:''));
+      if (returnPage && window.goToPage) window.goToPage(returnPage);
     }
   })();
 

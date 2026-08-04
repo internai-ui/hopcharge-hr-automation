@@ -431,9 +431,6 @@ async def download_results(fmt: str):
 # ──────────────────────────────────────────────
 
 class EmailRequest(BaseModel):
-    send_via:          Optional[str] = "oauth"
-    gmail_address:     Optional[str] = None
-    app_password:      Optional[str] = None
     form_link:         str
     tracking_base_url: Optional[str] = None   # e.g. http://localhost:8000
     email_entry_id:    Optional[str] = None   # e.g. entry.123456789 (form email field)
@@ -482,8 +479,6 @@ async def send_emails(req: EmailRequest):
             })
 
         summary = send_campaign(
-            gmail_address=sender_address,
-            app_password=req.app_password,
             form_link=req.form_link,
             tracking_base_url=req.tracking_base_url,
             candidates=manual_candidates,
@@ -628,8 +623,6 @@ async def delete_form_response(response_id: str):
 # ──────────────────────────────────────────────
 
 class OnboardingEmailRequest(BaseModel):
-    gmail_address: Optional[str] = None
-    app_password:  Optional[str] = None
     form_link:     str
     response_ids:  Optional[List[str]] = None   # required: only these candidates are emailed
 
@@ -684,8 +677,6 @@ async def send_onboarding_emails(req: OnboardingEmailRequest):
 # ──────────────────────────────────────────────
 
 class RejectionEmailRequest(BaseModel):
-    gmail_address: Optional[str] = None
-    app_password:  Optional[str] = None
     response_ids:  Optional[List[str]] = None   # required: only these candidates are emailed
 
 
@@ -700,6 +691,10 @@ async def send_rejection_emails(req: RejectionEmailRequest):
     """
     from emailer import send_rejection
     import rejected_store
+    import gmail_oauth
+
+    if not gmail_oauth.is_connected():
+        raise HTTPException(status_code=400, detail="Google account is not connected.")
 
     if not req.response_ids:
         raise HTTPException(
@@ -716,11 +711,7 @@ async def send_rejection_emails(req: RejectionEmailRequest):
         )
 
     try:
-        result = send_rejection(
-            gmail_address=req.gmail_address.strip(),
-            app_password=req.app_password.strip(),
-            candidates=candidates,
-        )
+        result = send_rejection(candidates=candidates)
         # Only stamp candidates whose send genuinely succeeded — a failed
         # send must stay retryable, not silently marked as notified.
         for r in result.get("results", []):

@@ -2,22 +2,14 @@
 emailer.py — Personalised email dispatch for Hopcharge recruitment.
 
 Loads candidate data from the parsed JSON output, composes an HTML email
-for each candidate with a valid email address, and sends it via Gmail SMTP
-using an App Password (OAuth is not required).
-
-Gmail setup (one-time):
-  1. Enable 2-Step Verification on the sending Gmail account.
-  2. Go to: Google Account → Security → App Passwords
-  3. Generate an app password for "Mail / Other (custom)" and use it here.
-     Do NOT use your regular Gmail password — SMTP will reject it.
+for each candidate with a valid email address, and sends it via the Gmail
+API using the connected Google account (see gmail_oauth.py) — no password
+is ever typed into this app.
 """
 
 import base64
 import json
 import logging
-import smtplib
-import ssl
-import socket
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
@@ -58,30 +50,6 @@ def _logo_path() -> Optional[Path]:
 LOGO_CID = "hopcharge_logo_white"
 
 logger = logging.getLogger("volt_cv.emailer")
-
-# ──────────────────────────────────────────────
-# IPv4-forced SMTP for macOS compatibility
-# ──────────────────────────────────────────────
-
-class SMTP_IPv4(smtplib.SMTP):
-    """SMTP client that forces IPv4 (works around macOS IPv6 issues)."""
-    def _get_socket(self, host, port, timeout):
-        """Create socket with IPv4 only."""
-        for family, socktype, proto, canonname, sockaddr in socket.getaddrinfo(
-            host, port, socket.AF_INET, socket.SOCK_STREAM
-        ):
-            try:
-                sock = socket.socket(family, socktype, proto)
-                if timeout is not None:
-                    sock.settimeout(timeout)
-                sock.connect(sockaddr)
-                return sock
-            except socket.error:
-                continue
-        raise socket.error("Could not connect to %s:%s" % (host, port))
-
-
-# ──────────────────────────────────────────────
 
 SUBJECT = "Thank You for Applying to Hopcharge — Next Steps"
 

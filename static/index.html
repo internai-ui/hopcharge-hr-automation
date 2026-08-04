@@ -272,7 +272,7 @@
     <div class="page-head">
       <div class="eyebrow">Module 02</div>
       <h1>Send <span class="grad-text">Emails</span></h1>
-      <p>Dispatch personalised recruitment emails to every parsed candidate, embedding your Google Forms assessment link. Powered by Gmail SMTP.</p>
+      <p>Dispatch personalised recruitment emails to every parsed candidate, embedding your Google Forms assessment link. Sent via your connected Google account.</p>
     </div>
 
     <div class="email-panel">
@@ -571,6 +571,8 @@
     <div class="rejd-title" style="color:#f87171;">&#x1F6AB; Send Rejection Email</div>
     <div class="rejd-sub">Sends a considerate decline notice to the candidates you&rsquo;ve checked below via your connected Google account. Nothing is sent automatically — only candidates you explicitly select receive this.</div>
 
+    <div class="google-auth-widget" style="margin-bottom:14px"></div>
+
     <div id="rej-email-recipients" style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--glass-border);font-size:12px;line-height:1.5;color:var(--text-mid)"></div>
 
     <div id="rej-email-status" style="display:none;margin:14px 0 0;padding:11px 14px;border-radius:9px;font-size:13px;line-height:1.6;background:var(--glass-2);border:1px solid var(--glass-border);color:var(--text-mid)"></div>
@@ -643,6 +645,8 @@
   <div class="rejd-card" style="max-width:500px;width:94vw;">
     <div class="rejd-title" style="color:#1F2D59;">&#127881; Send Onboarding Email</div>
     <div class="rejd-sub">Sends the welcome-to-the-family email with the onboarding form link to the Round 2 candidates you&rsquo;ve marked <b>&#9733; SELECTED</b> via your connected Google account.</div>
+
+    <div class="google-auth-widget" style="margin-bottom:14px"></div>
 
     <div id="ob-recipients" style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--glass-border);font-size:12px;line-height:1.5;color:var(--text-mid)"></div>
 
@@ -1011,7 +1015,7 @@
       <div class="field-hint" id="r1-api-status" style="margin-top:6px">Each candidate gets a unique single-use link &mdash; so you can tell who booked.</div>
     </div>
 
-    <div class="field-hint" style="margin-top:6px">Emails are sent via your connected Google account (OAuth). Connect on the Send Emails page if not already done.</div>
+    <div class="google-auth-widget" style="margin-top:14px"></div>
 
     <div class="rejd-actions">
       <button class="rejd-cancel" onclick="closeR1Invite()">Cancel</button>
