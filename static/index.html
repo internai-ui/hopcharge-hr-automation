@@ -318,13 +318,9 @@
 
         <button class="preview-toggle" id="preview-toggle"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 6s2-4 5-4 5 4 5 4-2 4-5 4-5-4-5-4Z" stroke="currentColor" stroke-width="1.3"/><circle cx="6" cy="6" r="1.5" fill="currentColor"/></svg>Preview Email Template</button>
         <div id="email-preview" class="email-preview-box hidden">
-          <div class="preview-subject">Subject: Thank You for Applying to Hopcharge — Next Steps</div>
-          <strong>Dear [Candidate Name],</strong><br><br>
-          Thank you for your interest in joining <strong>Hopcharge</strong>. We appreciate the time you have invested in your application and are pleased to confirm receipt.<br><br>
-          As part of our recruitment process, please complete the following assessment form at your earliest convenience.<br><br>
-          <span style="display:inline-block;background:rgba(31,45,89,0.15);border:1px solid rgba(31,45,89,0.3);border-radius:4px;padding:5px 14px;color:var(--violet);font-size:11px;font-family:'Poppins',sans-serif;font-weight:700;letter-spacing:1px">COMPLETE ASSESSMENT FORM →</span><br><br>
-          Candidates who do not respond within five business days may not be considered for the current hiring cycle.<br><br>
-          Warm regards,<br><strong>Hopcharge Recruitment Team</strong>
+          <div class="preview-subject" id="email-preview-subject">Subject: —</div>
+          <iframe id="email-preview-frame" sandbox="" class="adm-preview-frame" style="margin-top:10px;min-height:360px"></iframe>
+          <div class="field-hint" style="margin-top:8px">This is the actual saved recruitment template — edit its subject/body in Admin Settings.</div>
         </div>
 
         <div class="send-row">
@@ -419,7 +415,7 @@
         <div id="forms-svcacct-fields" class="hidden">
           <div class="smtp-note" style="margin-bottom:18px">
             <span class="note-icon">⚠</span>
-            <span>Requires a <strong>Google Cloud Service Account</strong> with <em>Google Forms API</em> and <em>Google Drive API</em> enabled. Share the form with the service-account email (Viewer). See <strong>FORMS_SETUP.md</strong> in the project folder.</span>
+            <span>Requires a <strong>Google Cloud Service Account</strong> with <em>Google Forms API</em> and <em>Google Drive API</em> enabled. Share the form with the service-account email (Viewer access) before syncing.</span>
           </div>
           <div class="forms-grid full" style="margin-bottom:18px">
             <div class="field-group forms-creds">

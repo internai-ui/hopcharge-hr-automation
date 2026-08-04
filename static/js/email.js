@@ -100,7 +100,33 @@
   }
 
   if (previewBtn && previewBox) {
-    previewBtn.addEventListener('click', () => { previewBox.classList.toggle('hidden'); });
+    let previewLoaded = false;
+    previewBtn.addEventListener('click', async () => {
+      const wasHidden = previewBox.classList.contains('hidden');
+      previewBox.classList.toggle('hidden');
+      if (!wasHidden || previewLoaded) return;
+      // Render the ACTUAL saved recruitment template — same server-side
+      // preview endpoint Admin Settings uses — instead of the old hardcoded
+      // static copy that never reflected what really gets sent.
+      const subjectEl = document.getElementById('email-preview-subject');
+      const frameEl = document.getElementById('email-preview-frame');
+      try {
+        const settingsRes = await fetch('/api/admin/settings');
+        const settingsData = await settingsRes.json();
+        const rec = (settingsData.settings && settingsData.settings.email && settingsData.settings.email.recruitment) || {};
+        const res = await fetch('/api/admin/email/recruitment/preview', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ subject: rec.subject || '', body: rec.body || '' })
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(errDetail(d, res.status));
+        subjectEl.textContent = 'Subject: ' + (d.subject || '(no subject)');
+        frameEl.srcdoc = d.html;
+        previewLoaded = true;
+      } catch(e) {
+        subjectEl.textContent = 'Could not load preview: ' + e.message;
+      }
+    });
   }
 
   if (sendBtn) {

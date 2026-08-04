@@ -1,11 +1,13 @@
 """
-gmail_oauth.py — shared Google OAuth 2.0 "Connect Gmail" integration.
+gmail_oauth.py — shared Google OAuth 2.0 "Connect Google Account" integration.
 
-Replaces (optionally — App Password stays as a fallback, see emailer.py and
-app.py's /api/send-emails) raw SMTP + Gmail App Password with a real OAuth
-user-consent flow: the HR user clicks "Connect Gmail", goes through Google's
-own consent screen, and this app is granted a refresh token. No password is
-ever typed into this app.
+Required for every candidate-facing send (recruitment campaign, onboarding,
+rejection notice, Round 1 Calendly invite) and for Forms sync's OAuth path:
+the HR user clicks "Connect Google Account", goes through Google's own
+consent screen, and this app is granted a refresh token. No password is
+ever typed into this app. (Forms sync alone still has a separate Service
+Account JSON fallback — see forms_retriever.py — for a form the connected
+account doesn't personally own; nothing else has a password/key fallback.)
 
 This is a SHARED Google connection, not Gmail-only: forms_retriever.py's
 OAuth path (Form Responses page) reuses the exact same token via

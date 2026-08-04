@@ -135,8 +135,9 @@ app.include_router(status_router)
 from employee_db import router as employee_router
 app.include_router(employee_router)
 
-# Gmail OAuth "Connect Gmail" (send + reply tracking) — App Password stays as
-# a fallback, see EmailRequest.send_via below.
+# Gmail OAuth "Connect Google Account" — required for every candidate-facing
+# send (recruitment, onboarding, rejection, Round 1 Calendly) and for Forms
+# sync's OAuth path (Service Account JSON remains a Forms-only fallback).
 from gmail_oauth import router as gmail_oauth_router
 app.include_router(gmail_oauth_router)
 
