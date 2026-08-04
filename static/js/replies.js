@@ -133,8 +133,10 @@
     body.appendChild(wrap);
 
     const actions = document.createElement('div');
-    actions.style.cssText = 'display:flex;justify-content:flex-end;margin-top:14px';
-    actions.innerHTML = `<button class="btn-ghost" id="rm-toggle-read">${rec.read ? 'Mark as unread' : 'Mark as read'}</button>`;
+    actions.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px';
+    actions.innerHTML = `
+      <a class="btn-ghost" id="rm-view-gmail" href="https://mail.google.com/mail/u/0/#all/${encodeURIComponent(rec.thread_id)}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">↗ View in Gmail</a>
+      <button class="btn-ghost" id="rm-toggle-read">${rec.read ? 'Mark as unread' : 'Mark as read'}</button>`;
     body.appendChild(actions);
     document.getElementById('rm-toggle-read').addEventListener('click', ()=> markReplyRead(rec.thread_id, !rec.read));
   }

@@ -111,7 +111,7 @@ HTML_TEMPLATE = """\
           <p style="margin:0;font-size:15px;line-height:1.7;color:#5b6472;">Warm regards,<br><strong style="color:#1F2D59;">Hopcharge Recruitment Team</strong></p>
         </td></tr>
         <tr><td style="padding:20px 40px 26px;border-top:1px solid #eef1f6;">
-          <p style="margin:0 0 8px;font-size:13px;color:#5b6472;">Questions? Write to <a href="mailto:{sender}" style="color:#E8537F;font-weight:700;text-decoration:underline;">{sender}</a></p>
+          <p style="margin:0 0 8px;font-size:13px;color:#5b6472;">Questions? Reply to this email.</p>
           <p style="margin:0;font-size:11px;line-height:1.6;color:#9aa3b6;">This email was sent to {email} as part of the Hopcharge recruitment process. If you believe this was received in error, please disregard this message.<br>&#169; 2026 Hopcharge. All rights reserved.</p>
         </td></tr>
       </table>
@@ -565,8 +565,7 @@ ONBOARD_HTML = """\
         <!-- ── FOOTER ── -->
         <tr><td style="padding:18px 40px 24px;border-top:1px solid #eef1f6;">
           <p style="margin:0 0 6px;font-size:13px;color:#5b6472;">
-            Questions? Write to
-            <a href="mailto:{sender}" style="color:#E8537F;font-weight:700;text-decoration:underline;">{sender}</a>
+            Questions? Reply to this email.
           </p>
           <p style="margin:0;font-size:11px;line-height:1.6;color:#9aa3b6;">
             This email was sent to {email}. &#169; 2026 Hopcharge. All rights reserved.

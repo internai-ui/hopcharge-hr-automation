@@ -26,6 +26,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import re
 import threading
 from datetime import datetime, timezone
 from email.utils import parseaddr
@@ -116,9 +117,59 @@ def _b64_decode(data: str) -> str:
         return ""
 
 
+# Best-effort markers for where a reply's OWN text ends and the quoted
+# thread history begins — the same patterns Gmail/Outlook themselves use to
+# decide what to fold under "···" in their own UI. None of these are 100%
+# reliable across every email client, but together they cover the large
+# majority of real replies; worst case a stray quote line slips through,
+# which is a cosmetic issue, not a correctness one.
+_QUOTE_MARKERS_TEXT = [
+    re.compile(r"^[ \t]*-{2,}\s*Original Message\s*-{2,}", re.IGNORECASE | re.MULTILINE),
+    re.compile(r"^_{10,}\s*$", re.MULTILINE),
+    re.compile(r"^[ \t]*On .{0,200}\bwrote:\s*$", re.MULTILINE | re.DOTALL),
+    # Outlook-style header block: a "From:" line followed within a few lines
+    # by Sent:/Date:/To:/Subject: — narrower than a bare "From:" match so a
+    # candidate's own reply starting a line with "From:" isn't cut short.
+    re.compile(r"^From:\s.+\n(?:.*\n){0,3}?^(?:Sent|Date|To|Subject):\s.+$",
+               re.IGNORECASE | re.MULTILINE),
+    re.compile(r"^[ \t]*>", re.MULTILINE),
+]
+_QUOTE_MARKER_HTML = re.compile(
+    r"<div[^>]*class=\"[^\"]*gmail_quote[^\"]*\"|<blockquote\b", re.IGNORECASE)
+
+
+def _strip_quoted_text(text: str) -> str:
+    """Cut a plain-text reply body at the first quote marker found, so a
+    reply email only shows the candidate's own new text, not the entire
+    thread history re-quoted underneath it."""
+    if not text:
+        return text
+    cut = len(text)
+    for pattern in _QUOTE_MARKERS_TEXT:
+        m = pattern.search(text)
+        if m and 0 < m.start() < cut:
+            cut = m.start()
+    cleaned = text[:cut].rstrip()
+    return cleaned if cleaned else text.strip()
+
+
+def _strip_quoted_html(html: str) -> str:
+    """Same idea as _strip_quoted_text but for the HTML body — a plain
+    string cut (not real HTML parsing) is good enough here since the result
+    is only ever rendered inside a sandboxed <iframe>, where a stray
+    unclosed tag is purely cosmetic."""
+    if not html:
+        return html
+    m = _QUOTE_MARKER_HTML.search(html)
+    if m and m.start() > 0:
+        return html[:m.start()]
+    return html
+
+
 def _extract_body(payload: dict) -> tuple[str, str]:
     """Walk a Gmail message payload's MIME parts, returning (text, html) —
-    the first text/plain and first text/html bodies found."""
+    the first text/plain and first text/html bodies found, with quoted
+    thread history stripped off the end of each."""
     text = ""
     html = ""
 
@@ -134,7 +185,7 @@ def _extract_body(payload: dict) -> tuple[str, str]:
             walk(sub)
 
     walk(payload or {})
-    return text, html
+    return _strip_quoted_text(text), _strip_quoted_html(html)
 
 
 def _internal_date_to_iso(ms: Optional[str]) -> Optional[str]:
