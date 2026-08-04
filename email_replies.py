@@ -125,13 +125,9 @@ def _b64_decode(data: str) -> str:
 # which is a cosmetic issue, not a correctness one.
 _QUOTE_MARKERS_TEXT = [
     re.compile(r"^[ \t]*-{2,}\s*Original Message\s*-{2,}", re.IGNORECASE | re.MULTILINE),
-    re.compile(r"^_{10,}\s*$", re.MULTILINE),
-    re.compile(r"^[ \t]*On .{0,200}\bwrote:\s*$", re.MULTILINE | re.DOTALL),
-    # Outlook-style header block: a "From:" line followed within a few lines
-    # by Sent:/Date:/To:/Subject: — narrower than a bare "From:" match so a
-    # candidate's own reply starting a line with "From:" isn't cut short.
-    re.compile(r"^From:\s.+\n(?:.*\n){0,3}?^(?:Sent|Date|To|Subject):\s.+$",
-               re.IGNORECASE | re.MULTILINE),
+    re.compile(r"^_{5,}\s*$", re.MULTILINE),
+    re.compile(r"(?:\n|^)[ \t]*On\s+.*?\s+wrote:\s*", re.IGNORECASE | re.DOTALL),
+    re.compile(r"^From:\s.+\n(?:.*\n){0,3}?^(?:Sent|Date|To|Subject):\s.+$", re.IGNORECASE | re.MULTILINE),
     re.compile(r"^[ \t]*>", re.MULTILINE),
 ]
 _QUOTE_MARKER_HTML = re.compile(
@@ -143,21 +139,37 @@ def _strip_quoted_text(text: str) -> str:
     reply email only shows the candidate's own new text, not the entire
     thread history re-quoted underneath it."""
     if not text:
-        return text
-    cut = len(text)
-    for pattern in _QUOTE_MARKERS_TEXT:
-        m = pattern.search(text)
-        if m and 0 < m.start() < cut:
-            cut = m.start()
-    cleaned = text[:cut].rstrip()
-    return cleaned if cleaned else text.strip()
+        return ""
+    
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    patterns = [
+        r'\n[ \t]*On\s+.*?\s+wrote:\s*',
+        r'^[ \t]*On\s+.*?\s+wrote:\s*',
+        r'\n[ \t]*-{2,}\s*Original Message\s*-{2,}',
+        r'^[ \t]*-{2,}\s*Original Message\s*-{2,}',
+        r'\n[ \t]*From:\s+.*?\n[ \t]*Sent:',
+        r'\n[ \t]*_{5,}',
+        r'\n[ \t]*>',
+    ]
+    
+    clean = normalized
+    for pat in patterns:
+        m = re.search(pat, clean, flags=re.IGNORECASE | re.DOTALL)
+        if m and m.start() >= 0:
+            clean = clean[:m.start()]
+
+    lines = []
+    for line in clean.split("\n"):
+        if line.strip().startswith(">"):
+            continue
+        lines.append(line)
+
+    res = "\n".join(lines).strip()
+    return res if res else text.strip()
 
 
 def _strip_quoted_html(html: str) -> str:
-    """Same idea as _strip_quoted_text but for the HTML body — a plain
-    string cut (not real HTML parsing) is good enough here since the result
-    is only ever rendered inside a sandboxed <iframe>, where a stray
-    unclosed tag is purely cosmetic."""
+    """Same idea as _strip_quoted_text but for the HTML body."""
     if not html:
         return html
     m = _QUOTE_MARKER_HTML.search(html)
@@ -166,10 +178,85 @@ def _strip_quoted_html(html: str) -> str:
     return html
 
 
+def _detect_reply_intent(text: str) -> dict:
+    """Classify reply text into intent category and display badge information."""
+    clean = (text or "").lower()
+
+    # 1. Not Interested / Opt Out
+    not_interested_keywords = [
+        "not interested", "no thanks", "don't contact", "dont contact",
+        "leave me alone", "remove me", "unsubscribe", "not looking",
+        "pass on this", "decline", "please stop", "no interest", "not open"
+    ]
+    for kw in not_interested_keywords:
+        if kw in clean:
+            return {
+                "category": "not_interested",
+                "label": "Not Interested",
+                "badge_bg": "rgba(239, 68, 68, 0.18)",
+                "badge_color": "#f87171",
+                "icon": "🔴"
+            }
+
+    # 2. Out of Office / Auto Reply
+    auto_reply_keywords = [
+        "automatic reply", "out of office", "auto-reply", "auto reply",
+        "currently away", "vacation responder", "on leave until"
+    ]
+    for kw in auto_reply_keywords:
+        if kw in clean:
+            return {
+                "category": "auto_reply",
+                "label": "Auto-Reply / OOO",
+                "badge_bg": "rgba(156, 163, 175, 0.18)",
+                "badge_color": "#9ca3af",
+                "icon": "⚪"
+            }
+
+    # 3. Question / Inquiry
+    question_keywords = [
+        "?", "salary", "ctc", "location", "timings", "hybrid", "remote",
+        "role details", "job description", "stipend", "duration"
+    ]
+    for kw in question_keywords:
+        if kw in clean:
+            return {
+                "category": "question",
+                "label": "Question / Inquiry",
+                "badge_bg": "rgba(245, 158, 11, 0.18)",
+                "badge_color": "#fbbf24",
+                "icon": "🟡"
+            }
+
+    # 4. Interested / Applied
+    interested_keywords = [
+        "interested", "filled", "submitted", "completed", "attached",
+        "looking forward", "thank you", "thanks for reaching", "glad to",
+        "happy to", "available for interview", "schedule"
+    ]
+    for kw in interested_keywords:
+        if kw in clean:
+            return {
+                "category": "interested",
+                "label": "Interested / Form Submitted",
+                "badge_bg": "rgba(52, 211, 153, 0.18)",
+                "badge_color": "#34d399",
+                "icon": "🟢"
+            }
+
+    # Default / General Response
+    return {
+        "category": "neutral",
+        "label": "Replied",
+        "badge_bg": "rgba(96, 165, 250, 0.18)",
+        "badge_color": "#60a5fa",
+        "icon": "🔵"
+    }
+
+
 def _extract_body(payload: dict) -> tuple[str, str]:
     """Walk a Gmail message payload's MIME parts, returning (text, html) —
-    the first text/plain and first text/html bodies found, with quoted
-    thread history stripped off the end of each."""
+    the full text/plain and text/html bodies found."""
     text = ""
     html = ""
 
@@ -185,7 +272,7 @@ def _extract_body(payload: dict) -> tuple[str, str]:
             walk(sub)
 
     walk(payload or {})
-    return _strip_quoted_text(text), _strip_quoted_html(html)
+    return text, html
 
 
 def _internal_date_to_iso(ms: Optional[str]) -> Optional[str]:
@@ -198,11 +285,7 @@ def _internal_date_to_iso(ms: Optional[str]) -> Optional[str]:
 
 
 def poll_once() -> dict:
-    """Check every open ("sent") tracked thread for a reply. Cheap no-op
-    when Gmail isn't connected. Holds _lock for the whole pass (Gmail API
-    calls included) — simplest way to avoid a lost-update race against
-    register_sent()/mark_read(), and call volume here is low (tens of
-    threads at most) so the brief lock hold is not a real bottleneck."""
+    """Check every open ("sent") tracked thread for a reply."""
     if not gmail_oauth.is_connected():
         return {"checked": 0, "new_replies": 0, "skipped": "not_connected"}
 
@@ -240,10 +323,15 @@ def poll_once() -> dict:
 
             headers = (reply_msg.get("payload") or {}).get("headers", [])
             body_text, body_html = _extract_body(reply_msg.get("payload") or {})
+            clean_text = _strip_quoted_text(body_text or reply_msg.get("snippet", ""))
+            intent = _detect_reply_intent(clean_text or body_text or reply_msg.get("snippet", ""))
+
             rec["status"] = "replied"
             rec["reply"] = {
                 "from": _header(headers, "From"),
                 "snippet": reply_msg.get("snippet", ""),
+                "clean_text": clean_text,
+                "intent": intent,
                 "body_text": body_text,
                 "body_html": body_html,
                 "received_at": _internal_date_to_iso(reply_msg.get("internalDate")),
@@ -300,6 +388,19 @@ def list_replies(status: str = "all") -> list[dict]:
             row["reply_from"] = reply.get("from")
             row["reply_snippet"] = reply.get("snippet")
             row["received_at"] = reply.get("received_at")
+            
+            raw_text = reply.get("body_text", "")
+            clean_text = reply.get("clean_text") or _strip_quoted_text(raw_text or reply.get("snippet", ""))
+            intent = reply.get("intent") or _detect_reply_intent(clean_text or raw_text or reply.get("snippet", ""))
+
+            row["clean_text"] = clean_text
+            row["intent"] = intent
+            row["clean_snippet"] = clean_text if clean_text else reply.get("snippet", "")
+
+            # Filter by intent category if specified
+            if status in ["not_interested", "interested", "question", "auto_reply"] and intent.get("category") != status:
+                continue
+
         rows.append(row)
     rows.sort(key=lambda r: r.get("received_at") or r.get("sent_at") or "", reverse=True)
     return rows
@@ -312,6 +413,14 @@ def get_reply_detail(thread_id: str) -> Optional[dict]:
         return None
     row = dict(rec)
     row["thread_id"] = thread_id
+    if rec.get("reply"):
+        reply = dict(rec["reply"])
+        raw_text = reply.get("body_text", "")
+        clean_text = reply.get("clean_text") or _strip_quoted_text(raw_text or reply.get("snippet", ""))
+        intent = reply.get("intent") or _detect_reply_intent(clean_text or raw_text or reply.get("snippet", ""))
+        reply["clean_text"] = clean_text
+        reply["intent"] = intent
+        row["reply"] = reply
     return row
 
 

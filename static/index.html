@@ -408,8 +408,12 @@
       <span class="results-title">Inbox</span>
       <div class="header-controls">
         <select id="reply-filter" title="Filter" style="background:var(--glass-2);border:1px solid var(--border-dim);border-radius:9px;color:var(--text-on);font-size:13px;padding:8px 12px;cursor:pointer">
-          <option value="all">All</option>
+          <option value="all">All status</option>
           <option value="unread">Unread replies</option>
+          <option value="not_interested">🔴 Not Interested</option>
+          <option value="interested">🟢 Interested</option>
+          <option value="question">🟡 Question / Inquiry</option>
+          <option value="auto_reply">⚪ Auto-reply / OOO</option>
         </select>
         <div class="search-wrap"><span class="search-icon">&#x2315;</span><input id="reply-search" type="text" placeholder="Search name, email&#x2026;"></div>
         <button id="reply-check-now" class="btn-ghost" title="Check Gmail for new replies now" aria-label="Check Gmail for new replies now">&#x21bb; Check now</button>

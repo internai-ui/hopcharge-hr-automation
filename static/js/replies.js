@@ -32,9 +32,20 @@
     rows.forEach((r, i)=>{
       const when = r.received_at ? new Date(r.received_at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
                  : (r.sent_at ? new Date(r.sent_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—');
-      const statusBadge = r.status === 'replied'
-        ? `<span class="dec-badge" style="background:${r.read?'rgba(96,165,250,.12)':'rgba(52,211,153,.15)'};color:${r.read?'#60a5fa':'#34d399'}">${r.read?'Replied':'● New reply'}</span>`
-        : `<span class="dec-badge" style="background:rgba(255,255,255,.08);color:var(--text-dim)">Sent — no reply yet</span>`;
+      
+      let statusBadge = '';
+      if (r.status === 'replied') {
+        if (r.intent) {
+          statusBadge = `<span class="dec-badge" style="background:${r.intent.badge_bg};color:${r.intent.badge_color};font-weight:600;display:inline-flex;align-items:center;gap:4px">${r.intent.icon} ${esc(r.intent.label)}</span>`;
+        } else {
+          statusBadge = `<span class="dec-badge" style="background:${r.read?'rgba(96,165,250,.12)':'rgba(52,211,153,.15)'};color:${r.read?'#60a5fa':'#34d399'}">${r.read?'Replied':'● New reply'}</span>`;
+        }
+      } else {
+        statusBadge = `<span class="dec-badge" style="background:rgba(255,255,255,.08);color:var(--text-dim)">Sent — no reply yet</span>`;
+      }
+
+      const snippetText = r.clean_snippet || r.clean_text || r.reply_snippet || '';
+
       const tr = document.createElement('tr');
       tr.style.animationDelay = `${i*25}ms`;
       tr.style.cursor = 'pointer';
@@ -44,7 +55,7 @@
         <td><div class="cand-name">${esc(r.candidate_name)||'Anonymous'}</div></td>
         <td class="td-email">${esc(r.candidate_email)||'<span style="opacity:.35">—</span>'}</td>
         <td>${statusBadge}</td>
-        <td style="font-size:12px;color:var(--text-mid);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.reply_snippet)||'<span style="opacity:.35">—</span>'}</td>
+        <td style="font-size:12px;color:var(--text-mid);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(snippetText)}">${esc(snippetText)||'<span style="opacity:.35">—</span>'}</td>
         <td style="font-size:10px;white-space:nowrap;color:var(--text-dim)">${when}</td>
         <td><button class="td-view-btn" onclick="event.stopPropagation();this.closest('tr').click()">VIEW</button></td>`;
       tbody.appendChild(tr);
@@ -87,7 +98,7 @@
     if (rec.form_link){
       const fl = document.createElement('div');
       fl.className = 'cand-qa-item full';
-      fl.innerHTML = `<div class="cand-qa-q">Form Link Sent</div><div class="cand-qa-a">${esc(rec.form_link)}</div>`;
+      fl.innerHTML = `<div class="cand-qa-q">Form Link Sent</div><div class="cand-qa-a" style="word-break:break-all;font-size:12px">${esc(rec.form_link)}</div>`;
       body.appendChild(fl);
     }
 
@@ -105,35 +116,37 @@
     wrap.className = 'cand-qa-item full';
     wrap.style.cssText = 'margin-top:10px;border-top:1px solid var(--border-dim);padding-top:18px';
     const receivedWhen = reply.received_at ? new Date(reply.received_at).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
-    wrap.innerHTML = `<div class="cand-qa-q">Reply <span style="opacity:.55;font-weight:400">— from ${esc(reply.from||'')}, ${esc(receivedWhen)}</span></div>`;
-    const contentBox = document.createElement('div');
-    contentBox.style.cssText = 'margin-top:10px;background:var(--glass-2);border:1px solid var(--border-dim);border-radius:8px;padding:14px 16px';
-    if (reply.body_text){
-      contentBox.style.whiteSpace = 'pre-wrap';
-      contentBox.style.fontSize = '13px';
-      contentBox.style.lineHeight = '1.6';
-      contentBox.style.color = 'var(--text-mid)';
-      contentBox.textContent = reply.body_text;
-    } else if (reply.body_html){
-      // Untrusted email HTML — render inside a fully sandboxed iframe (no scripts,
-      // no same-origin access to the parent page) rather than injecting it into
-      // this page's DOM.
-      const frame = document.createElement('iframe');
-      frame.setAttribute('sandbox', '');
-      frame.style.cssText = 'width:100%;min-height:260px;border:0;background:#fff;border-radius:6px';
-      frame.srcdoc = reply.body_html;
-      contentBox.style.padding = '0';
-      contentBox.appendChild(frame);
-    } else {
-      contentBox.style.fontSize = '13px';
-      contentBox.style.color = 'var(--text-dim)';
-      contentBox.textContent = reply.snippet || 'No content available.';
+    
+    let intentHeader = '';
+    if (reply.intent) {
+      intentHeader = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dim)">DECODED INTENT:</span>
+        <span style="background:${reply.intent.badge_bg};color:${reply.intent.badge_color};padding:4px 10px;border-radius:16px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px">${reply.intent.icon} ${esc(reply.intent.label)}</span>
+      </div>`;
     }
+
+    wrap.innerHTML = `
+      ${intentHeader}
+      <div class="cand-qa-q">Candidate Response <span style="opacity:.55;font-weight:400">— from ${esc(reply.from||'')}, ${esc(receivedWhen)}</span></div>
+    `;
+
+    const cleanText = reply.clean_text || reply.body_text || reply.snippet || '';
+
+    const contentBox = document.createElement('div');
+    contentBox.style.cssText = 'margin-top:10px;background:var(--glass-2);border:1px solid var(--border-dim);border-left:3px solid ' + (reply.intent?.badge_color || '#60a5fa') + ';border-radius:8px;padding:14px 16px';
+    contentBox.style.whiteSpace = 'pre-wrap';
+    contentBox.style.fontSize = '13.5px';
+    contentBox.style.lineHeight = '1.65';
+    contentBox.style.color = 'var(--text-on)';
+    contentBox.textContent = cleanText;
     wrap.appendChild(contentBox);
+
+
+
     body.appendChild(wrap);
 
     const actions = document.createElement('div');
-    actions.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px';
+    actions.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;margin-top:16px';
     actions.innerHTML = `
       <a class="btn-ghost" id="rm-view-gmail" href="https://mail.google.com/mail/u/0/#all/${encodeURIComponent(rec.thread_id)}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">↗ View in Gmail</a>
       <button class="btn-ghost" id="rm-toggle-read">${rec.read ? 'Mark as unread' : 'Mark as read'}</button>`;
@@ -178,7 +191,7 @@
     const q = e.target.value.toLowerCase();
     if (!q){ renderReplies(_rows, {}); return; }
     renderReplies(_rows.filter(r =>
-      JSON.stringify([r.candidate_name, r.candidate_email, r.reply_snippet]).toLowerCase().includes(q)), {});
+      JSON.stringify([r.candidate_name, r.candidate_email, r.clean_text, r.reply_snippet, r.intent?.label]).toLowerCase().includes(q)), {});
   });
 
   document.querySelector('.sb-item[data-page="replies"]')
