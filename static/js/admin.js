@@ -9,6 +9,7 @@
       const s = d.settings, def = d.defaults;
       _defaults = def;
 <<<<<<< HEAD
+<<<<<<< HEAD
       // Thresholds (optional elements)
       const rej = document.getElementById('adm-reject'), mov = document.getElementById('adm-move');
       if (rej && s.thresholds) rej.value = s.thresholds.auto_reject;
@@ -38,6 +39,8 @@
 
   // Admin settings loaded cleanly
 =======
+=======
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
       // Emails
       document.getElementById('adm-rec-subject').value = s.email.recruitment.subject || '';
       document.getElementById('adm-rec-body').value    = s.email.recruitment.body || '';
@@ -173,7 +176,10 @@
     });
   });
 <<<<<<< HEAD
+<<<<<<< HEAD
 
+=======
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
 =======
 >>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
 })();

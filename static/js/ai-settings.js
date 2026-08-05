@@ -1,6 +1,12 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 /* ───────── AI SETTINGS IN ADMIN PAGE ───────── */
 (function () {
+=======
+/* ───────── AI-ASSISTED CV PARSING SETTINGS (lives inside Admin Settings) ───────── */
+(function () {
+  if (!document.getElementById('ai-feature-enable')) return;
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
 =======
 /* ───────── AI-ASSISTED CV PARSING SETTINGS (lives inside Admin Settings) ───────── */
 (function () {
@@ -83,6 +89,9 @@
   }
 
   // ── Master feature toggle: enable/disable AI-based (external LLM) CV parsing ──
+<<<<<<< HEAD
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
+=======
 >>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
   function updateFeatureUI() {
     const section = $('api-config-section');
@@ -90,6 +99,7 @@
   }
 
   const featureToggle = $('ai-feature-enable');
+<<<<<<< HEAD
 <<<<<<< HEAD
   if (featureToggle) {
     featureToggle.addEventListener('change', async () => {
@@ -123,6 +133,8 @@
     }
     loadFeature();
 =======
+=======
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
   featureToggle.addEventListener('change', async () => {
     featureToggle.disabled = true;
     try {
@@ -188,6 +200,9 @@
         $('api-status').textContent = `✓ Configured · ${_provider}`;
       } else {
         $('offline-status').textContent = 'Active · Parsing now';
+<<<<<<< HEAD
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
+=======
 >>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
       }
     } catch (e) { }
