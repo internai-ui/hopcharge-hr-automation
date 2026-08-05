@@ -10,7 +10,7 @@
   let _provider = 'huggingface';
   let _currentMode = 'offline';  // offline or api
   let _loaded = false;
-  let _featureEnabled = false;   // master AI-parsing toggle — off by default, persisted server-side
+  let _featureEnabled = false;   // master AI-parsing toggle - off by default, persisted server-side
 
   function fillModels(sel) {
     // Populate the datalist with suggestions for the current provider
@@ -20,7 +20,7 @@
     else if (!$('ai-model').value) $('ai-model').value = MODELS[_provider][0];
   }
 
-  // Mode toggle — real radio inputs, native label-click semantics select them.
+  // Mode toggle - real radio inputs, native label-click semantics select them.
   document.querySelectorAll('.ai-mode-radio-input').forEach(radio => {
     radio.addEventListener('change', async () => {
       const mode = radio.value;
@@ -46,7 +46,7 @@
     const apiSection = $('api-config-section');
     const switchBtn = $('ai-switch-btn');
     // While the master AI-parsing feature is off, force the offline view
-    // regardless of what mode was last selected — the API section, key
+    // regardless of what mode was last selected - the API section, key
     // fields, etc. must never be reachable until the toggle is turned on.
     const effectiveMode = _featureEnabled ? _currentMode : 'offline';
     if (effectiveMode === 'offline') {
@@ -81,7 +81,7 @@
       _featureEnabled = !!d.enabled;
       featureToggle.checked = _featureEnabled;
       updateFeatureUI();
-      toast(_featureEnabled ? 'AI-assisted CV parsing enabled' : 'AI-assisted CV parsing disabled — offline parser only', 'ok');
+      toast(_featureEnabled ? 'AI-assisted CV parsing enabled' : 'AI-assisted CV parsing disabled - offline parser only', 'ok');
     } catch (e) {
       featureToggle.checked = !featureToggle.checked;
       alert('Failed to update the AI-parsing toggle: ' + e.message);

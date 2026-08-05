@@ -110,8 +110,8 @@
       const skipped = d.skipped || (d.results||[]).filter(x=>x.status==='skipped').length;
       if (d.sent>0 && !failed && !skipped)  toast(`Sent the Round 1 Calendly invite to ${d.sent} candidate${d.sent!==1?'s':''}`, 'ok');
       else if (d.sent>0 && skipped)         toast(`Sent ${d.sent}; ${skipped} skipped (no link set for their role)`, 'ok');
-      else if (d.sent>0)                    toast(`Sent ${d.sent}, ${failed} failed — check addresses`, 'ok');
-      else if (skipped)                     toast(`Nothing sent — ${skipped} candidate(s) have no link set for their role`, 'err');
+      else if (d.sent>0)                    toast(`Sent ${d.sent}, ${failed} failed - check addresses`, 'ok');
+      else if (skipped)                     toast(`Nothing sent - ${skipped} candidate(s) have no link set for their role`, 'err');
       else                                  toast(d.error || 'Nothing was sent', 'err');
       closeR1Invite();
     } catch(e){ toast('Send failed: ' + e.message, 'err'); }

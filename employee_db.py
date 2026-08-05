@@ -187,7 +187,7 @@ def _compute_derived(emp: dict) -> dict:
         if months == 12:
             whole, months = whole + 1, 0
         emp["service_duration"] = f"{whole}y {months}m"
-        emp["years_of_service_achievement"] = f"{whole} year{'s' if whole != 1 else ''}" if whole >= 1 else "—"
+        emp["years_of_service_achievement"] = f"{whole} year{'s' if whole != 1 else ''}" if whole >= 1 else "-"
     else:
         emp["service_duration"] = ""
         emp["years_of_service_achievement"] = ""
@@ -530,7 +530,7 @@ def _fetch_public_csv(raw_url: str) -> list:
     except urllib.error.HTTPError as exc:
         if exc.code in (401, 403):
             raise ValueError(
-                "Access denied — the sheet isn't shared publicly. Set General "
+                "Access denied - the sheet isn't shared publicly. Set General "
                 "access to 'Anyone with the link' (Viewer)."
             )
         if exc.code == 404:
@@ -692,7 +692,7 @@ def _http(exc: Exception):
             return HTTPException(403, f"Access denied. Share the Sheet/Form with the service account ({sa}) "
                                       "as Editor/Viewer, and enable the Sheets & Forms APIs.")
         if st == 404:
-            return HTTPException(404, "Not found — check the link/ID and that it's shared with the service account.")
+            return HTTPException(404, "Not found - check the link/ID and that it's shared with the service account.")
         return HTTPException(502, f"Google API error ({st}).")
     if isinstance(exc, (ValueError, FileNotFoundError)):
         return HTTPException(400, str(exc))

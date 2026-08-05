@@ -1,6 +1,6 @@
 /* Sidebar auth-check (was inline right after the sidebar markup) */
     /* Reveal the Account section only when sign-in is enabled.
-       Fails silently — the dashboard never depends on this. */
+       Fails silently - the dashboard never depends on this. */
     fetch('/api/auth/me').then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
       if (!d || d.auth === 'disabled' || !d.email) return;
       document.getElementById('sb-account').style.display = '';
@@ -58,7 +58,7 @@
   addEventListener('resize', () => { resize(); if (PARTICLES_ON) init(); });
 })();
 
-/* ───────── CURSOR GLOW (disabled — website has no cursor glow) ───────── */
+/* ───────── CURSOR GLOW (disabled - website has no cursor glow) ───────── */
 const glow = document.getElementById('glow-dot');
 if (glow) glow.style.display = 'none';
 let mx=0,my=0,gx=0,gy=0;
@@ -162,7 +162,7 @@ const body = document.body;
 const sidebarEl = document.getElementById('sidebar');
 const scrim = document.getElementById('sidebar-scrim');
 /* The sidebar sits off-screen (translateX(-100%)) when closed, but without
-   `inert` its buttons still sat in the keyboard tab order — a keyboard-only
+   `inert` its buttons still sat in the keyboard tab order - a keyboard-only
    user tabbing through the page would silently land on invisible, off-screen
    nav items with no visual indication. `inert` removes the whole subtree
    from both the tab order and the accessibility tree while closed. */
@@ -170,7 +170,7 @@ function openNav(){ body.classList.add('nav-open'); if (sidebarEl) sidebarEl.ine
 function closeNav(){ body.classList.remove('nav-open'); if (sidebarEl) sidebarEl.inert = true; }
 function toggleNav(){ body.classList.contains('nav-open') ? closeNav() : openNav(); }
 
-/* Sidebar only opens via this explicit button — no hover-to-expand. */
+/* Sidebar only opens via this explicit button - no hover-to-expand. */
 const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
 if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', toggleNav);
 scrim.addEventListener('click', closeNav);
@@ -187,7 +187,7 @@ function pageForPath(path) {
   return PAGE_NAMES.includes(name) ? name : null;
 }
 
-/* activatePage() only flips DOM state — no history writes, so popstate (the
+/* activatePage() only flips DOM state - no history writes, so popstate (the
    browser back/forward buttons) can call it directly without creating new
    history entries. goToPage() is what every click handler calls; it also
    pushes a URL unless told not to. */
@@ -225,7 +225,7 @@ document.querySelectorAll('.sb-item[data-page]').forEach(b => b.addEventListener
 document.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => goToPage(b.dataset.goto)));
 
 /* Initial load: the server already served the right index.html for this URL
-   (see app.py's per-page routes) — sync the DOM to it without pushing a
+   (see app.py's per-page routes) - sync the DOM to it without pushing a
    redundant history entry. Deferred to DOMContentLoaded (already-fired case
    handled too) rather than running inline, so this always runs against a
    fully-parsed document regardless of where this script tag sits. */

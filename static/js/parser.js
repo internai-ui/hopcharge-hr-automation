@@ -44,7 +44,7 @@ parseBtn.addEventListener('click', async () => {
     if (!res.ok) { const err = await res.json().catch(()=>({detail:'Server error'})); throw new Error(errDetail(err, res.status)); }
     const data = await res.json(); candidates = data.candidates || [];
     if (candidates.length) { toast(`⚡ ${candidates.length} candidate${candidates.length>1?'s':''} extracted`, 'ok'); renderResults(candidates); }
-    else { toast('No data extracted — check your PDFs', 'err'); }
+    else { toast('No data extracted - check your PDFs', 'err'); }
     (data.errors || []).forEach(e => toast(`${e.file}: ${e.error}`, 'err'));
     refreshEmailCount();
   } catch (err) { toast(`Error: ${err.message}`, 'err'); }
@@ -74,8 +74,8 @@ function renderCards(data){
       <div class="ccard-head">
         <div class="avatar">${initials(c.full_name)}</div>
         <div class="name-block">
-          <div class="cname">${c.full_name||'<em style="opacity:.35;font-style:normal">—</em>'}</div>
-          <div class="cloc"><svg width="9" height="9" viewBox="0 0 9 9" fill="none"><circle cx="4.5" cy="3.5" r="1.5" stroke="currentColor" stroke-width="0.9"/><path d="M4.5 8S2 6 2 3.5a2.5 2.5 0 015 0C7 6 4.5 8 4.5 8z" stroke="currentColor" fill="none" stroke-width="0.9"/></svg>${c.location_city||'—'}</div>
+          <div class="cname">${c.full_name||'<em style="opacity:.35;font-style:normal">-</em>'}</div>
+          <div class="cloc"><svg width="9" height="9" viewBox="0 0 9 9" fill="none"><circle cx="4.5" cy="3.5" r="1.5" stroke="currentColor" stroke-width="0.9"/><path d="M4.5 8S2 6 2 3.5a2.5 2.5 0 015 0C7 6 4.5 8 4.5 8z" stroke="currentColor" fill="none" stroke-width="0.9"/></svg>${c.location_city||'-'}</div>
         </div>
         ${conf>0?`<div class="conf-badge">${Math.round(conf*100)}%</div>`:''}
       </div>
@@ -99,10 +99,10 @@ function renderTable(data){
     const tr=document.createElement('tr'); tr.style.animationDelay=`${i*28}ms`;
     tr.innerHTML=`
       <td class="td-mono" style="color:var(--text-dim)">${i+1}</td>
-      <td class="td-name">${c.full_name||'—'}</td>
-      <td class="td-mono">${c.phone_number||'—'}</td>
-      <td class="td-mono" style="font-size:10px">${c.email||'—'}</td>
-      <td>${c.location_city||'—'}</td>
+      <td class="td-name">${c.full_name||'-'}</td>
+      <td class="td-mono">${c.phone_number||'-'}</td>
+      <td class="td-mono" style="font-size:10px">${c.email||'-'}</td>
+      <td>${c.location_city||'-'}</td>
       <td><span style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:700;color:var(--blue)">${c.skills?.length||0}</span></td>
       <td><span style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:700;color:var(--violet)">${c.work_experience?.length||0}</span></td>
       <td><button class="btn-view" data-i="${i}">View</button></td>`;
@@ -124,7 +124,7 @@ function openModal(idx){
   document.getElementById('m-name').textContent=c.full_name||'Unknown Candidate';
   document.getElementById('m-src').textContent=`Source: ${c.source_file||'unknown'}`;
   const bodyEl=document.getElementById('m-body'); bodyEl.innerHTML='';
-  bodyEl.appendChild(buildSection('Contact Information',[['Name',c.full_name||'—'],['Phone',`<span class="mono">${c.phone_number||'—'}</span>`],['Email',`<span class="mono">${c.email||'—'}</span>`],['City',c.location_city||'—'],['LinkedIn',c.linkedin_profile?`<a href="${c.linkedin_profile}" target="_blank" style="color:var(--blue)">${c.linkedin_profile}</a>`:'—']]));
+  bodyEl.appendChild(buildSection('Contact Information',[['Name',c.full_name||'-'],['Phone',`<span class="mono">${c.phone_number||'-'}</span>`],['Email',`<span class="mono">${c.email||'-'}</span>`],['City',c.location_city||'-'],['LinkedIn',c.linkedin_profile?`<a href="${c.linkedin_profile}" target="_blank" style="color:var(--blue)">${c.linkedin_profile}</a>`:'-']]));
   if(c.summary_objective_profile){const s=document.createElement('div');s.className='msec';s.innerHTML=`<div class="msec-title">Profile Summary</div><div style="font-size:13px;color:var(--text-mid);line-height:1.6;background:var(--glass-2);border:1px solid var(--border-dim);border-radius:var(--r-sm);padding:14px 16px">${c.summary_objective_profile}</div>`;bodyEl.appendChild(s);}
   if(c.work_experience?.length){const s=document.createElement('div');s.className='msec';s.innerHTML=`<div class="msec-title">Work Experience</div>`+c.work_experience.map(w=>`<div class="exp-block">${w.title?`<div class="eb-title">${w.title}</div>`:''}${w.company?`<div class="eb-co">${w.company}</div>`:''}${w.duration?`<div class="eb-dur">⏱ ${w.duration}</div>`:''}${w.description?`<div class="eb-desc">${w.description}</div>`:''}</div>`).join('');bodyEl.appendChild(s);}
   if(c.education?.length){const s=document.createElement('div');s.className='msec';s.innerHTML=`<div class="msec-title">Education</div>`+c.education.map(e=>`<div class="exp-block" style="border-left-color:var(--blue)">${e.degree?`<div class="eb-title">${e.degree}</div>`:''}${e.institution?`<div class="eb-co" style="color:var(--blue)">${e.institution}</div>`:''}${e.year?`<div class="eb-dur">🎓 ${e.year}${e.score?' · '+e.score:''}</div>`:''}</div>`).join('');bodyEl.appendChild(s);}

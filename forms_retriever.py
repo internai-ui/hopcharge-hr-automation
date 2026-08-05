@@ -96,7 +96,7 @@ def extract_form_id(raw: str) -> str:
             "That looks like the *published* form link (/forms/d/e/...).\n"
             "The API needs the EDIT id instead.\n"
             "  1. Open your form for editing in Google Forms.\n"
-            "  2. Copy the URL — it looks like:\n"
+            "  2. Copy the URL - it looks like:\n"
             "       https://docs.google.com/forms/d/<FORM_ID>/edit\n"
             "  3. Paste that <FORM_ID> (the part between /d/ and /edit)."
         )
@@ -176,7 +176,7 @@ def build_service(credentials_json: str):
     except Exception as exc:
         raise ValueError(
             f"Could not load the service-account key: {exc}. "
-            "The private_key field may be corrupted — re-copy the whole JSON file."
+            "The private_key field may be corrupted - re-copy the whole JSON file."
         ) from exc
 
     return build("forms", "v1", credentials=credentials, cache_discovery=False)
@@ -392,7 +392,7 @@ def sync_form_responses(form_id: str, credentials_json: str = "", auth_mode: str
             if auth_mode == "oauth":
                 raise ValueError(
                     "Permission denied (403).\n"
-                    "  • Your connected Google account needs edit access to this form — it must "
+                    "  • Your connected Google account needs edit access to this form - it must "
                     "be the form owner or a collaborator with edit rights.\n"
                     "  • If you connected before Forms access was added to this app, reconnect "
                     "Gmail on the Send Emails page so the new permission takes effect."

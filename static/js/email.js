@@ -110,8 +110,8 @@
       const wasHidden = previewBox.classList.contains('hidden');
       previewBox.classList.toggle('hidden');
       if (!wasHidden || previewLoaded) return;
-      // Render the ACTUAL saved recruitment template — same server-side
-      // preview endpoint Admin Settings uses — instead of the old hardcoded
+      // Render the ACTUAL saved recruitment template - same server-side
+      // preview endpoint Admin Settings uses - instead of the old hardcoded
       // static copy that never reflected what really gets sent.
       const subjectEl = document.getElementById('email-preview-subject');
       const frameEl = document.getElementById('email-preview-frame');
@@ -194,13 +194,13 @@
             const div = document.createElement('div');
             div.className = 'email-result-row';
             div.style.animationDelay = `${i * 30}ms`;
-            div.innerHTML = `<div class="er-name">${r.name || '—'}</div><div class="er-email">${r.email}</div><span class="er-badge ${r.status === 'sent' ? 'sent' : 'fail'}">${r.status === 'sent' ? '✓ Sent' : '✗ Failed'}</span>`;
+            div.innerHTML = `<div class="er-name">${r.name || '-'}</div><div class="er-email">${r.email}</div><span class="er-badge ${r.status === 'sent' ? 'sent' : 'fail'}">${r.status === 'sent' ? '✓ Sent' : '✗ Failed'}</span>`;
             rows.appendChild(div);
           });
         }
         document.getElementById('email-results')?.classList.remove('hidden');
         const trackMsg = (data.tracked > 0) ? ` · ${data.tracked} tracked ⏱` : '';
-        toast(`Campaign complete — ${data.sent} sent, ${data.failed} failed${trackMsg}`, data.failed === 0 ? 'ok' : 'inf');
+        toast(`Campaign complete - ${data.sent} sent, ${data.failed} failed${trackMsg}`, data.failed === 0 ? 'ok' : 'inf');
       } catch(err) {
         toast(`Email error: ${err.message}`, 'err');
       } finally {

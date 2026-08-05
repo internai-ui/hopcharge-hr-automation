@@ -312,7 +312,7 @@ def _build_login_flow(request: Request, code_verifier: Optional[str] = None) -> 
     active = gmail_oauth.get_active_client(mode)
     if not active:
         raise RuntimeError(
-            "Google Sign-In isn't set up yet — the OAuth client hasn't been configured. "
+            "Google Sign-In isn't set up yet - the OAuth client hasn't been configured. "
             "Set it up via “Connect Google Account” on the Send Emails page first; "
             "sign-in reuses that same client."
         )

@@ -12,7 +12,7 @@
       if(d.folder_id && !folderEl().value) folderEl().value=d.folder_id;
       const bits=[];
       if(d.service_account_email) bits.push(`Share the folder with <b style="color:var(--text-mid)">${d.service_account_email}</b> (Viewer).`);
-      else if(d.credentials_found===false) bits.push('No service-account key found in the project folder — add the same JSON you use for Forms.');
+      else if(d.credentials_found===false) bits.push('No service-account key found in the project folder - add the same JSON you use for Forms.');
       if(d.last_synced) bits.push(`Last sync: ${new Date(d.last_synced).toLocaleString()} · ${d.imported_count} imported so far.`);
       if(bits.length) statusEl().innerHTML=bits.join('<br>');
     }catch(e){}
@@ -33,7 +33,7 @@
       const r=await fetch('/api/drive/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({folder})});
       const d=await r.json();
       if(!r.ok) throw new Error(errDetail(d, r.statusText));
-      statusEl().innerHTML=`Connected to <b style="color:var(--text-mid)">${d.folder_name}</b> — ${d.pdf_count} PDF${d.pdf_count!==1?'s':''}, <b style="color:var(--text-mid)">${d.new_count} new</b>.`;
+      statusEl().innerHTML=`Connected to <b style="color:var(--text-mid)">${d.folder_name}</b> - ${d.pdf_count} PDF${d.pdf_count!==1?'s':''}, <b style="color:var(--text-mid)">${d.new_count} new</b>.`;
       toast(`Drive: ${d.new_count} new CV${d.new_count!==1?'s':''} ready`,'ok');
     }catch(e){ statusEl().textContent='Access failed: '+e.message; toast('Drive: '+e.message,'err'); }
   });

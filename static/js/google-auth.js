@@ -127,7 +127,7 @@
           const d = await res.json();
           if (!res.ok) throw new Error(errDetail(d, res.status));
           secEl.value = '';
-          toast('Google OAuth client saved — click Connect Google Account to sign in.', 'ok');
+          toast('Google OAuth client saved - click Connect Google Account to sign in.', 'ok');
           window.refreshGoogleAuthWidgets();
         } catch(e) { toast('Could not save client config: ' + e.message, 'err'); }
       });
@@ -198,7 +198,7 @@
     }
   }
 
-  // Handle redirect feedback params — including returning to whichever page
+  // Handle redirect feedback params - including returning to whichever page
   // the user clicked Connect from (see the connect button handler above),
   // instead of leaving them on the SPA's default landing page.
   (function(){

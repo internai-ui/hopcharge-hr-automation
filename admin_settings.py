@@ -44,7 +44,7 @@ _lock = threading.Lock()
 # The button + form link are added by the template automatically.
 # ──────────────────────────────────────────────
 
-DEFAULT_RECRUITMENT_SUBJECT = "Thank You for Applying to Hopcharge — Next Steps"
+DEFAULT_RECRUITMENT_SUBJECT = "Thank You for Applying to Hopcharge - Next Steps"
 DEFAULT_RECRUITMENT_BODY = (
     "Thank you for your interest in joining Hopcharge. We appreciate the time and "
     "effort you have invested in your application and are pleased to confirm that we "
@@ -60,7 +60,7 @@ DEFAULT_RECRUITMENT_BODY = (
 
 DEFAULT_ONBOARDING_SUBJECT = "Welcome to the Hopcharge Family 🎉"
 DEFAULT_ONBOARDING_BODY = (
-    "Congratulations! After a competitive selection process, you stood out — and we "
+    "Congratulations! After a competitive selection process, you stood out - and we "
     "could not be more excited to welcome you to the Hopcharge family as {role}.\n\n"
     "Before your first day, we need a few details from you to complete the onboarding "
     "process. Please complete your onboarding form within 3 business days so we can "

@@ -31,7 +31,7 @@
     tbody.innerHTML = '';
     rows.forEach((r, i)=>{
       const when = r.received_at ? new Date(r.received_at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
-                 : (r.sent_at ? new Date(r.sent_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—');
+                 : (r.sent_at ? new Date(r.sent_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '-');
       
       let statusBadge = '';
       if (r.status === 'replied') {
@@ -41,7 +41,7 @@
           statusBadge = `<span class="dec-badge" style="background:${r.read?'rgba(96,165,250,.12)':'rgba(52,211,153,.15)'};color:${r.read?'#60a5fa':'#34d399'}">${r.read?'Replied':'● New reply'}</span>`;
         }
       } else {
-        statusBadge = `<span class="dec-badge" style="background:rgba(255,255,255,.08);color:var(--text-dim)">Sent — no reply yet</span>`;
+        statusBadge = `<span class="dec-badge" style="background:rgba(255,255,255,.08);color:var(--text-dim)">Sent - no reply yet</span>`;
       }
 
       const snippetText = r.clean_snippet || r.clean_text || r.reply_snippet || '';
@@ -53,9 +53,9 @@
       tr.innerHTML = `
         <td style="color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:10px">${i+1}</td>
         <td><div class="cand-name">${esc(r.candidate_name)||'Anonymous'}</div></td>
-        <td class="td-email">${esc(r.candidate_email)||'<span style="opacity:.35">—</span>'}</td>
+        <td class="td-email">${esc(r.candidate_email)||'<span style="opacity:.35">-</span>'}</td>
         <td>${statusBadge}</td>
-        <td style="font-size:12px;color:var(--text-mid);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(snippetText)}">${esc(snippetText)||'<span style="opacity:.35">—</span>'}</td>
+        <td style="font-size:12px;color:var(--text-mid);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(snippetText)}">${esc(snippetText)||'<span style="opacity:.35">-</span>'}</td>
         <td style="font-size:10px;white-space:nowrap;color:var(--text-dim)">${when}</td>
         <td><button class="td-view-btn" onclick="event.stopPropagation();this.closest('tr').click()">VIEW</button></td>`;
       tbody.appendChild(tr);
@@ -89,8 +89,8 @@
     av.style.background = 'linear-gradient(135deg,#1F2D59,#2F5BEA)';
     av.textContent = _initials(rec.candidate_name);
     document.getElementById('rm-name').textContent = rec.candidate_name || 'Anonymous';
-    const sentWhen = rec.sent_at ? new Date(rec.sent_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—';
-    document.getElementById('rm-meta').textContent = `${rec.candidate_email || '—'}  ·  Campaign sent ${sentWhen}`;
+    const sentWhen = rec.sent_at ? new Date(rec.sent_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '-';
+    document.getElementById('rm-meta').textContent = `${rec.candidate_email || '-'}  ·  Campaign sent ${sentWhen}`;
 
     const body = document.getElementById('rm-body');
     body.innerHTML = '';
@@ -106,7 +106,7 @@
       const empty = document.createElement('div');
       empty.className = 'cand-qa-item full';
       empty.style.marginTop = '10px';
-      empty.innerHTML = `<div class="cand-qa-q">Reply</div><div class="cand-qa-a empty">No reply yet — this candidate hasn't responded to the campaign email.</div>`;
+      empty.innerHTML = `<div class="cand-qa-q">Reply</div><div class="cand-qa-a empty">No reply yet - this candidate hasn't responded to the campaign email.</div>`;
       body.appendChild(empty);
       return;
     }
@@ -115,7 +115,7 @@
     const wrap = document.createElement('div');
     wrap.className = 'cand-qa-item full';
     wrap.style.cssText = 'margin-top:10px;border-top:1px solid var(--border-dim);padding-top:18px';
-    const receivedWhen = reply.received_at ? new Date(reply.received_at).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    const receivedWhen = reply.received_at ? new Date(reply.received_at).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
     
     let intentHeader = '';
     if (reply.intent) {
@@ -127,7 +127,7 @@
 
     wrap.innerHTML = `
       ${intentHeader}
-      <div class="cand-qa-q">Candidate Response <span style="opacity:.55;font-weight:400">— from ${esc(reply.from||'')}, ${esc(receivedWhen)}</span></div>
+      <div class="cand-qa-q">Candidate Response <span style="opacity:.55;font-weight:400">- from ${esc(reply.from||'')}, ${esc(receivedWhen)}</span></div>
     `;
 
     const cleanText = reply.clean_text || reply.body_text || reply.snippet || '';
@@ -177,7 +177,7 @@
       if (d.skipped === 'not_connected'){
         toast('Connect Gmail first to check for replies.', 'inf');
       } else {
-        toast(`Checked ${d.checked} thread${d.checked===1?'':'s'} — ${d.new_replies} new repl${d.new_replies===1?'y':'ies'}`, 'ok');
+        toast(`Checked ${d.checked} thread${d.checked===1?'':'s'} - ${d.new_replies} new repl${d.new_replies===1?'y':'ies'}`, 'ok');
       }
       loadRepliesPage();
     }catch(e){ toast('Check failed: '+e.message, 'err'); }

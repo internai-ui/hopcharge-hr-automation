@@ -66,7 +66,7 @@
     if (usingOAuthForms()) { clearFieldError(credsEl); return; }
     const v = credsEl.value.trim();
     if (!v) showFieldError(credsEl, 'Paste the service account JSON key.');
-    else if (!v.startsWith('{')) showFieldError(credsEl, 'This doesn\'t look like JSON — it should start with {.');
+    else if (!v.startsWith('{')) showFieldError(credsEl, 'This doesn\'t look like JSON - it should start with {.');
     else clearFieldError(credsEl);
   });
 
@@ -76,14 +76,14 @@
   function initials(name){ return (name||'?').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase(); }
 
   function pick(answers, patterns){
-    if (!answers) return '—';
+    if (!answers) return '-';
     for (const a of answers){
       const q = (a.question||'').toLowerCase();
       if (patterns.some(p => q.includes(p.toLowerCase()))){
-        return (a.answer||'').trim() || '—';
+        return (a.answer||'').trim() || '-';
       }
     }
-    return '—';
+    return '-';
   }
 
   function extractFields(r){
@@ -118,20 +118,20 @@
     const col = avatarColor(idx);
     document.getElementById('cm-avatar').style.background = `linear-gradient(135deg,${col},${col}99)`;
     document.getElementById('cm-avatar').textContent = initials(f.name);
-    document.getElementById('cm-name').textContent = f.name === '—' ? 'Anonymous' : f.name;
-    const dateStr = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—';
-    document.getElementById('cm-meta').textContent = `Submitted ${dateStr}  ·  ${f.role !== '—' ? f.role : 'Role not specified'}`;
+    document.getElementById('cm-name').textContent = f.name === '-' ? 'Anonymous' : f.name;
+    const dateStr = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '-';
+    document.getElementById('cm-meta').textContent = `Submitted ${dateStr}  ·  ${f.role !== '-' ? f.role : 'Role not specified'}`;
 
     // Render all Q&A pairs
     const body = document.getElementById('cm-body');
     body.innerHTML = '';
 
     // Fast-fill flag banner (form completed in under 5 minutes)
-    const track = f.email !== '—' ? _trackingByEmail[f.email.toLowerCase()] : null;
+    const track = f.email !== '-' ? _trackingByEmail[f.email.toLowerCase()] : null;
     if (isFastFill(track)){
       const warn = document.createElement('div');
       warn.style.cssText = 'grid-column:1/-1;margin-bottom:18px;padding:12px 15px;background:rgba(248,113,113,.10);border:1px solid rgba(248,113,113,.4);border-radius:9px';
-      warn.innerHTML = `<div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:13px;letter-spacing:.5px;color:#f87171">🚩 FLAGGED — FAST COMPLETION</div>
+      warn.innerHTML = `<div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:13px;letter-spacing:.5px;color:#f87171">🚩 FLAGGED - FAST COMPLETION</div>
         <div style="font-size:12px;color:var(--text-mid);margin-top:5px;line-height:1.5">This candidate completed the form in <b style="color:#f87171">${track.time_taken_human}</b> (under 5 minutes). Consider reviewing their answers for low effort or copy-paste responses before advancing them.</div>`;
       body.appendChild(warn);
     }
@@ -145,11 +145,11 @@
       { q:'Marital Status',   a:f.marital },
       { q:'Languages Known',  a:f.languages },
       { q:'Role Applying For',a:f.role, full:true },
-      { q:'High School (10th) — School & Year', a:f.hs_school, full:true },
+      { q:'High School (10th) - School & Year', a:f.hs_school, full:true },
       { q:'High School %',    a:f.hs_pct },
-      { q:'Intermediate (12th) — School & Year', a:f.inter_sch, full:true },
+      { q:'Intermediate (12th) - School & Year', a:f.inter_sch, full:true },
       { q:'Intermediate %',   a:f.inter_pct },
-      { q:'Graduation — University & Year', a:f.grad, full:true },
+      { q:'Graduation - University & Year', a:f.grad, full:true },
       { q:'CGPA',             a:f.cgpa },
       { q:'Previous Experience', a:f.experience, full:true },
       { q:'Professional Skills', a:f.skills, full:true },
@@ -157,12 +157,12 @@
     groups.forEach(g => {
       const div = document.createElement('div');
       div.className = 'cand-qa-item' + (g.full ? ' full' : '');
-      const isEmpty = !g.a || g.a === '—';
+      const isEmpty = !g.a || g.a === '-';
       div.innerHTML = `<div class="cand-qa-q">${g.q}</div><div class="cand-qa-a${isEmpty?' empty':''}">${isEmpty ? 'Not provided' : g.a}</div>`;
       body.appendChild(div);
     });
 
-    // ── Full form responses — every raw question/answer exactly as submitted,
+    // ── Full form responses - every raw question/answer exactly as submitted,
     //    mirroring the view available in the Accepted candidates modal. The
     //    curated groups above only surface known fields; this shows everything.
     const _escFR = s => String(s==null?'':s)
@@ -172,7 +172,7 @@
       const hdr = document.createElement('div');
       hdr.className = 'cand-qa-item full';
       hdr.style.cssText = 'background:none;border:none;padding:14px 0 2px';
-      hdr.innerHTML = `<div class="cand-qa-q" style="font-size:11px;letter-spacing:1.5px;color:var(--text-mid)">Full Form Responses <span style="opacity:.55;font-weight:400">— every answer as submitted</span></div>`;
+      hdr.innerHTML = `<div class="cand-qa-q" style="font-size:11px;letter-spacing:1.5px;color:var(--text-mid)">Full Form Responses <span style="opacity:.55;font-weight:400">- every answer as submitted</span></div>`;
       body.appendChild(hdr);
       allAnswers.forEach(a => {
         const div = document.createElement('div');
@@ -198,13 +198,13 @@
     wrap.className = 'cand-qa-item full';
     wrap.style.cssText = 'margin-top:8px;border-top:1px solid var(--border-dim);padding-top:18px';
     wrap.innerHTML = `
-      <div class="cand-qa-q">Notes <span style="opacity:.55;font-weight:400">— personal remarks, any round</span></div>
+      <div class="cand-qa-q">Notes <span style="opacity:.55;font-weight:400">- personal remarks, any round</span></div>
       <div id="notes-list-${escNote(responseId)}" style="margin:10px 0 14px">
         <div style="font-size:12px;color:var(--text-dim)">Loading notes…</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <input id="note-stage-${escNote(responseId)}" class="field-input" type="text"
-               placeholder="Stage / round (optional) — e.g. Round 1 Telephonic"
+               placeholder="Stage / round (optional) - e.g. Round 1 Telephonic"
                style="font-size:12px">
         <textarea id="note-text-${escNote(responseId)}" rows="2" class="field-input"
                placeholder="Add a remark about this candidate…"
@@ -352,7 +352,7 @@
     const rec = (_fullData?.responses||[]).find(x=>x.response_id===responseId);
     const nm = rec ? (extractFields(rec).name||'this candidate') : 'this candidate';
     document.getElementById('accd-who').textContent =
-      `Move ${nm==='—'?'this candidate':nm} to the Accepted section. They enter at the HR Round stage.`;
+      `Move ${nm==='-'?'this candidate':nm} to the Accepted section. They enter at the HR Round stage.`;
     document.getElementById('accd-note').value = '';
     document.getElementById('accept-dialog').classList.add('open');
   };
@@ -392,7 +392,7 @@
     const rec = (_fullData?.responses||[]).find(x=>x.response_id===responseId);
     const nm = opts.name || (rec ? (extractFields(rec).name||'this candidate') : 'this candidate');
     document.getElementById('rejd-who').textContent =
-      `Move ${nm==='—'?'this candidate':nm} to the Rejected tab. Their full application is preserved.`;
+      `Move ${nm==='-'?'this candidate':nm} to the Rejected tab. Their full application is preserved.`;
     document.getElementById('rejd-reason').value = '';
     // Populate rounds (fetch once, then cache); preselect a preferred round when
     // the caller knows which stage the candidate is being rejected from.
@@ -406,7 +406,7 @@
       fetch('/api/rejected').then(r=>r.json()).then(d=>{
         sel.innerHTML = (d.rounds||[]).map(rd=>`<option value="${rd}">${rd}</option>`).join('');
         preselect();
-      }).catch(()=>{ sel.innerHTML = '<option value="Round 0 — Form Screening">Round 0 — Form Screening</option>'; });
+      }).catch(()=>{ sel.innerHTML = '<option value="Round 0 - Form Screening">Round 0 - Form Screening</option>'; });
     } else {
       preselect();
     }
@@ -483,7 +483,7 @@
     lastEl.value = data.last_synced || '';
 
     const lbl = document.getElementById('forms-title-label');
-    lbl.textContent = (data.form_title || 'Responses') + ' — ' + n + ' response' + (n!==1?'s':'');
+    lbl.textContent = (data.form_title || 'Responses') + ' - ' + n + ' response' + (n!==1?'s':'');
 
     // Save full dataset for modal + filtering. Stamp each response with its
     // true index so sorting/filtering never breaks the modal/delete mapping.
@@ -537,7 +537,7 @@
     const roles = new Set();
     responses.forEach(r => {
       const role = r.role_name || extractFields(r).role;
-      if (role && role !== '—') roles.add(role);
+      if (role && role !== '-') roles.add(role);
     });
     sel.innerHTML = '<option value="">All roles</option>' +
       [...roles].sort().map(role => `<option value="${role}">${role}</option>`).join('');
@@ -559,7 +559,7 @@
     let rows = _fullData.responses.slice();
 
     // Once a candidate is routed to the Accepted or Rejected pipeline they drop
-    // off this page — it only lists candidates still awaiting a decision.
+    // off this page - it only lists candidates still awaiting a decision.
     rows = rows.filter(r => !_acceptedIds.has(r.response_id) && !_rejectedIds.has(r.response_id));
     const pendingTotal = rows.length;
 
@@ -611,12 +611,12 @@
   }
 
   function timeBadge(rec){
-    if(!rec) return '<span style="opacity:.3;font-size:10px">—</span>';
+    if(!rec) return '<span style="opacity:.3;font-size:10px">-</span>';
     if(rec.time_taken_human){
       const secs=rec.time_taken_seconds||0;
       // colour: green normal, amber moderate/very-fast, red very-long
       let col='#34d399';
-      if(secs<FAST_FILL_SECONDS) col='#fbbf24';   // under 5 min — flagged
+      if(secs<FAST_FILL_SECONDS) col='#fbbf24';   // under 5 min - flagged
       else if(secs>900) col='#f87171';            // very long
       else if(secs>300) col='#fbbf24';            // moderate
       const flag = isFastFill(rec)
@@ -644,10 +644,10 @@
       const idx = r._idx;                 // true index into _modalResponses
       const f   = extractFields(r);
       const col = avatarColor(idx);
-      const dateStr = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—';
+      const dateStr = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '-';
       const role = roleOf(r);
-      const displayName = f.name !== '—' ? f.name : 'Anonymous';
-      const track = f.email !== '—' ? byEmail[f.email.toLowerCase()] : null;
+      const displayName = f.name !== '-' ? f.name : 'Anonymous';
+      const track = f.email !== '-' ? byEmail[f.email.toLowerCase()] : null;
 
       const isRejected = _rejectedIds.has(r.response_id);
       const isAccepted = _acceptedIds.has(r.response_id);
@@ -669,7 +669,7 @@
       const flagged = isFastFill(track);
       if (flagged) tr.classList.add('row-flagged');
       const nameFlag = flagged
-        ? ` <span class="fast-flag" title="Filled in under 5 minutes — review for low effort">🚩 ${track.time_taken_human}</span>` : '';
+        ? ` <span class="fast-flag" title="Filled in under 5 minutes - review for low effort">🚩 ${track.time_taken_human}</span>` : '';
       tr.onclick = () => openCandModal(idx);
       tr.innerHTML = `
         <td style="color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:10px">${pos+1}</td>
@@ -679,9 +679,9 @@
             <div><div class="cand-name">${displayName}${nameFlag}</div></div>
           </div>
         </td>
-        <td>${role && role!=='—' ? `<span class="td-pill" style="background:rgba(31,45,89,.12);color:#c4b5fd">${role}</span>` : '<span style="opacity:.35">—</span>'}</td>
-        <td class="td-email">${f.email !== '—' ? f.email : '<span style="opacity:.35;font-style:italic">—</span>'}</td>
-        <td><span class="td-pill">${f.location !== '—' ? f.location : '—'}</span></td>
+        <td>${role && role!=='-' ? `<span class="td-pill" style="background:rgba(31,45,89,.12);color:#c4b5fd">${role}</span>` : '<span style="opacity:.35">-</span>'}</td>
+        <td class="td-email">${f.email !== '-' ? f.email : '<span style="opacity:.35;font-style:italic">-</span>'}</td>
+        <td><span class="td-pill">${f.location !== '-' ? f.location : '-'}</span></td>
         <td style="font-size:10px;white-space:nowrap;color:var(--text-dim)">${dateStr}</td>
         <td style="white-space:nowrap">${timeBadge(track)}</td>
         <td style="white-space:nowrap">${decisionCell}</td>
@@ -743,7 +743,7 @@
       });
       const data = await res.json();
       if (!res.ok) throw new Error(errDetail(data, res.status));
-      toast(`⚡ ${data.new_added} new response${data.new_added!==1?'s':''} — ${data.total} total`, 'ok');
+      toast(`⚡ ${data.new_added} new response${data.new_added!==1?'s':''} - ${data.total} total`, 'ok');
       infoEl.textContent = `${data.total} responses stored · ${data.new_added} new`;
       renderResponses(data);
     } catch (err) {
