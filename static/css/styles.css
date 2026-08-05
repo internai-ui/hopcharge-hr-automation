@@ -820,8 +820,6 @@ input.invalid:focus, select.invalid:focus, textarea.invalid:focus {
   .emp-status-box{margin:12px 0;padding:11px 14px;border-radius:9px;font-size:12px;line-height:1.6;background:var(--glass-2);border:1px solid var(--glass-border);color:var(--text-mid)}
   @media(max-width:640px){.emp-form{grid-template-columns:1fr}}
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 /* Toggle switch styling */
 .switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
 .switch input { opacity: 0; width: 0; height: 0; }
@@ -829,9 +827,7 @@ input.invalid:focus, select.invalid:focus, textarea.invalid:focus {
 .slider::before { position: absolute; content: ""; height: 18px; width: 18px; left: 2px; bottom: 2px; background-color: #ffffff; border-radius: 50%; transition: transform 0.25s; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
 input:checked + .slider { background-color: #2F5BEA; border-color: #2F5BEA; }
 input:checked + .slider::before { transform: translateX(20px); }
-=======
-=======
->>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
+
 /* ────── Central Shared Google Auth Widget ────── */
 .google-auth-widget { margin-bottom: 20px; }
 .g-widget-card {
@@ -952,8 +948,4 @@ input:checked + .slider::before { transform: translateX(20px); }
 }
 .g-widget-connect-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(31,45,89,0.42); }
 .g-widget-connect-btn:active { transform: translateY(0); }
-<<<<<<< HEAD
->>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
-=======
->>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
 

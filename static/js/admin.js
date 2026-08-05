@@ -3,61 +3,55 @@
   let _defaults = null;
 
   async function load(){
-    try{
-      const res = await fetch('/api/admin/settings');
-      const d = await res.json();
-      const s = d.settings, def = d.defaults;
-      _defaults = def;
-<<<<<<< HEAD
-<<<<<<< HEAD
-      // Thresholds (optional elements)
-      const rej = document.getElementById('adm-reject'), mov = document.getElementById('adm-move');
-      if (rej && s.thresholds) rej.value = s.thresholds.auto_reject;
-      if (mov && s.thresholds) mov.value = s.thresholds.auto_move;
-      const rejVal = document.getElementById('adm-reject-val'), movVal = document.getElementById('adm-move-val');
-      if (rejVal && s.thresholds) rejVal.textContent = s.thresholds.auto_reject;
-      if (movVal && s.thresholds) movVal.textContent = s.thresholds.auto_move;
-      if (typeof checkThresholdWarn === 'function') checkThresholdWarn();
-      // Emails
-      if (s.email && s.email.recruitment) {
-        document.getElementById('adm-rec-subject').value = s.email.recruitment.subject || '';
-        document.getElementById('adm-rec-body').value    = s.email.recruitment.body || '';
-      }
-      if (s.email && s.email.onboarding) {
-        document.getElementById('adm-ob-subject').value  = s.email.onboarding.subject || '';
-        document.getElementById('adm-ob-body').value     = s.email.onboarding.body || '';
-      }
-      if (s.email && s.email.rejection) {
-        document.getElementById('adm-rej-subject').value = s.email.rejection.subject || '';
-        document.getElementById('adm-rej-body').value    = s.email.rejection.body || '';
-      }
-      // Refresh any preview panes that are already open
-      ['recruitment','onboarding','rejection'].forEach(k => { if (typeof refreshPreview === 'function') refreshPreview(k); });
-    }catch(e){ console.error('Load admin settings failed:', e); toast('Could not load admin settings','err'); }
-  }
-  window.loadAdminSettings = load;
+  try{
+    const res = await fetch('/api/admin/settings');
+    const d = await res.json();
+    const s = d.settings, def = d.defaults;
+    _defaults = def;
 
-  // Admin settings loaded cleanly
-=======
-=======
->>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
-      // Emails
+    // Thresholds
+    const rej = document.getElementById('adm-reject'), mov = document.getElementById('adm-move');
+    if (rej && s.thresholds) rej.value = s.thresholds.auto_reject;
+    if (mov && s.thresholds) mov.value = s.thresholds.auto_move;
+
+    const rejVal = document.getElementById('adm-reject-val'), movVal = document.getElementById('adm-move-val');
+    if (rejVal && s.thresholds) rejVal.textContent = s.thresholds.auto_reject;
+    if (movVal && s.thresholds) movVal.textContent = s.thresholds.auto_move;
+
+    if (typeof checkThresholdWarn === 'function') checkThresholdWarn();
+
+    // Emails
+    if (s.email && s.email.recruitment) {
       document.getElementById('adm-rec-subject').value = s.email.recruitment.subject || '';
       document.getElementById('adm-rec-body').value    = s.email.recruitment.body || '';
+    }
+    if (s.email && s.email.onboarding) {
       document.getElementById('adm-ob-subject').value  = s.email.onboarding.subject || '';
       document.getElementById('adm-ob-body').value     = s.email.onboarding.body || '';
+    }
+    if (s.email && s.email.rejection) {
       document.getElementById('adm-rej-subject').value = s.email.rejection.subject || '';
       document.getElementById('adm-rej-body').value    = s.email.rejection.body || '';
-      // Refresh any preview panes that are already open (e.g. re-navigating
-      // back to this page) so they don't show stale content.
-      ['recruitment','onboarding','rejection'].forEach(refreshPreview);
-      // Recruitment form
-      const rf = s.recruitment_form || {};
-      document.getElementById('adm-form-id').value   = rf.form_id || '';
-      document.getElementById('adm-form-link').value = rf.form_link || '';
-    }catch(e){ toast('Could not load admin settings','err'); }
+    }
+
+    // Refresh preview
+    ['recruitment','onboarding','rejection'].forEach(k => {
+      if (typeof refreshPreview === 'function') refreshPreview(k);
+    });
+
+    // Recruitment form
+    const rf = s.recruitment_form || {};
+    document.getElementById('adm-form-id').value   = rf.form_id || '';
+    document.getElementById('adm-form-link').value = rf.form_link || '';
+
+  }catch(e){
+    console.error('Load admin settings failed:', e);
+    toast('Could not load admin settings','err');
   }
-  window.loadAdminSettings = load;
+} // ✅ CLOSE FUNCTION HERE
+
+// ✅ OUTSIDE the function
+window.loadAdminSettings = load;
 
   // Save recruitment form
   document.getElementById('adm-form-save')?.addEventListener('click', async ()=>{
@@ -76,7 +70,7 @@
       window.dispatchEvent(new CustomEvent('recruitment-form-changed', {detail: d.recruitment_form}));
     }catch(e){ msg.textContent = 'Save failed: '+e.message; msg.style.color = 'var(--red)'; }
   });
->>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
+
 
   // Email save/reset helper
   async function saveEmail(kind, subjId, bodyId){
@@ -175,11 +169,5 @@
       target.dispatchEvent(new Event('input', {bubbles:true}));
     });
   });
-<<<<<<< HEAD
-<<<<<<< HEAD
 
-=======
->>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
-=======
->>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
 })();
