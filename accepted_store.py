@@ -2,9 +2,9 @@
 accepted_store.py — Persistent store + API for accepted candidates.
 
 Mirror of rejected_store.py. When HR clicks "Accept" on a candidate in Form
-Responses, the candidate's full profile (name, phone, email, every form answer,
-and their scores) is copied into output/accepted_candidates.json together with
-WHICH ROUND they were accepted in and when.
+Responses, the candidate's full profile (name, phone, email, every form answer)
+is copied into output/accepted_candidates.json together with WHICH ROUND they
+were accepted in and when.
 
 For now the UI's Accepted section only surfaces candidates accepted in
 "Round 1", but the store keeps the round on every entry so future rounds can be
@@ -16,8 +16,6 @@ Storage shape (output/accepted_candidates.json):
     {
       "response_id": "...", "name": "...", "email": "...", "phone": "...",
       "role": "...", "answers": [ {question, answer}, ... ],
-      "objective_score": 21, "ai_score": 40, "total_score": 61,
-      "recommendation": "Shortlist",
       "accepted_round": "Round 1 — Telephonic Interview",
       "accepted_note": "optional free text",
       "accepted_at": "2026-06-10T09:15:00Z"
@@ -45,17 +43,6 @@ ACCEPTED_FILE: Path = OUTPUT_DIR / "accepted_candidates.json"
 RESPONSES_FILE: Path = OUTPUT_DIR / "form_responses.json"
 
 _lock = threading.Lock()
-
-# ╔══════════════════════════════════════════════════════════════════╗
-# ║  AUTO-MOVE SETTING — change the score threshold here.             ║
-# ║                                                                  ║
-# ║  Candidates in Form Responses whose total score is STRICTLY      ║
-# ║  GREATER THAN this number are automatically moved into the       ║
-# ║  HR Round stage of the Accepted pipeline.                        ║
-# ║                                                                  ║
-# ║  To change the cut-off, edit the one number below and restart.   ║
-# ╚══════════════════════════════════════════════════════════════════╝
-AUTO_MOVE_SCORE_THRESHOLD = 65
 
 # Accepted candidates move through four fixed stages, in order.
 # Accepting from Form Responses always lands a candidate in the first stage (hr).
@@ -146,12 +133,7 @@ def _pick(answers: list[dict], keys: list[str]) -> str:
 # ──────────────────────────────────────────────
 
 def _build_accept_entry(src: dict, note: str = "") -> dict:
-    """Build an accepted-store entry from a raw form response (no I/O).
-
-    Pulled out of accept_candidate so the bulk auto-move path can build many
-    entries in memory and persist them with a single save (see
-    auto_move_qualified), instead of a full load+save per candidate.
-    """
+    """Build an accepted-store entry from a raw form response (no I/O)."""
     answers = src.get("answers", [])
     now = _now_iso()
     return {
@@ -159,13 +141,9 @@ def _build_accept_entry(src: dict, note: str = "") -> dict:
         "name":            _pick(answers, ["full name", "name"]) or "Anonymous",
         "email":           src.get("email") or _pick(answers, ["personal email", "email"]),
         "phone":           _pick(answers, ["phone", "mobile", "contact"]),
-        "role":            src.get("role_name") or src.get("scored_role")
+        "role":            src.get("role_name")
                            or _pick(answers, ["role applying", "role"]),
         "answers":         answers,                      # full Q&A preserved
-        "objective_score": src.get("objective_score"),
-        "ai_score":        src.get("ai_score"),
-        "total_score":     src.get("total_score"),
-        "recommendation":  src.get("recommendation"),
         "stage":           STAGES[0],                    # always enters at HR Round
         "accepted_note":   (note or "").strip(),
         "accepted_at":     now,
@@ -294,70 +272,6 @@ def accepted_ids() -> set[str]:
     return {r.get("response_id") for r in _load()["accepted"]}
 
 
-def auto_move_qualified(threshold: int | None = None) -> dict:
-    """
-    Scan Form Responses and auto-move every candidate whose total_score is
-    strictly greater than `threshold` (default AUTO_MOVE_SCORE_THRESHOLD) into
-    the HR Round stage.
-
-    Skips candidates who are already accepted or already rejected, and skips
-    any with a scoring error or no score yet. Returns a summary.
-    """
-    cut = AUTO_MOVE_SCORE_THRESHOLD if threshold is None else int(threshold)
-
-    # Exclude anyone already in either pipeline so we never duplicate or
-    # override a manual decision.
-    already_accepted = accepted_ids()
-    try:
-        from rejected_store import rejected_ids
-        already_rejected = rejected_ids()
-    except Exception:
-        already_rejected = set()
-    skip = already_accepted | already_rejected
-
-    # Build every qualifying entry in memory first (read responses once), then
-    # persist them all with a SINGLE save. The old code called accept_candidate
-    # per candidate, and each call did a full load + dual-write (Postgres
-    # round-trip + whole-file rewrite). That was O(M²) DB queries for M movers
-    # and made the "automatic" button feel frozen. One save fixes that.
-    new_entries = []
-    moved = []
-    for src in _load_responses():
-        rid = src.get("response_id")
-        if not rid or rid in skip:
-            continue
-        if src.get("scoring_error"):
-            continue
-        score = src.get("total_score")
-        if score is None:
-            continue
-        try:
-            score = float(score)
-        except (TypeError, ValueError):
-            continue
-        if score > cut:
-            entry = _build_accept_entry(src, note=f"Auto-moved: score {int(score)} > {cut}")
-            new_entries.append(entry)
-            moved.append({"response_id": rid, "name": entry["name"],
-                          "total_score": entry.get("total_score")})
-
-    if new_entries:
-        with _lock:
-            data = _load()
-            # All ids in new_entries were excluded via `skip`, but guard against
-            # duplicates defensively before appending.
-            existing = {r.get("response_id") for r in data["accepted"]}
-            for entry in new_entries:
-                if entry["response_id"] in existing:
-                    continue
-                data["accepted"].append(entry)
-                existing.add(entry["response_id"])
-            _save(data)
-
-    logger.info("Auto-move (>%s): moved %d candidate(s) to HR Round", cut, len(moved))
-    return {"threshold": cut, "moved_count": len(moved), "moved": moved}
-
-
 # ──────────────────────────────────────────────
 # FastAPI router  (mounted in app.py)
 # ──────────────────────────────────────────────
@@ -386,23 +300,7 @@ async def get_accepted(stage: str | None = None):
         "stages": STAGES,
         "stage_labels": STAGE_LABELS,
         "counts": stage_counts(),
-        "auto_move_threshold": AUTO_MOVE_SCORE_THRESHOLD,
     }
-
-
-@router.post("/auto-move")
-async def post_auto_move():
-    """
-    Auto-move all Form Responses candidates scoring above the configured
-    threshold into the HR Round. Safe to call repeatedly — already-accepted
-    or already-rejected candidates are skipped.
-    """
-    try:
-        from admin_settings import get_threshold
-        cut = get_threshold("auto_move")
-    except Exception:
-        cut = None
-    return {"success": True, **auto_move_qualified(threshold=cut)}
 
 
 @router.get("/ids")

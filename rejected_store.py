@@ -2,8 +2,8 @@
 rejected_store.py — Persistent store + API for rejected candidates.
 
 When HR clicks "Reject" on a candidate in Form Responses, the candidate's full
-profile (name, phone, email, every form answer, and their scores) is copied
-into output/rejected_candidates.json together with WHICH ROUND they were
+profile (name, phone, email, every form answer) is copied into
+output/rejected_candidates.json together with WHICH ROUND they were
 rejected in and when. The Rejected tab in the UI reads from this store.
 
 A candidate can also be restored (un-rejected), which removes them from the
@@ -20,10 +20,6 @@ Storage shape (output/rejected_candidates.json):
       "phone":        "9266042587",
       "role":         "Customer Support Executive",
       "answers":      [ {question, answer}, ... ],   # full form answers
-      "objective_score": 21,
-      "ai_score":        40,
-      "total_score":     61,
-      "recommendation":  "Shortlist",
       "rejected_round":  "Round 0 — Form Screening",
       "rejected_reason": "optional free text",
       "rejected_at":     "2026-06-10T09:15:00Z",
@@ -53,17 +49,6 @@ REJECTED_FILE: Path = OUTPUT_DIR / "rejected_candidates.json"
 RESPONSES_FILE: Path = OUTPUT_DIR / "form_responses.json"
 
 _lock = threading.Lock()
-
-# ╔══════════════════════════════════════════════════════════════════╗
-# ║  AUTO-REJECT SETTING — change the score threshold here.          ║
-# ║                                                                  ║
-# ║  Candidates in Form Responses whose total score is STRICTLY      ║
-# ║  LESS THAN this number are automatically moved into the          ║
-# ║  Rejected tab (Round 0 — Form Screening).                        ║
-# ║                                                                  ║
-# ║  To change the cut-off, edit the one number below and restart.   ║
-# ╚══════════════════════════════════════════════════════════════════╝
-AUTO_REJECT_SCORE_THRESHOLD = 30
 
 # The rounds HR can reject a candidate in. The UI shows these in a dropdown;
 # free-text is also accepted so the pipeline can grow without code changes.
@@ -142,25 +127,16 @@ def _pick(answers: list[dict], keys: list[str]) -> str:
 # ──────────────────────────────────────────────
 
 def _build_reject_entry(src: dict, round_name: str, reason: str = "") -> dict:
-    """Build a rejected-store entry from a raw form response (no I/O).
-
-    Pulled out of reject_candidate so the bulk auto-reject path can build many
-    entries in memory and persist them with a single save (see
-    auto_reject_low_scorers), instead of a full load+save per candidate.
-    """
+    """Build a rejected-store entry from a raw form response (no I/O)."""
     answers = src.get("answers", [])
     return {
         "response_id":     src.get("response_id"),
         "name":            _pick(answers, ["full name", "name"]) or "Anonymous",
         "email":           src.get("email") or _pick(answers, ["personal email", "email"]),
         "phone":           _pick(answers, ["phone", "mobile", "contact"]),
-        "role":            src.get("role_name") or src.get("scored_role")
+        "role":            src.get("role_name")
                            or _pick(answers, ["role applying", "role"]),
         "answers":         answers,                      # full Q&A preserved
-        "objective_score": src.get("objective_score"),
-        "ai_score":        src.get("ai_score"),
-        "total_score":     src.get("total_score"),
-        "recommendation":  src.get("recommendation"),
         "rejected_round":  (round_name or "").strip() or DEFAULT_ROUNDS[0],
         "rejected_reason": (reason or "").strip(),
         "rejected_at":     _now_iso(),
@@ -242,89 +218,6 @@ def rejected_ids() -> set[str]:
     return {r.get("response_id") for r in _load()["rejected"]}
 
 
-def auto_reject_low_scorers(threshold: int | None = None) -> dict:
-    """
-    Scan Form Responses and auto-reject every candidate whose total_score is
-    STRICTLY LESS THAN `threshold` (default AUTO_REJECT_SCORE_THRESHOLD).
-
-    Safe rules (mirrors auto_move_qualified):
-      • Skips candidates already in the rejected store (no double-entry).
-      • Skips candidates already accepted (manual decision preserved).
-      • Skips candidates with a scoring error (failed API call ≠ low score).
-      • Skips candidates with no score yet (not scored = not rejected).
-      • Idempotent: calling repeatedly only ever adds new low-scorers.
-
-    Rejected with round "Round 0 — Form Screening" and a note showing the
-    score so the reviewer knows why they were auto-rejected.
-    """
-    cut = AUTO_REJECT_SCORE_THRESHOLD if threshold is None else int(threshold)
-
-    already_rejected = rejected_ids()
-    try:
-        from accepted_store import accepted_ids
-        already_accepted = accepted_ids()
-    except Exception:
-        already_accepted = set()
-    skip = already_rejected | already_accepted
-
-    # Load responses
-    if not RESPONSES_FILE.exists():
-        return {"threshold": cut, "rejected_count": 0, "rejected": []}
-    try:
-        responses = json.loads(RESPONSES_FILE.read_text()).get("responses", [])
-    except (json.JSONDecodeError, OSError):
-        return {"threshold": cut, "rejected_count": 0, "rejected": []}
-
-    # Build every qualifying entry in memory first, then persist them all with
-    # a SINGLE save. The old code called reject_candidate per candidate, and
-    # each call did a full load + dual-write (Postgres round-trip + whole-file
-    # rewrite) — O(M²) DB queries for M rejections, which made the "automatic"
-    # button feel frozen. One save fixes that.
-    new_entries = []
-    rejected = []
-    for src in responses:
-        rid = src.get("response_id")
-        if not rid or rid in skip:
-            continue
-        if src.get("scoring_error"):
-            continue                      # API failure ≠ bad candidate
-        score = src.get("total_score")
-        if score is None:
-            continue                      # unscored = not yet decided
-        try:
-            score = float(score)
-        except (TypeError, ValueError):
-            continue
-        if score < cut:
-            entry = _build_reject_entry(
-                src,
-                round_name="Round 0 — Form Screening",
-                reason=f"Auto-rejected: score {int(score)} < {cut}",
-            )
-            new_entries.append(entry)
-            rejected.append({
-                "response_id": rid,
-                "name": entry["name"],
-                "total_score": entry.get("total_score"),
-            })
-
-    if new_entries:
-        with _lock:
-            data = _load()
-            # All ids in new_entries were excluded via `skip`, but guard against
-            # duplicates defensively before appending.
-            existing = {r.get("response_id") for r in data["rejected"]}
-            for entry in new_entries:
-                if entry["response_id"] in existing:
-                    continue
-                data["rejected"].append(entry)
-                existing.add(entry["response_id"])
-            _save(data)
-
-    logger.info("Auto-reject (<%s): rejected %d candidate(s)", cut, len(rejected))
-    return {"threshold": cut, "rejected_count": len(rejected), "rejected": rejected}
-
-
 # ──────────────────────────────────────────────
 # FastAPI router  (mounted in app.py)
 # ──────────────────────────────────────────────
@@ -340,11 +233,10 @@ class RejectBody(BaseModel):
 
 @router.get("")
 async def get_rejected():
-    """List all rejected candidates + available round names + auto-reject threshold."""
+    """List all rejected candidates + available round names."""
     return {
         "rejected": list_rejected(),
         "rounds": DEFAULT_ROUNDS,
-        "auto_reject_threshold": AUTO_REJECT_SCORE_THRESHOLD,
     }
 
 
@@ -362,21 +254,6 @@ async def post_reject(body: RejectBody):
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return {"success": True, "entry": entry}
-
-
-@router.post("/auto-reject")
-async def post_auto_reject():
-    """
-    Auto-reject all Form Responses candidates scoring below the configured
-    threshold into Round 0 — Form Screening. Safe to call repeatedly —
-    already-rejected or already-accepted candidates are skipped.
-    """
-    try:
-        from admin_settings import get_threshold
-        cut = get_threshold("auto_reject")
-    except Exception:
-        cut = None
-    return {"success": True, **auto_reject_low_scorers(threshold=cut)}
 
 
 @router.delete("/{response_id}")

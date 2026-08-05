@@ -1,11 +1,13 @@
 """
-gmail_oauth.py — shared Google OAuth 2.0 "Connect Gmail" integration.
+gmail_oauth.py — shared Google OAuth 2.0 "Connect Google Account" integration.
 
-Replaces (optionally — App Password stays as a fallback, see emailer.py and
-app.py's /api/send-emails) raw SMTP + Gmail App Password with a real OAuth
-user-consent flow: the HR user clicks "Connect Gmail", goes through Google's
-own consent screen, and this app is granted a refresh token. No password is
-ever typed into this app.
+Required for every candidate-facing send (recruitment campaign, onboarding,
+rejection notice, Round 1 Calendly invite) and for Forms sync's OAuth path:
+the HR user clicks "Connect Google Account", goes through Google's own
+consent screen, and this app is granted a refresh token. No password is
+ever typed into this app. (Forms sync alone still has a separate Service
+Account JSON fallback — see forms_retriever.py — for a form the connected
+account doesn't personally own; nothing else has a password/key fallback.)
 
 This is a SHARED Google connection, not Gmail-only: forms_retriever.py's
 OAuth path (Form Responses page) reuses the exact same token via
@@ -291,6 +293,17 @@ def is_connected() -> bool:
     return public_status()["connected"]
 
 
+def get_active_client(mode: Optional[str] = None) -> Optional[dict]:
+    """Public accessor for auth.py's Google Sign-In login flow, which reuses
+    this same OAuth client (narrower scopes, its own redirect URI) rather
+    than requiring a second client registration in Google Cloud Console."""
+    return _active_client(mode)
+
+
+def client_mode() -> str:
+    return _client_mode()
+
+
 # ──────────────────────────────────────────────
 # CSRF state for the authorize/callback round trip
 #
@@ -300,17 +313,17 @@ def is_connected() -> bool:
 # in-memory) and the window between authorize and callback is seconds.
 # ──────────────────────────────────────────────
 
-_pending_states: dict[str, tuple[float, str]] = {}
+_pending_states: dict[str, tuple[float, str, str]] = {}
 _STATE_TTL = 600  # seconds
 
 
 def _cleanup_states() -> None:
     now = time.time()
-    for k in [k for k, (exp, _cv) in _pending_states.items() if exp < now]:
+    for k in [k for k, (exp, _cv, _rt) in _pending_states.items() if exp < now]:
         _pending_states.pop(k, None)
 
 
-def _new_state() -> tuple[str, str]:
+def _new_state(return_to: str = "") -> tuple[str, str]:
     """Returns (state, code_verifier). Both must survive the redirect round
     trip to Google and back — stored together here, keyed by state, since
     /authorize and /callback are separate requests (each builds its own Flow
@@ -318,22 +331,24 @@ def _new_state() -> tuple[str, str]:
     which would otherwise generate a FRESH, mismatched verifier on callback
     than the one whose challenge was actually sent to Google in /authorize,
     causing Google to reject the exchange with "invalid_grant: Missing code
-    verifier")."""
+    verifier"). return_to (e.g. "rejected", "forms") rides along the same way
+    so /callback can redirect the user back to the page/dialog they clicked
+    Connect from, instead of always landing on the SPA's default page."""
     _cleanup_states()
     state = secrets.token_urlsafe(24)
     # RFC 7636 requires 43-128 chars from [A-Za-z0-9-._~]; token_urlsafe's
     # base64url alphabet (no padding) is a safe subset.
     code_verifier = secrets.token_urlsafe(96)
-    _pending_states[state] = (time.time() + _STATE_TTL, code_verifier)
+    _pending_states[state] = (time.time() + _STATE_TTL, code_verifier, return_to or "")
     return state, code_verifier
 
 
-def _consume_state(state: str) -> Optional[str]:
-    """Returns the code_verifier for a valid, unexpired state (consuming it),
-    or None if the state is missing/expired."""
+def _consume_state(state: str) -> Optional[tuple[str, str]]:
+    """Returns (code_verifier, return_to) for a valid, unexpired state
+    (consuming it), or None if the state is missing/expired."""
     _cleanup_states()
     entry = _pending_states.pop(state, None)
-    return entry[1] if entry else None
+    return (entry[1], entry[2]) if entry else None
 
 
 # ──────────────────────────────────────────────
@@ -488,8 +503,8 @@ async def post_client_config(body: ClientConfigBody):
 
 
 @router.get("/authorize")
-async def authorize(request: Request):
-    state, code_verifier = _new_state()
+async def authorize(request: Request, return_to: str = ""):
+    state, code_verifier = _new_state(return_to=return_to)
     try:
         flow = build_flow(request, code_verifier=code_verifier)
     except GmailNotConnectedError as exc:
@@ -513,12 +528,18 @@ async def callback(request: Request, code: str = "", state: str = "", error: str
         host = request.headers.get("host") or request.url.netloc
         base = f"{proto}://{host}"
 
+    # Consumed once, up front, so both the error path and the success path
+    # below can send the user back to whichever page/dialog they clicked
+    # Connect from — not just always the SPA's default landing page.
+    consumed = _consume_state(state) if state else None
+    code_verifier, return_to = consumed if consumed else (None, "")
+    _page_qs = f"&page={urllib.parse.quote(return_to)}" if return_to else ""
+
     def _err(reason: str) -> RedirectResponse:
-        return RedirectResponse(f"{base}/?gmail=error&reason={urllib.parse.quote(reason)}", status_code=302)
+        return RedirectResponse(f"{base}/?gmail=error&reason={urllib.parse.quote(reason)}{_page_qs}", status_code=302)
 
     if error:
         return _err(f"Google denied access: {error}")
-    code_verifier = _consume_state(state) if state else None
     if not code or not state or not code_verifier:
         return _err("Invalid or expired authorization attempt. Please try connecting again.")
 
@@ -546,7 +567,7 @@ async def callback(request: Request, code: str = "", state: str = "", error: str
         logger.error("Gmail OAuth callback failed: %s", exc, exc_info=True)
         return _err(f"Could not complete Gmail connection: {exc}")
 
-    return RedirectResponse(f"{base}/?gmail=connected", status_code=302)
+    return RedirectResponse(f"{base}/?gmail=connected{_page_qs}", status_code=302)
 
 
 @router.post("/disconnect")

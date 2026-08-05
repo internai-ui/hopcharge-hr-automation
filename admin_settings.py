@@ -1,5 +1,5 @@
 """
-admin_settings.py — Editable admin configuration (email text + score thresholds).
+admin_settings.py — Editable admin configuration (email text).
 
 Values are read THROUGH this store at runtime. If an override exists in
 output/admin_settings.json it wins; otherwise the hardcoded DEFAULTS apply.
@@ -13,7 +13,7 @@ Stored shape (output/admin_settings.json):
     "onboarding":  { "subject": "...", "body": "..." },
     "rejection":   { "subject": "...", "body": "..." }
   },
-  "thresholds": { "auto_reject": 30, "auto_move": 65 }
+  "recruitment_form": { "form_id": "...", "form_link": "..." }
 }
 """
 
@@ -36,7 +36,7 @@ _lock = threading.Lock()
 
 
 # ──────────────────────────────────────────────
-# DEFAULTS — the editable prose + threshold defaults.
+# DEFAULTS — the editable prose defaults.
 # The email "body" is the human-readable message; the surrounding HTML chrome
 # (header, button, footer) stays fixed in emailer.py. Placeholders allowed in
 # body: {name} (all kinds), {role} (onboarding + rejection only — substituted
@@ -44,7 +44,7 @@ _lock = threading.Lock()
 # The button + form link are added by the template automatically.
 # ──────────────────────────────────────────────
 
-DEFAULT_RECRUITMENT_SUBJECT = "Thank You for Applying to Hopcharge — Next Steps"
+DEFAULT_RECRUITMENT_SUBJECT = "Thank You for Applying to Hopcharge - Next Steps"
 DEFAULT_RECRUITMENT_BODY = (
     "Thank you for your interest in joining Hopcharge. We appreciate the time and "
     "effort you have invested in your application and are pleased to confirm that we "
@@ -60,7 +60,7 @@ DEFAULT_RECRUITMENT_BODY = (
 
 DEFAULT_ONBOARDING_SUBJECT = "Welcome to the Hopcharge Family 🎉"
 DEFAULT_ONBOARDING_BODY = (
-    "Congratulations! After a competitive selection process, you stood out — and we "
+    "Congratulations! After a competitive selection process, you stood out - and we "
     "could not be more excited to welcome you to the Hopcharge family as {role}.\n\n"
     "Before your first day, we need a few details from you to complete the onboarding "
     "process. Please complete your onboarding form within 3 business days so we can "
@@ -76,16 +76,13 @@ DEFAULT_REJECTION_BODY = (
     "apply again for future opportunities that match your profile."
 )
 
-DEFAULT_AUTO_REJECT = 30
-DEFAULT_AUTO_MOVE = 65
-
 DEFAULTS = {
     "email": {
         "recruitment": {"subject": DEFAULT_RECRUITMENT_SUBJECT, "body": DEFAULT_RECRUITMENT_BODY},
         "onboarding":  {"subject": DEFAULT_ONBOARDING_SUBJECT,  "body": DEFAULT_ONBOARDING_BODY},
         "rejection":   {"subject": DEFAULT_REJECTION_SUBJECT,   "body": DEFAULT_REJECTION_BODY},
     },
-    "thresholds": {"auto_reject": DEFAULT_AUTO_REJECT, "auto_move": DEFAULT_AUTO_MOVE},
+    "recruitment_form": {"form_id": "", "form_link": ""},
 }
 
 
@@ -119,7 +116,7 @@ def _merged() -> dict:
             "onboarding":  dict(DEFAULTS["email"]["onboarding"]),
             "rejection":   dict(DEFAULTS["email"]["rejection"]),
         },
-        "thresholds": dict(DEFAULTS["thresholds"]),
+        "recruitment_form": dict(DEFAULTS["recruitment_form"]),
     }
     e = raw.get("email", {})
     for k in ("recruitment", "onboarding", "rejection"):
@@ -127,13 +124,11 @@ def _merged() -> dict:
             for fld in ("subject", "body"):
                 if e[k].get(fld) is not None:
                     out["email"][k][fld] = e[k][fld]
-    t = raw.get("thresholds", {})
-    for k in ("auto_reject", "auto_move"):
-        if t.get(k) is not None:
-            try:
-                out["thresholds"][k] = int(t[k])
-            except (TypeError, ValueError):
-                pass
+    rf = raw.get("recruitment_form", {})
+    if isinstance(rf, dict):
+        for fld in ("form_id", "form_link"):
+            if rf.get(fld) is not None:
+                out["recruitment_form"][fld] = rf[fld]
     return out
 
 
@@ -150,88 +145,10 @@ def get_email(kind: str) -> dict:
     return _merged()["email"].get(kind, DEFAULTS["email"].get(kind, {}))
 
 
-def get_threshold(name: str) -> int:
-    """name = 'auto_reject' | 'auto_move'."""
-    return int(_merged()["thresholds"].get(name, DEFAULTS["thresholds"][name]))
-
-
-# ──────────────────────────────────────────────
-# Per-role scoring tuning (Feature: tunable strictness + semantic traits)
-#
-# Stored under raw["role_tuning"][role_key]:
-#   { "strictness": 0-100, "creativeness": 0-100,
-#     "traits": [ {"name": "...", "description": "..."} ] }
-#
-#   strictness    50 = current/neutral behaviour. Higher = harsher marking,
-#                 lower = more lenient. In AI mode it tells the model how strict
-#                 to be AND scales the sub-score; in OFFLINE mode the rules engine
-#                 internalises it (tighter floors, smaller nudge, a downward gain).
-#   creativeness  50 = neutral. Higher = reward original / unconventional but
-#                 sound answers (offline: trust exact keywords less, reward
-#                 substance + lexical variety more; AI: a prompt clause). Lower =
-#                 favour standard, textbook-correct answers only.
-#   traits        Free-text qualities the HR wants judged by GIST/meaning (not
-#                 keywords). In AI mode the model rates how strongly each answer
-#                 demonstrates them; that nudges the score within a small band.
-# ──────────────────────────────────────────────
-
-DEFAULT_STRICTNESS = 50
-DEFAULT_CREATIVENESS = 50
-
-
-def get_role_tuning(role_key: str) -> dict:
-    """Return {"strictness": int, "creativeness": int, "traits": [{name, description}]}
-    for a role, falling back to neutral defaults so scoring works before anything
-    is set."""
-    raw = _load_raw()
-    rt = (raw.get("role_tuning") or {}).get(role_key) or {}
-    try:
-        strictness = int(rt.get("strictness", DEFAULT_STRICTNESS))
-    except (TypeError, ValueError):
-        strictness = DEFAULT_STRICTNESS
-    strictness = max(0, min(100, strictness))
-    try:
-        creativeness = int(rt.get("creativeness", DEFAULT_CREATIVENESS))
-    except (TypeError, ValueError):
-        creativeness = DEFAULT_CREATIVENESS
-    creativeness = max(0, min(100, creativeness))
-    traits = []
-    for t in (rt.get("traits") or []):
-        if not isinstance(t, dict):
-            continue
-        nm = (t.get("name") or "").strip()
-        if nm:
-            traits.append({"name": nm[:80],
-                           "description": (t.get("description") or "").strip()[:500]})
-    return {"strictness": strictness, "creativeness": creativeness, "traits": traits}
-
-
-def set_role_tuning(role_key: str, strictness: int, traits: list,
-                    creativeness: int = DEFAULT_CREATIVENESS) -> dict:
-    clean = []
-    for t in (traits or []):
-        if not isinstance(t, dict):
-            continue
-        nm = (t.get("name") or "").strip()
-        if nm:
-            clean.append({"name": nm[:80],
-                          "description": (t.get("description") or "").strip()[:500]})
-    try:
-        s = max(0, min(100, int(strictness)))
-    except (TypeError, ValueError):
-        s = DEFAULT_STRICTNESS
-    try:
-        cr = max(0, min(100, int(creativeness)))
-    except (TypeError, ValueError):
-        cr = DEFAULT_CREATIVENESS
-    with _lock:
-        raw = _load_raw()
-        raw.setdefault("role_tuning", {})[role_key] = {
-            "strictness": s, "creativeness": cr, "traits": clean}
-        _save_raw(raw)
-    logger.info("Updated scoring tuning for role %s (strictness=%d, creativeness=%d, traits=%d)",
-                role_key, s, cr, len(clean))
-    return get_role_tuning(role_key)
+def get_recruitment_form() -> dict:
+    """The saved Google Form ID (for the Forms API sync) and public form link
+    (embedded as the recruitment email's CTA button) — {form_id, form_link}."""
+    return _merged()["recruitment_form"]
 
 
 # ──────────────────────────────────────────────
@@ -244,11 +161,6 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 class EmailSettings(BaseModel):
     subject: str = Field(..., min_length=1, max_length=300)
     body:    str = Field(..., min_length=1, max_length=8000)
-
-
-class ThresholdSettings(BaseModel):
-    auto_reject: int = Field(..., ge=0, le=100)
-    auto_move:   int = Field(..., ge=0, le=100)
 
 
 @router.get("/settings")
@@ -302,48 +214,18 @@ async def reset_email(kind: str):
     return {"success": True, "email": DEFAULTS["email"][kind]}
 
 
-@router.put("/thresholds")
-async def update_thresholds(body: ThresholdSettings):
+class RecruitmentFormSettings(BaseModel):
+    form_id:   str = Field("", max_length=300)
+    form_link: str = Field("", max_length=500)
+
+
+@router.put("/recruitment-form")
+async def update_recruitment_form(body: RecruitmentFormSettings):
+    if body.form_link and not body.form_link.startswith("http"):
+        raise HTTPException(status_code=400, detail="Form link must be a valid URL (starting with http).")
     with _lock:
         raw = _load_raw()
-        raw["thresholds"] = {"auto_reject": body.auto_reject, "auto_move": body.auto_move}
+        raw["recruitment_form"] = {"form_id": body.form_id.strip(), "form_link": body.form_link.strip()}
         _save_raw(raw)
-    logger.info("Updated thresholds: reject<%d, move>%d", body.auto_reject, body.auto_move)
-    return {"success": True, "thresholds": _merged()["thresholds"]}
-
-
-@router.post("/thresholds/reset")
-async def reset_thresholds():
-    with _lock:
-        raw = _load_raw()
-        raw.pop("thresholds", None)
-        _save_raw(raw)
-    return {"success": True, "thresholds": DEFAULTS["thresholds"]}
-
-
-# ── Per-role scoring tuning ──
-
-class TraitModel(BaseModel):
-    name: str = Field(..., min_length=1, max_length=80)
-    description: str = Field("", max_length=500)
-
-
-class RoleTuning(BaseModel):
-    strictness: int = Field(DEFAULT_STRICTNESS, ge=0, le=100)
-    creativeness: int = Field(DEFAULT_CREATIVENESS, ge=0, le=100)
-    traits: list[TraitModel] = Field(default_factory=list)
-
-
-@router.get("/role-tuning/{role_key}")
-async def get_role_tuning_ep(role_key: str):
-    """Current strictness + custom traits for one role (neutral defaults if unset)."""
-    return {"success": True, "role_key": role_key, "tuning": get_role_tuning(role_key)}
-
-
-@router.put("/role-tuning/{role_key}")
-async def put_role_tuning_ep(role_key: str, body: RoleTuning):
-    """Save strictness + creativeness (0–100) + semantic traits for one role."""
-    tuning = set_role_tuning(role_key, body.strictness,
-                             [t.model_dump() for t in body.traits],
-                             creativeness=body.creativeness)
-    return {"success": True, "role_key": role_key, "tuning": tuning}
+    logger.info("Updated recruitment form settings (form_id=%s).", body.form_id.strip() or "(empty)")
+    return {"success": True, "recruitment_form": _merged()["recruitment_form"]}

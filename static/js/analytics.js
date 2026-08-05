@@ -18,7 +18,6 @@
     ['cvs_parsed','CVs parsed','#2F5BEA'],
     ['emails_sent','Emails sent','#0ea5a3'],
     ['responses_received','Responses','#7c3aed'],
-    ['candidates_scored','Scored','#8b5cf6'],
     ['accepted','Accepted','#34d399'],
     ['rejected','Rejected','#f87171'],
     ['interviews_invited','Interviews','#f59e0b'],
@@ -80,7 +79,6 @@
       renderCards(d.cards||{});
       trend(d.series||[]);
       bars('an-roles', (d.role_breakdown||[]).slice(0,12).map(r=>({label:`${r.role}  (✓${r.accepted} ✕${r.rejected})`, value:r.processed, color:'#7c3aed'})));
-      bars('an-bands', Object.entries(d.band_distribution||{}).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({label:k, value:v, color:'#8b5cf6'})));
       const SL={hr:'HR Round',round1:'Round 1',round2:'Round 2',onboarded:'Onboarded'};
       bars('an-stages', Object.entries(d.stage_accepted||{}).map(([k,v])=>({label:SL[k]||k, value:v, color:'#34d399'})));
       bars('an-rounds', Object.entries(d.round_rejected||{}).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({label:k, value:v, color:'#f87171'})));

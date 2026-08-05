@@ -2,7 +2,7 @@
 (function(){
   if (!document.getElementById('page-rejected')) return;
   let _rows = [];
-  // Ephemeral, page-local selection for bulk-sending the rejection email —
+  // Ephemeral, page-local selection for bulk-sending the rejection email -
   // unlike onboarding's persisted ★ SELECTED flag, this doesn't need to
   // survive a reload; it's just "who am I about to email right now".
   const _rejSelectedSet = new Set();
@@ -39,17 +39,16 @@
 
     const tbody = document.getElementById('rej-tbody');
     if (!rows.length){
-      tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:34px;color:var(--text-dim)">No rejected candidates yet. Use the ✕ Reject button on the Form Responses tab.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:34px;color:var(--text-dim)">No rejected candidates yet. Use the ✕ Reject button on the Form Responses tab.</td></tr>';
       _updateRejEmailCount();
       return;
     }
     tbody.innerHTML = '';
     rows.forEach((r, i)=>{
-      const when = r.rejected_at ? new Date(r.rejected_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—';
-      const score = (r.total_score!=null) ? `${r.total_score}/100` : (r.ai_score!=null ? `${r.ai_score}` : '—');
+      const when = r.rejected_at ? new Date(r.rejected_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '-';
       const notifiedCell = r.rejection_email_sent_at
         ? `<span title="${esc(r.rejection_email_sent_at)}" style="font-size:10px;color:#34d399">&#10003; ${new Date(r.rejection_email_sent_at).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span>`
-        : '<span style="opacity:.35;font-size:10px">—</span>';
+        : '<span style="opacity:.35;font-size:10px">-</span>';
       const tr = document.createElement('tr');
       tr.style.animationDelay = `${i*25}ms`;
       tr.style.cursor = 'pointer';
@@ -58,17 +57,16 @@
         <td onclick="event.stopPropagation()"><input type="checkbox" class="rej-select-row" data-rid="${esc(r.response_id)}" aria-label="Select ${esc(r.name)||'candidate'} for rejection email"></td>
         <td style="color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:10px">${i+1}</td>
         <td><div class="cand-name">${esc(r.name)||'Anonymous'}</div></td>
-        <td class="td-email">${esc(r.email)||'<span style="opacity:.35">—</span>'}</td>
-        <td class="td-phone">${esc(r.phone)||'<span style="opacity:.35">—</span>'}</td>
-        <td>${r.role?`<span class="td-pill" style="background:rgba(31,45,89,.12);color:#c4b5fd">${esc(r.role)}</span>`:'<span style="opacity:.35">—</span>'}</td>
-        <td style="font-family:'JetBrains Mono',monospace;font-size:11.5px">${score}</td>
-        <td><span class="dec-badge dec-rejected">${esc(r.rejected_round)||'—'}</span></td>
+        <td class="td-email">${esc(r.email)||'<span style="opacity:.35">-</span>'}</td>
+        <td class="td-phone">${esc(r.phone)||'<span style="opacity:.35">-</span>'}</td>
+        <td>${r.role?`<span class="td-pill" style="background:rgba(31,45,89,.12);color:#c4b5fd">${esc(r.role)}</span>`:'<span style="opacity:.35">-</span>'}</td>
+        <td><span class="dec-badge dec-rejected">${esc(r.rejected_round)||'-'}</span></td>
         <td style="font-size:10px;white-space:nowrap;color:var(--text-dim)">${when}</td>
         <td>${notifiedCell}</td>
         <td><button class="td-view-btn" onclick="event.stopPropagation();this.closest('tr').click()">VIEW</button></td>
         <td><button class="td-view-btn rej-restore-btn" data-rid="${esc(r.response_id)}" style="border-color:rgba(52,211,153,.45);color:#34d399" title="Restore to active pipeline" aria-label="Restore to active pipeline">↩ RESTORE</button></td>`;
       // Wire the restore button via a listener (robust to any characters in
-      // the response_id — building the call as an inline onclick string broke
+      // the response_id - building the call as an inline onclick string broke
       // parsing for some IDs, so the click silently did nothing).
       const restoreBtn = tr.querySelector('.rej-restore-btn');
       if (restoreBtn){
@@ -123,14 +121,6 @@
   _rejEmailDialog?.addEventListener('click', e=>{ if (e.target === _rejEmailDialog) _rejEmailDialog.style.display = 'none'; });
 
   document.getElementById('rej-email-send')?.addEventListener('click', async ()=>{
-    const gmailEl = document.getElementById('rej-email-gmail'), passEl = document.getElementById('rej-email-pass');
-    if (!validateRequired([
-      { input: gmailEl, message: 'Enter the sender Gmail address.' },
-      { input: passEl, message: 'Enter the Gmail App Password.' },
-    ])) return;
-    const gmail = gmailEl.value.trim();
-    const pass  = passEl.value.trim();
-
     const selectedIds = Array.from(_rejSelectedSet);
     if (!selectedIds.length){
       toast('Check at least one candidate first', 'err');
@@ -146,7 +136,7 @@
       const res = await fetch('/api/send-rejection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gmail_address: gmail, app_password: pass, response_ids: selectedIds })
+        body: JSON.stringify({ response_ids: selectedIds })
       });
       const d = await res.json();
       if (!res.ok) throw new Error(errDetail(d, res.status));
@@ -155,11 +145,11 @@
       const rows = (d.results || []).map(r =>
         `<div style="font-size:12px;margin-top:4px;">
            ${r.status === 'sent' ? '&#x2713;' : '&#x2717;'}
-           <b>${esc(r.name)}</b> — ${esc(r.email)}
+           <b>${esc(r.name)}</b> - ${esc(r.email)}
            ${r.error ? `<span style="color:#f87171"> (${esc(r.error)})</span>` : ''}
          </div>`).join('');
       statusBox.innerHTML = `<b style="color:${failed ? '#fbbf24' : '#34d399'}">
-        ${sent} sent${failed ? ', ' + failed + ' failed' : ' — all done!'}</b>${rows}`;
+        ${sent} sent${failed ? ', ' + failed + ' failed' : ' - all done!'}</b>${rows}`;
       statusBox.style.display = 'block';
       toast(`Rejection email sent to ${sent} candidate${sent !== 1 ? 's' : ''}`, sent && !failed ? 'ok' : 'inf');
       loadRejectedPage();
@@ -178,7 +168,7 @@
   }
 
   // Open the rejected candidate's full profile in the SAME pop-out modal
-  // (#cand-modal) the Accepted pipeline uses — a candidate tile, not an inline
+  // (#cand-modal) the Accepted pipeline uses - a candidate tile, not an inline
   // dropdown. Reuses the modal shell, the cand-qa styling, and the rejected
   // notes API helpers (rejLoadNotes / rejAddNote with the same element ids).
   window.openRejectedModal = function(r){
@@ -188,21 +178,18 @@
     if (av){ av.style.background = 'linear-gradient(135deg,#7f1d1d,#ef4444)'; av.textContent = _rejInitials(r.name); }
     const nm = document.getElementById('cm-name');
     if (nm) nm.textContent = r.name || 'Anonymous';
-    const when = r.rejected_at ? new Date(r.rejected_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—';
+    const when = r.rejected_at ? new Date(r.rejected_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '-';
     const meta = document.getElementById('cm-meta');
-    if (meta) meta.textContent = `Rejected  ·  ${r.rejected_round || '—'}  ·  ${r.role || 'Role not specified'}  ·  ${when}`;
+    if (meta) meta.textContent = `Rejected  ·  ${r.rejected_round || '-'}  ·  ${r.role || 'Role not specified'}  ·  ${when}`;
 
     const body = document.getElementById('cm-body');
     body.innerHTML = '';
 
-    const score = (r.total_score!=null) ? (r.total_score+'/100') : (r.ai_score!=null ? String(r.ai_score) : null);
     const idItems = [
       { q:'Full Name',      a:r.name },
       { q:'Email Address',  a:r.email },
       { q:'Phone Number',   a:r.phone },
       { q:'Role',           a:r.role, full:true },
-      { q:'Score',          a:score },
-      { q:'Recommendation', a:r.recommendation },
     ];
     idItems.forEach(g=>{
       const div = document.createElement('div');
@@ -215,7 +202,7 @@
     // Rejection round + reason
     const rb = document.createElement('div');
     rb.className = 'cand-qa-item full';
-    rb.innerHTML = `<div class="cand-qa-q">Rejection</div><div class="cand-qa-a">${esc(r.rejected_round||'—')}${r.rejected_reason?` — ${esc(r.rejected_reason)}`:''}</div>`;
+    rb.innerHTML = `<div class="cand-qa-q">Rejection</div><div class="cand-qa-a">${esc(r.rejected_round||'-')}${r.rejected_reason?` - ${esc(r.rejected_reason)}`:''}</div>`;
     body.appendChild(rb);
 
     // Full form answers
@@ -232,7 +219,7 @@
     notesWrap.className = 'cand-qa-item full';
     notesWrap.style.cssText = 'margin-top:8px;border-top:1px solid var(--border-dim);padding-top:18px';
     notesWrap.innerHTML = `
-      <div class="cand-qa-q">Notes <span style="opacity:.55;font-weight:400">— personal remarks, any round</span></div>
+      <div class="cand-qa-q">Notes <span style="opacity:.55;font-weight:400">- personal remarks, any round</span></div>
       <div id="rejnotes-list-${rid}" style="margin:10px 0 14px"><div style="font-size:12px;color:var(--text-dim)">Loading notes…</div></div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <input id="rejnote-stage-${rid}" type="text" placeholder="Stage / round (optional)" class="field-input" style="font-size:12px">

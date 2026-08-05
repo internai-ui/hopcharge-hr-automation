@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hopcharge — HR BAU Automation Dashboard</title>
+<title>Hopcharge - HR BAU Automation Dashboard</title>
 <link rel="icon" href="/static/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -19,8 +19,6 @@
 <div id="glow-dot"></div>
 <div id="progress-rail"><div id="progress-fill"></div></div>
 
-<!-- ── SIDEBAR HOVER ZONE (move cursor to left edge to open) ── -->
-<div id="sidebar-hotzone"></div>
 <button id="sidebar-toggle-btn" type="button" aria-label="Open navigation menu" title="Menu">
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
 </button>
@@ -75,17 +73,14 @@
     </button>
     <button class="sb-item" data-page="admin">
       <span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 1.5l1.5 1.2 1.9-.3.7 1.8 1.8.7-.3 1.9L15.5 9l-1.2 1.5.3 1.9-1.8.7-.7 1.8-1.9-.3L9 16.5l-1.5-1.2-1.9.3-.7-1.8-1.8-.7.3-1.9L2.5 9l1.2-1.5-.3-1.9 1.8-.7.7-1.8 1.9.3L9 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="9" cy="9" r="2.3" stroke="currentColor" stroke-width="1.3"/></svg></span>
-      <span class="label-wrap">Admin Settings<span class="sub">Emails &amp; thresholds</span></span>
+      <span class="label-wrap">Admin Settings<span class="sub">Emails &amp; AI parsing</span></span>
     </button>
     <!-- Account links: only shown when sign-in (DASHBOARD_AUTH=on) is active.
-         Plain anchors, not data-page buttons — they navigate to standalone
-         pages and don't touch the SPA's page-switching logic. -->
+         Plain anchors, not data-page buttons - they navigate to standalone
+         pages and don't touch the SPA's page-switching logic. Admin access
+         (is_admin) is toggled per-employee on the Employee Database page. -->
     <div id="sb-account" style="display:none">
       <div class="sb-section-label">Account</div>
-      <a class="sb-item" id="sb-users-link" href="/users" style="text-decoration:none; display:none">
-        <span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="6.5" cy="6" r="2.6" stroke="currentColor" stroke-width="1.4"/><path d="M1.8 15c.5-2.6 2.5-4.2 4.7-4.2 2.2 0 4.2 1.6 4.7 4.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="12.8" cy="6.8" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M12 10.6c1.9 0 3.6 1.3 4.1 3.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
-        <span class="label-wrap">Users<span class="sub">Manage dashboard access</span></span>
-      </a>
       <a class="sb-item" href="/logout" style="text-decoration:none">
         <span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M7 2.5H4a1.5 1.5 0 00-1.5 1.5v10A1.5 1.5 0 004 15.5h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12 5.5L15.5 9 12 12.5M15 9H7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         <span class="label-wrap">Sign out<span class="sub" id="sb-account-email">End this session</span></span>
@@ -108,7 +103,7 @@
       <div class="welcome-eyebrow">HR Operations · Internal Tools</div>
       <h1>HR BAU <span class="grad-text">Automation</span><br>Dashboard</h1>
       <p class="welcome-desc">
-        Hopcharge delivers on-demand, doorstep electric-vehicle charging — bringing power
+        Hopcharge delivers on-demand, doorstep electric-vehicle charging - bringing power
         directly to drivers without the wait of fixed stations. This internal dashboard
         streamlines our HR business-as-usual operations: parsing candidate CVs at scale and
         dispatching personalised, form-driven recruitment emails in a single, automated flow.
@@ -182,12 +177,12 @@
         <div class="wcard">
           <div class="wc-ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 2h7l3 3v11a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 2v4h4" stroke="currentColor" stroke-width="1.5"/></svg></div>
           <h3>Batch CV Parsing</h3>
-          <p>Upload PDF resumes and extract names, contacts, skills and experience into structured data — text-based and scanned alike.</p>
+          <p>Upload PDF resumes and extract names, contacts, skills and experience into structured data - text-based and scanned alike.</p>
         </div>
         <div class="wcard">
           <div class="wc-ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4" width="14" height="10" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M2.5 5l6.5 5 6.5-5" stroke="currentColor" stroke-width="1.5"/></svg></div>
           <h3>Automated Outreach</h3>
-          <p>Send personalised, branded recruitment emails embedding your assessment form link — to every candidate, in one click.</p>
+          <p>Send personalised, branded recruitment emails embedding your assessment form link - to every candidate, in one click.</p>
         </div>
         <div class="wcard">
           <div class="wc-ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2l5 3v4c0 3.5-2.2 6-5 7-2.8-1-5-3.5-5-7V5l5-3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
@@ -212,7 +207,7 @@
       <div class="drop-zone" id="drop-zone">
         <div class="dz-bolt"><svg width="28" height="28" viewBox="0 0 28 28" fill="none"><polygon points="16,2 6,16 13,16 10,26 22,12 15,12" fill="#fff"/></svg></div>
         <div class="dz-title">Drop PDF Resumes Here</div>
-        <div class="dz-sub">Batch upload supported — text-based &amp; scanned PDFs accepted</div>
+        <div class="dz-sub">Batch upload supported - text-based &amp; scanned PDFs accepted</div>
         <label for="file-input" class="browse-btn"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="3" width="11" height="9" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M4.5 3V2a2 2 0 014 0v1" stroke="currentColor" stroke-width="1.4"/></svg>Browse Files</label>
         <input type="file" id="file-input" accept=".pdf" multiple>
         <div class="file-chips" id="file-chips"></div>
@@ -233,7 +228,7 @@
       <div class="stat"><div class="stat-label">Candidates</div><div class="stat-val" id="s-cands">0</div></div>
       <div class="stat"><div class="stat-label">With Experience</div><div class="stat-val" id="s-exp">0</div></div>
       <div class="stat"><div class="stat-label">Total Skills</div><div class="stat-val" id="s-skills">0</div></div>
-      <div class="stat"><div class="stat-label">Avg Confidence</div><div class="stat-val" id="s-conf">—</div></div>
+      <div class="stat"><div class="stat-label">Avg Confidence</div><div class="stat-val" id="s-conf">-</div></div>
     </div>
 
     <div id="results-section" class="hidden">
@@ -268,86 +263,42 @@
     <div class="page-head">
       <div class="eyebrow">Module 02</div>
       <h1>Send <span class="grad-text">Emails</span></h1>
-      <p>Dispatch personalised recruitment emails to every parsed candidate, embedding your Google Forms assessment link. Powered by Gmail SMTP.</p>
+      <p>Dispatch personalised recruitment emails to every parsed candidate, embedding your Google Forms assessment link. Sent via your connected Google account.</p>
     </div>
 
     <div class="email-panel">
       <div class="email-body">
-        <div class="gmail-connect-panel" id="gmail-connect-panel" style="margin:-4px 0 16px;padding:16px 18px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:10px">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
-            <div style="display:flex;align-items:center;gap:10px">
-              <span id="gmail-status-pill" class="dec-badge" style="background:rgba(255,255,255,0.08);color:var(--text-dim)">Checking…</span>
-              <div>
-                <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:#34d399">✉ CONNECT GMAIL</div>
-                <div id="gmail-status-detail" style="font-size:11px;color:var(--muted);margin-top:1px">Checking connection status…</div>
-              </div>
-            </div>
-            <div style="display:flex;gap:8px;flex-shrink:0">
-              <button type="button" id="gmail-connect-btn" class="btn-ghost hidden">Connect Gmail</button>
-              <button type="button" id="gmail-disconnect-btn" class="btn-ghost hidden" style="border-color:rgba(248,113,113,.4);color:#f87171">Disconnect</button>
-            </div>
-          </div>
-          <div style="font-size:10.5px;color:var(--text-dim);margin-top:10px">Uses Google OAuth — no password is ever typed into this app. Drop the client-secret JSON Google gives you into <code>credentials/</code> (same folder as your Forms/Drive service-account file) and it's picked up automatically — no copy-pasting needed. While your Google Cloud OAuth consent screen is in "Testing" status, the connection may need reconnecting roughly every 7 days.</div>
+        <div class="google-auth-widget"></div>
 
-          <button type="button" class="preview-toggle" id="gmail-oauth-settings-toggle" style="margin-top:12px">⚙ Paste OAuth client manually instead</button>
-          <div id="gmail-oauth-settings" class="email-grid full hidden" style="margin-top:12px;gap:14px">
-            <div class="field-group"><label class="field-label" for="gmail-oauth-client-id">OAuth Client ID<span class="req-mark">*</span></label><input id="gmail-oauth-client-id" class="field-input" type="text" placeholder="xxxxxxxx.apps.googleusercontent.com" autocomplete="off"></div>
-            <div class="field-group"><label class="field-label" for="gmail-oauth-client-secret">OAuth Client Secret<span class="req-mark">*</span></label><input id="gmail-oauth-client-secret" class="field-input" type="password" placeholder="GOCSPX-…" autocomplete="off"><span class="field-hint" id="gmail-oauth-mode-hint">Only needed if you don't have a credentials/*.json file for this deployment mode.</span></div>
-            <div style="display:flex;justify-content:flex-end"><button type="button" id="gmail-oauth-save-btn" class="btn-ghost">Save Client Config</button></div>
-          </div>
-        </div>
-
-        <div class="apppass-toggle-row" style="display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid var(--border-dim);border-radius:8px">
-          <label class="switch" style="position:relative;display:inline-block;width:38px;height:21px;flex-shrink:0">
-            <input type="checkbox" id="apppass-enable" style="opacity:0;width:0;height:0">
-            <span class="slider" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.15);border-radius:21px;transition:.25s"></span>
-          </label>
-          <div style="flex:1">
-            <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--text-mid)">🔑 USE APP PASSWORD INSTEAD (FALLBACK)</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:1px">Collapses once Gmail is connected via OAuth above. Turn on to send via SMTP with a Gmail App Password instead.</div>
-          </div>
-        </div>
-
-        <div id="apppass-fields" class="hidden">
-          <div class="smtp-note">
-            <span class="note-icon">⚠</span>
-            <span>This uses <strong>Gmail SMTP</strong>. You must use a <a href="https://myaccount.google.com/apppasswords" target="_blank">Gmail App Password</a> — not your account password. Generate one via Google Account → Security → 2-Step Verification → App Passwords.</span>
-          </div>
-
-          <div class="email-grid">
-            <div class="field-group"><label class="field-label" for="gmail-addr">Sender Gmail Address<span class="req-mark">*</span></label><input id="gmail-addr" class="field-input" type="email" placeholder="hr@hopcharge.com" autocomplete="email" required></div>
-            <div class="field-group"><label class="field-label" for="gmail-pass">Gmail App Password<span class="req-mark">*</span></label><input id="gmail-pass" class="field-input" type="password" placeholder="xxxx xxxx xxxx xxxx" autocomplete="off" required><span class="field-hint">16-character app password, not your Gmail login</span></div>
-          </div>
-        </div>
         <div class="email-grid full" style="margin-bottom:18px">
-          <div class="field-group"><label class="field-label" for="form-link">Google Forms Assessment Link<span class="req-mark">*</span></label><input id="form-link" class="field-input" type="url" placeholder="https://docs.google.com/forms/d/…" required><span class="field-hint">Embedded as a CTA button in every email</span></div>
+          <div id="form-link-status" style="font-size:12.5px;color:var(--text-mid);padding:10px 12px;background:var(--glass-2);border:1px solid var(--border-dim);border-radius:8px">Loading recruitment form…</div>
         </div>
 
         <div class="manual-emails-row" style="margin:-4px 0 14px;padding:11px 14px;background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.18);border-radius:8px">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-            <label class="switch" style="position:relative;display:inline-block;width:38px;height:21px;flex-shrink:0">
-              <input type="checkbox" id="manual-enable" style="opacity:0;width:0;height:0">
-              <span class="slider" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.15);border-radius:21px;transition:.25s"></span>
+            <label class="switch">
+              <input type="checkbox" id="manual-enable">
+              <span class="switch-track"></span>
             </label>
             <div style="flex:1">
-              <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:#60a5fa">✉ MANUALLY ADD EMAILS</div>
+              <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:#60a5fa">MANUALLY ADD EMAILS</div>
               <div style="font-size:11px;color:var(--muted);margin-top:1px">Send Round 0 form links to emails you paste below, instead of parsed candidates</div>
             </div>
           </div>
           <div id="manual-fields" class="hidden">
-            <textarea id="manual-emails" class="field-input" rows="4" placeholder="Paste emails — one per line, or separated by commas/spaces&#10;e.g.&#10;alice@example.com&#10;bob@example.com, carol@example.com" style="resize:vertical;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6"></textarea>
+            <textarea id="manual-emails" class="field-input" rows="4" placeholder="Paste emails - one per line, or separated by commas/spaces&#10;e.g.&#10;alice@example.com&#10;bob@example.com, carol@example.com" style="resize:vertical;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6"></textarea>
             <span class="field-hint" id="manual-count">No emails added yet</span>
           </div>
         </div>
 
         <div class="track-toggle-row" style="display:flex;align-items:center;gap:10px;margin:-4px 0 14px;padding:11px 14px;background:rgba(31,45,89,0.06);border:1px solid rgba(31,45,89,0.18);border-radius:8px">
-          <label class="switch" style="position:relative;display:inline-block;width:38px;height:21px;flex-shrink:0">
-            <input type="checkbox" id="track-enable" style="opacity:0;width:0;height:0">
-            <span class="slider" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.15);border-radius:21px;transition:.25s"></span>
+          <label class="switch">
+            <input type="checkbox" id="track-enable">
+            <span class="switch-track"></span>
           </label>
           <div style="flex:1">
             <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--violet)">⏱ TRACK FORM COMPLETION TIME</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:1px">Off by default — emails link straight to your Google Form, no public server needed. Turn on to measure how long each candidate takes to fill the form (requires this server to be reachable at a public URL).</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:1px">Off by default - emails link straight to your Google Form, no public server needed. Turn on to measure how long each candidate takes to fill the form (requires this server to be reachable at a public URL).</div>
           </div>
         </div>
 
@@ -358,13 +309,9 @@
 
         <button class="preview-toggle" id="preview-toggle"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 6s2-4 5-4 5 4 5 4-2 4-5 4-5-4-5-4Z" stroke="currentColor" stroke-width="1.3"/><circle cx="6" cy="6" r="1.5" fill="currentColor"/></svg>Preview Email Template</button>
         <div id="email-preview" class="email-preview-box hidden">
-          <div class="preview-subject">Subject: Thank You for Applying to Hopcharge — Next Steps</div>
-          <strong>Dear [Candidate Name],</strong><br><br>
-          Thank you for your interest in joining <strong>Hopcharge</strong>. We appreciate the time you have invested in your application and are pleased to confirm receipt.<br><br>
-          As part of our recruitment process, please complete the following assessment form at your earliest convenience.<br><br>
-          <span style="display:inline-block;background:rgba(31,45,89,0.15);border:1px solid rgba(31,45,89,0.3);border-radius:4px;padding:5px 14px;color:var(--violet);font-size:11px;font-family:'Poppins',sans-serif;font-weight:700;letter-spacing:1px">COMPLETE ASSESSMENT FORM →</span><br><br>
-          Candidates who do not respond within five business days may not be considered for the current hiring cycle.<br><br>
-          Warm regards,<br><strong>Hopcharge Recruitment Team</strong>
+          <div class="preview-subject" id="email-preview-subject">Subject: -</div>
+          <iframe id="email-preview-frame" sandbox="" class="adm-preview-frame" style="margin-top:10px;min-height:360px"></iframe>
+          <div class="field-hint" style="margin-top:8px">This is the actual saved recruitment template - edit its subject/body in Admin Settings.</div>
         </div>
 
         <div class="send-row">
@@ -391,8 +338,10 @@
     <div class="page-head">
       <div class="eyebrow">Module 02b</div>
       <h1>Email <span class="grad-text">Replies</span></h1>
-      <p>Replies candidates send back to a Gmail-connected campaign, in one place. Reading and marking a reply here only updates this dashboard — it never touches your real Gmail inbox.</p>
+      <p>Replies candidates send back to a Gmail-connected campaign, in one place. Reading and marking a reply here only updates this dashboard - it never touches your real Gmail inbox.</p>
     </div>
+
+    <div class="google-auth-widget"></div>
 
     <div id="reply-stats" class="forms-stats" style="margin-bottom:18px">
       <div class="fstat"><div class="fstat-label">Total Sent</div><div class="fstat-val" id="reply-total">0</div></div>
@@ -406,10 +355,10 @@
         <select id="reply-filter" title="Filter" style="background:var(--glass-2);border:1px solid var(--border-dim);border-radius:9px;color:var(--text-on);font-size:13px;padding:8px 12px;cursor:pointer">
           <option value="all">All status</option>
           <option value="unread">Unread replies</option>
-          <option value="not_interested">🔴 Not Interested</option>
-          <option value="interested">🟢 Interested</option>
-          <option value="question">🟡 Question / Inquiry</option>
-          <option value="auto_reply">⚪ Auto-reply / OOO</option>
+          <option value="not_interested">Not Interested</option>
+          <option value="interested">Interested</option>
+          <option value="question">Question / Inquiry</option>
+          <option value="auto_reply">Auto-reply / OOO</option>
         </select>
         <div class="search-wrap"><span class="search-icon">&#x2315;</span><input id="reply-search" type="text" placeholder="Search name, email&#x2026;"></div>
         <button id="reply-check-now" class="btn-ghost" title="Check Gmail for new replies now" aria-label="Check Gmail for new replies now">&#x21bb; Check now</button>
@@ -436,32 +385,20 @@
     <div class="page-head">
       <div class="eyebrow">Module 03</div>
       <h1>Form <span class="grad-text">Responses</span></h1>
-      <p>Retrieve candidate answers from your Google Form assessment. Responses are stored locally and structured for AI-based scoring in the next step.</p>
+      <p>Retrieve candidate answers from your Google Form assessment. Responses are stored locally for review, acceptance, or rejection.</p>
     </div>
+
+    <div class="google-auth-widget"></div>
 
     <div class="email-panel" style="margin-bottom:28px">
       <div class="email-body">
-        <div class="gmail-connect-panel" id="forms-oauth-panel" style="margin:-4px 0 16px;padding:16px 18px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:10px">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
-            <div style="display:flex;align-items:center;gap:10px">
-              <span id="forms-oauth-pill" class="dec-badge" style="background:rgba(255,255,255,0.08);color:var(--text-dim)">Checking…</span>
-              <div>
-                <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:#34d399">📋 GOOGLE ACCOUNT ACCESS</div>
-                <div id="forms-oauth-detail" style="font-size:11px;color:var(--muted);margin-top:1px">Checking connection status…</div>
-              </div>
-            </div>
-            <button type="button" id="forms-oauth-connect-btn" class="btn-ghost hidden">Connect Google</button>
-          </div>
-          <div style="font-size:10.5px;color:var(--text-dim);margin-top:10px">Uses the same Google connection as Send Emails — connecting/reconnecting there also applies here. The connected account must own or have edit access to this form.</div>
-        </div>
-
         <div class="apppass-toggle-row" style="display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid var(--border-dim);border-radius:8px">
-          <label class="switch" style="position:relative;display:inline-block;width:38px;height:21px;flex-shrink:0">
-            <input type="checkbox" id="forms-svcacct-enable" style="opacity:0;width:0;height:0">
-            <span class="slider" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.15);border-radius:21px;transition:.25s"></span>
+          <label class="switch">
+            <input type="checkbox" id="forms-svcacct-enable">
+            <span class="switch-track"></span>
           </label>
           <div style="flex:1">
-            <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--text-mid)">🔑 USE SERVICE ACCOUNT INSTEAD (FALLBACK)</div>
+            <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--text-mid)">USE SERVICE ACCOUNT INSTEAD (FALLBACK)</div>
             <div style="font-size:11px;color:var(--muted);margin-top:1px">Collapses once your Google account has Forms access. Turn on to use a service-account key instead (e.g. for a form you don't personally own).</div>
           </div>
         </div>
@@ -469,23 +406,22 @@
         <div id="forms-svcacct-fields" class="hidden">
           <div class="smtp-note" style="margin-bottom:18px">
             <span class="note-icon">⚠</span>
-            <span>Requires a <strong>Google Cloud Service Account</strong> with <em>Google Forms API</em> and <em>Google Drive API</em> enabled. Share the form with the service-account email (Viewer). See <strong>FORMS_SETUP.md</strong> in the project folder.</span>
+            <span>Requires a <strong>Google Cloud Service Account</strong> with <em>Google Forms API</em> and <em>Google Drive API</em> enabled. Share the form with the service-account email (Viewer access) before syncing.</span>
           </div>
           <div class="forms-grid full" style="margin-bottom:18px">
             <div class="field-group forms-creds">
               <label class="field-label" for="forms-creds">Service Account JSON<span class="req-mark">*</span></label>
               <textarea id="forms-creds" required placeholder='Paste the full service account JSON key contents here:
 { "type": "service_account", "project_id": "...", "private_key": "...", "client_email": "..." }'></textarea>
-              <span class="field-hint">Stays local — only used to call Google's own API.</span>
+              <span class="field-hint">Stays local - only used to call Google's own API.</span>
             </div>
           </div>
         </div>
 
         <div class="forms-grid">
           <div class="field-group">
-            <label class="field-label" for="forms-id">Google Form ID or Edit URL<span class="req-mark">*</span></label>
-            <input id="forms-id" class="field-input" type="text" placeholder="Paste the form EDIT url or its ID" required>
-            <span class="field-hint">Use the <strong>edit</strong> URL: docs.google.com/forms/d/<strong>&lt;ID&gt;</strong>/edit &nbsp;—&nbsp; <em>not</em> the published /d/e/ responder link</span>
+            <label class="field-label">Google Form</label>
+            <div id="forms-id-status" style="font-size:12.5px;color:var(--text-mid);padding:10px 12px;background:var(--glass-2);border:1px solid var(--border-dim);border-radius:8px">Loading recruitment form…</div>
           </div>
           <div class="field-group">
             <label class="field-label" for="forms-last">Last Synced</label>
@@ -504,7 +440,7 @@
           <a id="forms-dl-btn" href="/api/forms/download" class="btn-dl xlsx" download style="display:none">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v7M3 5l3 3 3-3M1 10h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Download JSON
           </a>
-          <span class="send-info" id="forms-info">Enter Form ID and credentials to sync</span>
+          <span class="send-info" id="forms-info">Set the recruitment form in Admin Settings, then sync</span>
         </div>
       </div>
     </div>
@@ -512,7 +448,6 @@
     <div id="forms-stats" class="forms-stats hidden">
       <div class="fstat"><div class="fstat-label">Responses</div><div class="fstat-val" id="fs-total">0</div></div>
       <div class="fstat"><div class="fstat-label">Questions</div><div class="fstat-val" id="fs-questions">0</div></div>
-      <div class="fstat"><div class="fstat-label">AI Evaluated</div><div class="fstat-val" id="fs-evaluated">0</div></div>
       <div class="fstat"><div class="fstat-label">🚩 Flagged (&lt;5m)</div><div class="fstat-val" id="fs-flagged" style="color:#f87171">0</div></div>
     </div>
 
@@ -533,7 +468,6 @@
           <span style="font-family:'Poppins',sans-serif;font-weight:700;font-size:11px;letter-spacing:.6px;color:var(--violet)">SORT BY</span>
           <select id="sort-field" class="filter-select">
             <option value="date">Date applied</option>
-            <option value="score">Candidate score</option>
             <option value="time">Time taken</option>
             <option value="name">Name</option>
           </select>
@@ -543,9 +477,6 @@
           <span style="font-family:'Poppins',sans-serif;font-weight:700;font-size:11px;letter-spacing:.6px;color:var(--violet)">STATUS</span>
           <select id="filter-status" class="filter-select">
             <option value="">All</option>
-            <option value="scored">Scored</option>
-            <option value="pending">Pending</option>
-            <option value="failed">Scoring failed</option>
             <option value="flagged">🚩 Flagged (&lt;5 min)</option>
           </select>
         </div>
@@ -563,10 +494,7 @@
 <span class="sk">"responses"</span>: [ {<br>
 &nbsp;&nbsp;<span class="sk">"response_id"</span>: <span class="sv">"ACYDBNh&#x2026;"</span>,&nbsp;
 <span class="sk">"email"</span>: <span class="sv">"candidate@example.com"</span>,<br>
-&nbsp;&nbsp;<span class="sk">"answers"</span>: [ { <span class="sk">"question"</span>: <span class="sv">"Why join Hopcharge?"</span>, <span class="sk">"answer"</span>: <span class="sv">"&#x2026;"</span> } ],<br>
-&nbsp;&nbsp;<span class="sk">"ai_score"</span>: <span class="sn">null</span>,&nbsp;
-<span class="sk">"ai_reasoning"</span>: <span class="sn">null</span>,&nbsp;
-<span class="sk">"shortlisted"</span>: <span class="sn">null</span>&nbsp;<span style="color:var(--text-dim)">&#x2190; AI fills these next sprint</span><br>
+&nbsp;&nbsp;<span class="sk">"answers"</span>: [ { <span class="sk">"question"</span>: <span class="sv">"Why join Hopcharge?"</span>, <span class="sk">"answer"</span>: <span class="sv">"&#x2026;"</span> } ]<br>
 } ]
         </div>
       </div>
@@ -580,7 +508,7 @@
     <div class="page-head">
       <div class="eyebrow">Talent Pipeline</div>
       <h1>Rejected <span class="grad-text">Candidates</span></h1>
-      <p>Every declined candidate, preserved with their full application — answers, contact details, scores, and the round in which they were rejected. Restore anyone back to the active pipeline at any time.</p>
+      <p>Every declined candidate, preserved with their full application - answers, contact details, and the round in which they were rejected. Restore anyone back to the active pipeline at any time.</p>
     </div>
 
     <div id="rej-stats" class="forms-stats" style="margin-bottom:18px">
@@ -602,10 +530,10 @@
         <thead><tr>
           <th style="width:34px"><input type="checkbox" id="rej-select-all" title="Select all" aria-label="Select all candidates"></th>
           <th>#</th><th>Candidate</th><th>Email</th><th>Phone</th><th>Role</th>
-          <th>Score</th><th>Rejected In</th><th>When</th><th>Notified</th><th></th><th></th>
+          <th>Rejected In</th><th>When</th><th>Notified</th><th></th><th></th>
         </tr></thead>
         <tbody id="rej-tbody">
-          <tr><td colspan="11" style="text-align:center;padding:34px;color:var(--text-dim)">No rejected candidates yet. Use the ✕ Reject button on the Form Responses tab.</td></tr>
+          <tr><td colspan="10" style="text-align:center;padding:34px;color:var(--text-dim)">No rejected candidates yet. Use the ✕ Reject button on the Form Responses tab.</td></tr>
         </tbody>
       </table>
     </div>
@@ -616,15 +544,11 @@
 <div id="rejection-email-dialog" class="rejd-overlay" style="display:none;z-index:340;">
   <div class="rejd-card" style="max-width:500px;width:94vw;">
     <div class="rejd-title" style="color:#f87171;">&#x1F6AB; Send Rejection Email</div>
-    <div class="rejd-sub">Sends a considerate decline notice to the candidates you&rsquo;ve checked below. Nothing is sent automatically — only the candidates you explicitly select receive this.</div>
+    <div class="rejd-sub">Sends a considerate decline notice to the candidates you&rsquo;ve checked below via your connected Google account. Nothing is sent automatically - only candidates you explicitly select receive this.</div>
+
+    <div class="google-auth-widget" style="margin-bottom:14px"></div>
 
     <div id="rej-email-recipients" style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--glass-border);font-size:12px;line-height:1.5;color:var(--text-mid)"></div>
-
-    <label class="field-label" for="rej-email-gmail" style="margin-top:14px">Gmail Address<span class="req-mark">*</span></label>
-    <input class="field-input" id="rej-email-gmail" type="email" placeholder="hr@hopcharge.com" required>
-
-    <label class="field-label" for="rej-email-pass" style="margin-top:10px">Gmail App Password<span class="req-mark">*</span></label>
-    <input class="field-input" id="rej-email-pass" type="password" placeholder="xxxx xxxx xxxx xxxx" required>
 
     <div id="rej-email-status" style="display:none;margin:14px 0 0;padding:11px 14px;border-radius:9px;font-size:13px;line-height:1.6;background:var(--glass-2);border:1px solid var(--glass-border);color:var(--text-mid)"></div>
 
@@ -681,10 +605,10 @@
       <table class="resp-table">
         <thead><tr>
           <th>#</th><th>Candidate</th><th>Email</th><th>Phone</th><th>Role</th>
-          <th>Score</th><th>In Stage Since</th><th></th><th></th>
+          <th>In Stage Since</th><th></th><th></th>
         </tr></thead>
         <tbody id="acc-tbody">
-          <tr><td colspan="9" style="text-align:center;padding:34px;color:var(--text-dim)">No candidates in this stage yet.</td></tr>
+          <tr><td colspan="8" style="text-align:center;padding:34px;color:var(--text-dim)">No candidates in this stage yet.</td></tr>
         </tbody>
       </table>
     </div>
@@ -695,15 +619,11 @@
 <div id="onboard-dialog" class="rejd-overlay" style="display:none;z-index:340;">
   <div class="rejd-card" style="max-width:500px;width:94vw;">
     <div class="rejd-title" style="color:#1F2D59;">&#127881; Send Onboarding Email</div>
-    <div class="rejd-sub">Sends the welcome-to-the-family email with the onboarding form link to the Round 2 candidates you&rsquo;ve marked <b>&#9733; SELECTED</b>. Uses the same Gmail credentials as your Send Emails tab.</div>
+    <div class="rejd-sub">Sends the welcome-to-the-family email with the onboarding form link to the Round 2 candidates you&rsquo;ve marked <b>&#9733; SELECTED</b> via your connected Google account.</div>
+
+    <div class="google-auth-widget" style="margin-bottom:14px"></div>
 
     <div id="ob-recipients" style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--glass-border);font-size:12px;line-height:1.5;color:var(--text-mid)"></div>
-
-    <label class="field-label" for="ob-gmail" style="margin-top:14px">Gmail Address<span class="req-mark">*</span></label>
-    <input class="field-input" id="ob-gmail" type="email" placeholder="hr@hopcharge.com" required>
-
-    <label class="field-label" for="ob-pass" style="margin-top:10px">Gmail App Password<span class="req-mark">*</span></label>
-    <input class="field-input" id="ob-pass" type="password" placeholder="xxxx xxxx xxxx xxxx" required>
 
     <label class="field-label" for="ob-form" style="margin-top:10px">Onboarding Form Link<span class="req-mark">*</span></label>
     <input class="field-input" id="ob-form" type="url" placeholder="https://forms.google.com/…" required>
@@ -724,7 +644,7 @@
   <div class="page-head">
     <div class="eyebrow">Insights</div>
     <h1>Analytics</h1>
-    <p>How the platform is working for HR — pick a time window to see volume, outcomes and trends.</p>
+    <p>How the platform is working for HR - pick a time window to see volume, outcomes and trends.</p>
   </div>
 
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 22px">
@@ -743,12 +663,8 @@
 
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-bottom:18px">
     <div class="an-panel" style="background:var(--glass-2);border:1px solid var(--border-dim);border-radius:14px;padding:18px 20px">
-      <h3 style="margin:0 0 14px;font-size:14px;font-weight:700;color:var(--text-on)">Role-wise &mdash; processed &middot; accepted &middot; rejected</h3>
+      <h3 style="margin:0 0 14px;font-size:14px;font-weight:700;color:var(--text-on)">Role-wise - processed &middot; accepted &middot; rejected</h3>
       <div id="an-roles"></div>
-    </div>
-    <div class="an-panel" style="background:var(--glass-2);border:1px solid var(--border-dim);border-radius:14px;padding:18px 20px">
-      <h3 style="margin:0 0 14px;font-size:14px;font-weight:700;color:var(--text-on)">Recommendation bands</h3>
-      <div id="an-bands"></div>
     </div>
     <div class="an-panel" style="background:var(--glass-2);border:1px solid var(--border-dim);border-radius:14px;padding:18px 20px">
       <h3 style="margin:0 0 14px;font-size:14px;font-weight:700;color:var(--text-on)">Accepted by stage</h3>
@@ -842,8 +758,12 @@
   </div>
 </section>
 
+<<<<<<< HEAD
 <!-- ═══ AI SETTINGS REMOVED (MERGED INTO ADMIN SETTINGS) ═══ -->
 
+=======
+<!-- ═══ AI SETTINGS ═══ -->
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
 <!-- ── COLLEGE ADD/EDIT MODAL ── -->
 <div id="discover-modal">
   <div class="cand-modal-scrim" onclick="closeDiscoverModal()"></div>
@@ -851,7 +771,7 @@
     <button class="cand-modal-close" onclick="closeDiscoverModal()" aria-label="Close">✕</button>
     <div class="cand-modal-name" style="margin-bottom:6px">Discover Placement Contacts</div>
     <div style="font-size:12.5px;color:var(--text-dim);margin-bottom:18px;line-height:1.5">
-      Type a college name — for known institutions (all IITs, NITs, IIITs, BITS, IISc, and major universities)
+      Type a college name - for known institutions (all IITs, NITs, IIITs, BITS, IISc, and major universities)
       the correct website and placement pages are found automatically. For others, paste the website URL to improve results.
       Nothing is saved until you click <b style="color:#5fd3c8">Save</b> on a result.
     </div>
@@ -925,31 +845,27 @@
     </div>
 
     <div id="r1-free-sec">
-      <label class="field-label" for="r1-link-cse" style="font-size:11px">Customer Support Executive &mdash; Calendly link</label>
+      <label class="field-label" for="r1-link-cse" style="font-size:11px">Customer Support Executive - Calendly link</label>
       <input id="r1-link-cse" class="field-input" type="url" placeholder="https://calendly.com/hopcharge-hr/cse-round-1">
       <div class="field-hint" id="r1-cse-hint" style="margin-top:4px">Goes to Round 1 candidates who applied for Customer Support Executive.</div>
 
-      <label class="field-label" for="r1-link-ops" style="font-size:11px;margin-top:14px">Operations Specialist &mdash; Calendly link</label>
+      <label class="field-label" for="r1-link-ops" style="font-size:11px;margin-top:14px">Operations Specialist - Calendly link</label>
       <input id="r1-link-ops" class="field-input" type="url" placeholder="https://calendly.com/hopcharge-hr/ops-round-1">
       <div class="field-hint" id="r1-ops-hint" style="margin-top:4px">Goes to Round 1 candidates who applied for Operations Specialist.</div>
     </div>
 
     <div id="r1-api-sec" style="display:none">
-      <label class="field-label" for="r1-token" style="font-size:11px">Calendly API token <span style="opacity:.55">(Pro/Team &mdash; Integrations &rarr; API &amp; webhooks)</span></label>
+      <label class="field-label" for="r1-token" style="font-size:11px">Calendly API token <span style="opacity:.55">(Pro/Team - Integrations &rarr; API &amp; webhooks)</span></label>
       <div style="display:flex;gap:8px">
         <input id="r1-token" class="field-input" type="password" placeholder="leave blank if already saved" style="flex:1">
         <button type="button" id="r1-load-events" class="rejd-cancel" style="white-space:nowrap">Load events</button>
       </div>
       <label class="field-label" for="r1-event" style="font-size:11px;margin-top:10px">Event type</label>
-      <select id="r1-event" class="field-input"><option value="">&mdash; load events first &mdash;</option></select>
-      <div class="field-hint" id="r1-api-status" style="margin-top:6px">Each candidate gets a unique single-use link &mdash; so you can tell who booked.</div>
+      <select id="r1-event" class="field-input"><option value="">- load events first -</option></select>
+      <div class="field-hint" id="r1-api-status" style="margin-top:6px">Each candidate gets a unique single-use link - so you can tell who booked.</div>
     </div>
 
-    <div style="display:flex;gap:10px;margin-top:12px">
-      <div style="flex:1"><label class="field-label" for="r1-sender" style="font-size:11px">Sender Gmail<span class="req-mark">*</span></label><input id="r1-sender" class="field-input" type="email" placeholder="hr@hopcharge.com" required></div>
-      <div style="flex:1"><label class="field-label" for="r1-pass" style="font-size:11px">App Password<span class="req-mark">*</span></label><input id="r1-pass" class="field-input" type="password" placeholder="xxxx xxxx xxxx xxxx" required></div>
-    </div>
-    <div class="field-hint" style="margin-top:6px">Sender + App Password reused from your Send Emails tab when available.</div>
+    <div class="google-auth-widget" style="margin-top:14px"></div>
 
     <div class="rejd-actions">
       <button class="rejd-cancel" onclick="closeR1Invite()">Cancel</button>
@@ -980,8 +896,8 @@
     <div class="cand-modal-header">
       <div class="cand-modal-avatar" id="cm-avatar"></div>
       <div>
-        <div class="cand-modal-name" id="cm-name">—</div>
-        <div class="cand-modal-meta" id="cm-meta">—</div>
+        <div class="cand-modal-name" id="cm-name">-</div>
+        <div class="cand-modal-meta" id="cm-meta">-</div>
       </div>
     </div>
     <div class="cand-qa-grid" id="cm-body"></div>
@@ -995,8 +911,8 @@
     <div class="cand-modal-header">
       <div class="cand-modal-avatar" id="rm-avatar"></div>
       <div>
-        <div class="cand-modal-name" id="rm-name">—</div>
-        <div class="cand-modal-meta" id="rm-meta">—</div>
+        <div class="cand-modal-name" id="rm-name">-</div>
+        <div class="cand-modal-meta" id="rm-meta">-</div>
       </div>
     </div>
     <div id="rm-body"></div>
@@ -1007,7 +923,7 @@
 <div id="overlay">
   <div class="modal">
     <div class="modal-head">
-      <div class="modal-head-left"><div class="mname" id="m-name">—</div><div class="msrc" id="m-src">—</div></div>
+      <div class="modal-head-left"><div class="mname" id="m-name">-</div><div class="msrc" id="m-src">-</div></div>
       <button class="modal-close" id="m-close" aria-label="Close">✕</button>
     </div>
     <div class="modal-body" id="m-body"></div>
@@ -1017,6 +933,7 @@
 <div id="toast-box"></div>
 
 <script src="/static/js/core.js"></script>
+<script src="/static/js/google-auth.js"></script>
 <script src="/static/js/parser.js"></script>
 <script src="/static/js/email.js"></script>
 <script src="/static/js/replies.js"></script>
@@ -1025,7 +942,6 @@
 <script src="/static/js/analytics.js"></script>
 <script src="/static/js/rejected.js"></script>
 <script src="/static/js/colleges.js"></script>
-<script src="/static/js/ai-settings.js"></script>
 <div id="col-status-menu"></div>
 <script src="/static/js/calendly.js"></script>
 <!-- ── GOOGLE DRIVE SYNC DIALOG ── -->
@@ -1084,17 +1000,121 @@
     <div class="page-head">
       <div class="eyebrow">Configuration</div>
       <h1>Admin <span class="grad-text">Settings</span></h1>
-      <p>Edit the emails sent at each stage and tune the score thresholds that drive auto-reject and auto-accept. Changes apply to every email and pipeline action from the moment you save.</p>
+      <p>Edit the emails sent at each stage, the recruitment form, and AI-assisted CV parsing. Changes apply from the moment you save.</p>
     </div>
 
+<<<<<<< HEAD
     <!-- AI CV Parsing Settings -->
     <div class="ccard" style="margin-bottom:26px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;color:var(--text-on)">🤖 AI CV Parsing Settings</div>
         <span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);background:var(--violet-dim);border-radius:5px;padding:3px 9px">LLM Parser</span>
+=======
+    <!-- Recruitment form -->
+    <div class="ccard" style="margin-bottom:26px">
+      <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;color:var(--text-on);margin-bottom:4px">Recruitment form</div>
+      <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">Set once here - used by both Send Emails (the CTA link embedded in every recruitment email) and Form Responses (syncing submitted answers via the Forms API).</div>
+
+      <label class="field-label" for="adm-form-id">Google Form ID or Edit URL</label>
+      <input type="text" id="adm-form-id" class="field-input" style="margin-bottom:4px" placeholder="Paste the form EDIT url or its ID">
+      <span class="field-hint">Use the <strong>edit</strong> URL: docs.google.com/forms/d/<strong>&lt;ID&gt;</strong>/edit - used to sync responses.</span>
+
+      <label class="field-label" for="adm-form-link" style="margin-top:16px">Google Forms Assessment Link</label>
+      <input type="url" id="adm-form-link" class="field-input" style="margin-bottom:4px" placeholder="https://docs.google.com/forms/d/e/…/viewform">
+      <span class="field-hint">The public link candidates fill out - embedded as the CTA button in the recruitment email.</span>
+
+      <div style="display:flex;gap:10px;align-items:center;margin-top:16px">
+        <button class="btn-send" id="adm-form-save">Save recruitment form</button>
+        <span id="adm-form-msg" style="font-size:12px;color:var(--text-dim)"></span>
+      </div>
+    </div>
+
+    <!-- AI-assisted CV parsing -->
+    <div class="glass-card ai-cfg-card" style="margin-bottom:20px;padding:16px 20px;display:flex;align-items:center;gap:14px">
+      <label class="switch">
+        <input type="checkbox" id="ai-feature-enable">
+        <span class="switch-track"></span>
+      </label>
+      <div style="flex:1">
+        <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--violet)">ENABLE AI-ASSISTED CV PARSING</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:1px" id="ai-feature-desc">Off by default. CVs are parsed with the offline regex + spaCy parser only - no API key fields, no external calls. Turning this on reveals the Claude / OpenAI / Gemini / Groq / Hugging Face configuration below.</div>
+      </div>
+    </div>
+
+    <div id="ai-cfg-grid" class="ai-cfg-grid" style="margin-bottom:26px">
+      <!-- Mode selector -->
+      <div class="glass-card ai-cfg-card">
+        <div class="ai-cfg-title">CV Parsing Mode</div>
+
+        <div class="ai-mode-options">
+          <label class="ai-mode-option" data-mode="offline">
+            <input type="radio" name="ai-mode" value="offline" class="ai-mode-radio-input" checked>
+            <div class="ai-mode-text">
+              <div class="ai-mode-label">Offline (Regex + spaCy)</div>
+              <div class="ai-mode-desc">Deterministic section-heading parsing. No API key needed. Always works, even for unusual layouts it can't fully read.</div>
+              <div class="ai-mode-status" id="offline-status">Active · Parsing now</div>
+            </div>
+          </label>
+
+          <label class="ai-mode-option hidden" data-mode="api" id="ai-mode-api-option">
+            <input type="radio" name="ai-mode" value="api" class="ai-mode-radio-input">
+            <div class="ai-mode-text">
+              <div class="ai-mode-label">AI-Based (Claude / OpenAI / Gemini / Groq / Hugging Face)</div>
+              <div class="ai-mode-desc">LLM-based extraction - handles unusual formats, tables, and non-standard section names far more consistently. Requires an API key.</div>
+              <div class="ai-mode-status" id="api-status">Not configured</div>
+            </div>
+          </label>
+        </div>
+
+        <!-- API config section (shown only when API mode selected) -->
+        <div id="api-config-section" class="ai-api-config hidden" style="margin-top:24px;padding-top:24px;border-top:1px solid var(--border-dim)">
+          <label class="field-label">Provider</label>
+          <div class="ai-provider-toggle">
+            <button class="ai-prov-btn active" data-provider="huggingface">
+              <span class="ai-prov-name">Hugging Face <span style="opacity:.6;font-weight:600">(free)</span></span>
+            </button>
+            <button class="ai-prov-btn" data-provider="anthropic">
+              <span class="ai-prov-name">Anthropic Claude</span>
+            </button>
+            <button class="ai-prov-btn" data-provider="openai">
+              <span class="ai-prov-name">OpenAI</span>
+            </button>
+            <button class="ai-prov-btn" data-provider="gemini">
+              <span class="ai-prov-name">Google Gemini</span>
+            </button>
+            <button class="ai-prov-btn" data-provider="groq">
+              <span class="ai-prov-name">Groq</span>
+            </button>
+          </div>
+          <span class="field-hint">Hugging Face uses a free-tier shared inference API (no billing) - get a token at huggingface.co/settings/tokens with "Inference Providers" permission.</span>
+
+          <label class="field-label" for="ai-model" style="margin-top:18px">Model<span class="req-mark">*</span></label>
+          <input id="ai-model" class="field-input" list="ai-model-list" placeholder="e.g. claude-3-5-sonnet-latest" autocomplete="off" required>
+          <datalist id="ai-model-list"></datalist>
+          <span class="field-hint">Pick a suggestion or type the exact model id from your provider console.</span>
+
+          <label class="field-label" for="ai-key" style="margin-top:18px">API Key<span class="req-mark">*</span></label>
+          <input id="ai-key" class="field-input" type="password" placeholder="Enter your API key" required>
+          <span class="field-hint">Stored encrypted · never displayed after save</span>
+
+          <label class="field-label" for="ai-temp" style="margin-top:18px">Temperature <span id="ai-temp-val" style="color:var(--violet)">0.2</span></label>
+          <input id="ai-temp" type="range" min="0" max="1" step="0.05" value="0.2" class="ai-slider">
+          <div class="ai-temp-labels"><span>Precise (0.0)</span><span>Creative (1.0)</span></div>
+
+          <div class="send-row" style="margin-top:22px">
+            <button id="ai-save-btn" class="btn-parse">Save API Key</button>
+            <button id="ai-clear-btn" class="btn-ghost">Clear Key (Use Offline)</button>
+          </div>
+        </div>
+
+        <div class="send-row hidden" id="ai-switch-btn-row" style="margin-top:18px;gap:8px">
+          <button id="ai-switch-btn" class="btn-ghost" style="flex:1">Switch to API Mode</button>
+        </div>
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
       </div>
       <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">Configure the external AI provider used for intelligent CV parsing. When enabled, uploaded PDFs are parsed via your chosen LLM (Claude, OpenAI, Gemini, Groq, or Hugging Face) for consistent extraction across complex resume layouts. When disabled, the free offline regex+spaCy parser is used.</div>
 
+<<<<<<< HEAD
       <label class="switch-row" style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding:14px 16px;background:rgba(255,255,255,0.03);border:1px solid var(--border-dim);border-radius:10px;cursor:pointer">
         <span class="switch">
           <input type="checkbox" id="ai-feature-enable">
@@ -1132,6 +1152,38 @@
           <button id="ai-clear-btn" class="btn-ghost" type="button">Clear Key (Use Offline)</button>
         </div>
         <div id="ai-config-msg" style="font-size:12px;color:var(--text-dim);margin-top:10px"></div>
+=======
+      <!-- Info card -->
+      <div class="glass-card ai-cfg-card">
+        <div class="ai-cfg-title">How It Works</div>
+
+        <div style="font-size:13px;color:var(--text-mid);line-height:1.7">
+          <div style="margin-bottom:16px">
+            <div style="font-weight:700;color:var(--text-on);margin-bottom:6px">Offline Parsing</div>
+            <ul style="margin:0;padding-left:20px">
+              <li>Regex + spaCy section-heading detection</li>
+              <li>Fast and free - no API calls</li>
+              <li>Works well on standard resume layouts</li>
+              <li>Can miss fields on unusual formats, tables, or creative layouts</li>
+            </ul>
+          </div>
+
+          <div class="hidden" id="ai-how-it-works-api" style="margin-bottom:16px">
+            <div style="font-weight:700;color:var(--text-on);margin-bottom:6px">AI-Based Parsing</div>
+            <ul style="margin:0;padding-left:20px">
+              <li>Routes the extracted text through an LLM for structured extraction</li>
+              <li>Handles arbitrary formats far more consistently</li>
+              <li>Falls back to offline parsing automatically if the call fails</li>
+              <li>Requires an API call (slight latency + cost, per your provider)</li>
+            </ul>
+          </div>
+
+          <div style="background:var(--glass-2);border-radius:var(--r-sm);padding:12px;border:1px solid var(--border-dim)">
+            <strong style="color:var(--violet)">✓ Switch anytime</strong><br/>
+            When AI parsing is off or a call fails for any reason, the app always falls back to the offline parser - a resume is never left unparsed.
+          </div>
+        </div>
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
       </div>
     </div>
 
@@ -1141,7 +1193,7 @@
         <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;color:var(--text-on)">Recruitment email</div>
         <span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);background:var(--violet-dim);border-radius:5px;padding:3px 9px">Sent at form dispatch</span>
       </div>
-      <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">The first email candidates receive, with the assessment-form link. The header, button and footer stay fixed — only the greeting text below is editable.</div>
+      <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">The first email candidates receive, with the assessment-form link. The header, button and footer stay fixed - only the greeting text below is editable.</div>
       <label for="adm-rec-subject" style="display:block;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">Subject<span class="req-mark">*</span></label>
       <input type="text" id="adm-rec-subject" class="field-input" required style="margin-bottom:16px" placeholder="Email subject line">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
@@ -1150,13 +1202,19 @@
       </div>
       <textarea id="adm-rec-body" rows="9" class="field-input" required style="resize:vertical;line-height:1.6" placeholder="Email body text…"></textarea>
       <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap">
+<<<<<<< HEAD
         <button class="btn-send" id="adm-rec-save" type="button">Save recruitment email</button>
         <button class="btn-ghost" id="adm-rec-reset" type="button">Reset to default</button>
         <button class="btn-ghost adm-preview-toggle" type="button" data-kind="recruitment">👁 Preview</button>
+=======
+        <button class="btn-send" id="adm-rec-save">Save recruitment email</button>
+        <button class="btn-ghost" id="adm-rec-reset">Reset to default</button>
+        <button class="btn-ghost adm-preview-toggle" type="button" data-kind="recruitment">Preview</button>
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
       </div>
       <div id="adm-recruitment-preview-wrap" class="hidden adm-preview-wrap">
-        <div style="font-size:11px;color:var(--text-dim);margin:14px 0 8px">Live preview — sample candidate data, exact email layout.</div>
-        <div id="adm-recruitment-preview-subject" class="adm-preview-subject">Subject: —</div>
+        <div style="font-size:11px;color:var(--text-dim);margin:14px 0 8px">Live preview - sample candidate data, exact email layout.</div>
+        <div id="adm-recruitment-preview-subject" class="adm-preview-subject">Subject: -</div>
         <iframe id="adm-recruitment-preview-frame" sandbox="" class="adm-preview-frame"></iframe>
       </div>
     </div>
@@ -1167,7 +1225,7 @@
         <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;color:var(--text-on)">Onboarding email</div>
         <span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);background:var(--green-dim);border-radius:5px;padding:3px 9px">Sent on onboarding</span>
       </div>
-      <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">The welcome email sent when a candidate is onboarded. The header, button and footer stay fixed — only the greeting text below is editable.</div>
+      <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">The welcome email sent when a candidate is onboarded. The header, button and footer stay fixed - only the greeting text below is editable.</div>
       <label for="adm-ob-subject" style="display:block;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">Subject<span class="req-mark">*</span></label>
       <input type="text" id="adm-ob-subject" class="field-input" required style="margin-bottom:16px" placeholder="Onboarding subject line">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
@@ -1179,13 +1237,19 @@
       </div>
       <textarea id="adm-ob-body" rows="6" class="field-input" required style="resize:vertical;line-height:1.6" placeholder="Onboarding body…"></textarea>
       <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap">
+<<<<<<< HEAD
         <button class="btn-send" id="adm-ob-save" type="button">Save onboarding email</button>
         <button class="btn-ghost" id="adm-ob-reset" type="button">Reset to default</button>
         <button class="btn-ghost adm-preview-toggle" type="button" data-kind="onboarding">👁 Preview</button>
+=======
+        <button class="btn-send" id="adm-ob-save">Save onboarding email</button>
+        <button class="btn-ghost" id="adm-ob-reset">Reset to default</button>
+        <button class="btn-ghost adm-preview-toggle" type="button" data-kind="onboarding">Preview</button>
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
       </div>
       <div id="adm-onboarding-preview-wrap" class="hidden adm-preview-wrap">
-        <div style="font-size:11px;color:var(--text-dim);margin:14px 0 8px">Live preview — sample candidate data, exact email layout.</div>
-        <div id="adm-onboarding-preview-subject" class="adm-preview-subject">Subject: —</div>
+        <div style="font-size:11px;color:var(--text-dim);margin:14px 0 8px">Live preview - sample candidate data, exact email layout.</div>
+        <div id="adm-onboarding-preview-subject" class="adm-preview-subject">Subject: -</div>
         <iframe id="adm-onboarding-preview-frame" sandbox="" class="adm-preview-frame"></iframe>
       </div>
     </div>
@@ -1196,7 +1260,7 @@
         <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;color:var(--text-on)">Rejection email</div>
         <span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#f87171;background:rgba(248,113,113,.14);border-radius:5px;padding:3px 9px">Sent manually from Rejected tab</span>
       </div>
-      <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">The considerate decline notice you can send to candidates from the Rejected tab. Nothing is sent automatically — you select who receives it there.</div>
+      <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">The considerate decline notice you can send to candidates from the Rejected tab. Nothing is sent automatically - you select who receives it there.</div>
       <label for="adm-rej-subject" style="display:block;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">Subject<span class="req-mark">*</span></label>
       <input type="text" id="adm-rej-subject" class="field-input" required style="margin-bottom:16px" placeholder="Rejection subject line">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px">
@@ -1208,13 +1272,19 @@
       </div>
       <textarea id="adm-rej-body" rows="6" class="field-input" required style="resize:vertical;line-height:1.6" placeholder="Rejection body…"></textarea>
       <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap">
+<<<<<<< HEAD
         <button class="btn-send" id="adm-rej-save" type="button">Save rejection email</button>
         <button class="btn-ghost" id="adm-rej-reset" type="button">Reset to default</button>
         <button class="btn-ghost adm-preview-toggle" type="button" data-kind="rejection">👁 Preview</button>
+=======
+        <button class="btn-send" id="adm-rej-save">Save rejection email</button>
+        <button class="btn-ghost" id="adm-rej-reset">Reset to default</button>
+        <button class="btn-ghost adm-preview-toggle" type="button" data-kind="rejection">Preview</button>
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
       </div>
       <div id="adm-rejection-preview-wrap" class="hidden adm-preview-wrap">
-        <div style="font-size:11px;color:var(--text-dim);margin:14px 0 8px">Live preview — sample candidate data, exact email layout.</div>
-        <div id="adm-rejection-preview-subject" class="adm-preview-subject">Subject: —</div>
+        <div style="font-size:11px;color:var(--text-dim);margin:14px 0 8px">Live preview - sample candidate data, exact email layout.</div>
+        <div id="adm-rejection-preview-subject" class="adm-preview-subject">Subject: -</div>
         <iframe id="adm-rejection-preview-frame" sandbox="" class="adm-preview-frame"></iframe>
       </div>
     </div>
@@ -1269,7 +1339,7 @@
 <div id="emp-csv-dialog" class="emp-overlay">
   <div class="rejd-card">
     <div class="rejd-title">Import from Google Sheet</div>
-    <div class="rejd-sub">Paste a Google Sheet link. The sheet must be shared <b>&ldquo;Anyone with the link&rdquo; (Viewer)</b> &mdash; no service account needed. The first row should be column headers (Name, Email, Designation, PAN, etc.); they&rsquo;re auto-matched to employee fields.</div>
+    <div class="rejd-sub">Paste a Google Sheet link. The sheet must be shared <b>&ldquo;Anyone with the link&rdquo; (Viewer)</b> - no service account needed. The first row should be column headers (Name, Email, Designation, PAN, etc.); they&rsquo;re auto-matched to employee fields.</div>
     <label class="field-label" for="emp-csv-url">Public Google Sheet link</label>
     <input class="field-input" id="emp-csv-url" placeholder="https://docs.google.com/spreadsheets/d/…">
     <div id="emp-csv-status" class="emp-status-box" style="display:none"></div>
@@ -1302,6 +1372,7 @@
 
 <script src="/static/js/employees.js"></script>
 <script src="/static/js/admin.js"></script>
+<script src="/static/js/ai-settings.js"></script>
 
 </body>
 </html>

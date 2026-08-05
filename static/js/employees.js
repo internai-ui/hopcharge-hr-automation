@@ -47,17 +47,17 @@
       return `<div class="emp-card" data-edit="${eA(e._id)}">
         <div class="emp-card-top">
           <div class="emp-av" style="background:linear-gradient(135deg,${col},${col}bb)">${eT(initials(e.name))}</div>
-          <div class="emp-id-badge">${eT(e.employee_id)||'—'}</div>
+          <div class="emp-id-badge">${eT(e.employee_id)||'-'}</div>
         </div>
         <div class="emp-name">${eT(e.name)||'Unnamed'}</div>
-        <div class="emp-desig">${eT(e.designation)||'—'}</div>
-        <div class="emp-dept">${eT(e.department)||'—'}${e.division?' · '+eT(e.division):''}</div>
-        <span class="emp-status ${stClass(e.employee_status)}">${eT(e.employee_status)||'—'}</span>
+        <div class="emp-desig">${eT(e.designation)||'-'}</div>
+        <div class="emp-dept">${eT(e.department)||'-'}${e.division?' · '+eT(e.division):''}</div>
+        <span class="emp-status ${stClass(e.employee_status)}">${eT(e.employee_status)||'-'}</span>
         <div class="emp-rows">
-          <div><span>DOJ</span><b>${eT(e.doj)||'—'}</b></div>
-          <div><span>Service</span><b>${eT(e.service_duration)||'—'}</b></div>
-          <div><span>Contact</span><b>${eT(e.contact_no)||'—'}</b></div>
-          <div><span>Email</span><b>${eT(e.email_official||e.email)||'—'}</b></div>
+          <div><span>DOJ</span><b>${eT(e.doj)||'-'}</b></div>
+          <div><span>Service</span><b>${eT(e.service_duration)||'-'}</b></div>
+          <div><span>Contact</span><b>${eT(e.contact_no)||'-'}</b></div>
+          <div><span>Email</span><b>${eT(e.email_official||e.email)||'-'}</b></div>
         </div>
         <div class="emp-card-actions">
           <button class="td-mini-btn" data-edit="${eA(e._id)}">Edit</button>
@@ -72,7 +72,7 @@
     const tb=document.getElementById('emp-tbody');
     if(!rows.length){ tb.innerHTML=`<tr><td colspan="${_empFields.length+1}" style="text-align:center;padding:34px;color:var(--text-dim)">No employees yet.</td></tr>`; return; }
     tb.innerHTML=rows.map(e=>{
-      const cells=_empFields.map(f=>`<td>${eT(mask(f.key,e[f.key]))||'<span style="opacity:.3">—</span>'}</td>`).join('');
+      const cells=_empFields.map(f=>`<td>${eT(mask(f.key,e[f.key]))||'<span style="opacity:.3">-</span>'}</td>`).join('');
       return `<tr>${cells}<td style="white-space:nowrap">
         <button class="td-mini-btn" data-edit="${eA(e._id)}">Edit</button>
         <button class="td-mini-btn" data-del="${eA(e._id)}" style="border-color:rgba(248,113,113,.4);color:#f87171">✕</button></td></tr>`;
@@ -87,6 +87,7 @@
       const fid=`emp-f-${eA(fl.key)}`;
       let input;
       if(fl.derived){ input=`<input id="${fid}" class="field-input" value="${eA(val)}" disabled><span class="emp-hint">auto-calculated</span>`; }
+      else if(fl.key==='is_admin'){ input=`<div style="display:flex;align-items:center;gap:10px"><label class="switch"><input type="checkbox" id="${fid}" data-k="${fl.key}" value="true" ${String(val).toLowerCase()==='true'?'checked':''}><span class="switch-track"></span></label><span style="font-size:13px;color:var(--text-mid)">Can sign into this dashboard as an admin</span></div><div class="emp-hint" style="margin-top:6px">Requires a matching Email or Official Email below - sign-in is matched by email address.</div>`; }
       else if(SELECTS[fl.key]){ input=`<select id="${fid}" class="field-input" data-k="${fl.key}">`+SELECTS[fl.key].map(o=>`<option ${o===val?'selected':''}>${eT(o)}</option>`).join('')+`</select>`; }
       else if(TEXTAREAS.has(fl.key)){ input=`<textarea id="${fid}" class="field-input" data-k="${fl.key}" rows="2">${eT(val)}</textarea>`; }
       else { input=`<input id="${fid}" class="field-input" data-k="${fl.key}" value="${eA(val)}"${fl.key==='name'?' required':''}>`; }
@@ -94,6 +95,18 @@
       wrap.innerHTML=`<label class="field-label" for="${fid}">${eT(fl.label)}${reqMark}${fl.sensitive?' 🔒':''}</label>${input}`;
       f.appendChild(wrap);
     });
+    const adminCb = document.getElementById('emp-f-is_admin');
+    const emailLabel = f.querySelector('label[for="emp-f-email"]');
+    function syncAdminStar(){
+      if (!emailLabel) return;
+      const mark = emailLabel.querySelector('.req-mark');
+      if (adminCb && adminCb.checked) {
+        if (!mark) emailLabel.insertAdjacentHTML('beforeend', '<span class="req-mark">*</span>');
+      } else if (mark) {
+        mark.remove();
+      }
+    }
+    if (adminCb) { syncAdminStar(); adminCb.addEventListener('change', syncAdminStar); }
   }
   function openEdit(emp){
     _empEditId = emp?emp._id:null;
@@ -106,13 +119,31 @@
   async function saveEmp(){
     const nameEl = document.querySelector('#emp-form [data-k="name"]');
     if (nameEl && !validateRequired([{ input: nameEl, message: 'Enter the employee\'s name.' }])) return;
-    const data={}; document.querySelectorAll('#emp-form [data-k]').forEach(el=>{ data[el.dataset.k]=el.value; });
+    const data={}; document.querySelectorAll('#emp-form [data-k]').forEach(el=>{
+      data[el.dataset.k] = el.type==='checkbox' ? String(el.checked) : el.value;
+    });
+    if (data.is_admin === 'true' && !(data.email||'').trim() && !(data.email_official||'').trim()) {
+      const emailEl = document.querySelector('#emp-form [data-k="email"]') || document.querySelector('#emp-form [data-k="email_official"]');
+      if (emailEl) showFieldError(emailEl, 'Admin sign-in requires an email - add one before enabling admin access.');
+      toast('Add an email before granting admin access - sign-in matches by email.', 'err');
+      return;
+    }
+    const saveBtn = document.getElementById('emp-save-btn');
+    const prevLabel = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = _empEditId ? 'Saving…' : 'Adding…';
     try{
       const url = _empEditId?`/api/employees/${encodeURIComponent(_empEditId)}`:'/api/employees';
       const r=await fetch(url,{method:_empEditId?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});
       const d=await r.json(); if(!r.ok) throw new Error(errDetail(d, r.status));
-      toast(_empEditId?'Employee updated':'Employee added','ok'); closeEdit(); loadEmployees();
+      if (Array.isArray(d._ignored_fields) && d._ignored_fields.includes('is_admin')) {
+        toast('Saved, but the admin-access change was not applied - you don’t have permission to grant admin.', 'err');
+      } else {
+        toast(_empEditId?'Employee updated':'Employee added','ok');
+      }
+      closeEdit(); await loadEmployees();
     }catch(e){ toast('Save failed: '+e.message,'err'); }
+    finally{ saveBtn.disabled=false; saveBtn.textContent=prevLabel; }
   }
   let _empDelId=null;
   function confirmDelEmp(id){
@@ -125,11 +156,14 @@
   }
   function closeDelConfirm(){ _empDelId=null; document.getElementById('emp-del-dialog').classList.remove('open'); }
   async function delEmp(id){
+    const confirmBtn = document.getElementById('emp-del-confirm');
+    confirmBtn.disabled = true; confirmBtn.textContent = 'Removing…';
     try{
       const r=await fetch(`/api/employees/${encodeURIComponent(id)}`,{method:'DELETE'});
       const d=await r.json(); if(!r.ok) throw new Error(errDetail(d, r.status));
-      toast('Employee removed','inf'); closeEdit(); loadEmployees();
+      toast('Employee removed','inf'); closeDelConfirm(); closeEdit(); await loadEmployees();
     }catch(e){ toast('Delete failed: '+e.message,'err'); }
+    finally{ confirmBtn.disabled=false; confirmBtn.textContent='Remove'; }
   }
 
   // Import from Google Form
@@ -173,7 +207,7 @@
         + (d.duplicates?` · <span style="color:#fbbf24">${d.duplicates} already exist</span>`:'')
         + `<br>Mapped: ${d.mapped_fields.map(eT).join(', ')||'none'}`
         + (d.unmapped_columns.length?`<br><span style="color:#fbbf24">Ignored columns:</span> ${d.unmapped_columns.map(eT).join(', ')}`:'')
-        + (d.sample&&d.sample.length?`<br><span style="opacity:.7">e.g. ${d.sample.map(s=>eT(s.name||s.email||'—')).join(', ')}</span>`:'');
+        + (d.sample&&d.sample.length?`<br><span style="opacity:.7">e.g. ${d.sample.map(s=>eT(s.name||s.email||'-')).join(', ')}</span>`:'');
       if(d.new>0) document.getElementById('emp-csv-go').style.display='inline-flex';
     }catch(e){ box.textContent='Error: '+e.message; document.getElementById('emp-csv-go').style.display='none'; }
   }
@@ -198,7 +232,7 @@
       document.getElementById('emp-sheet-id').value=d.spreadsheet_id||'';
       document.getElementById('emp-sheet-ws').value=d.worksheet||'Master';
       const box=document.getElementById('emp-sheet-status'); box.style.display='block';
-      box.innerHTML=`Service account: <b>${eT(d.service_account_email)||'not found'}</b> — share the sheet with it as Editor.`+
+      box.innerHTML=`Service account: <b>${eT(d.service_account_email)||'not found'}</b> - share the sheet with it as Editor.`+
         (d.last_sync?`<br>Last backup: ${eT(d.last_sync)}`:'')+
         (d.last_error?`<br><span style="color:#f87171">Last error: ${eT(d.last_error)}</span>`:'');
     }catch(e){}
@@ -228,7 +262,7 @@
   document.getElementById('emp-save-btn').addEventListener('click',saveEmp);
   document.getElementById('emp-delete-btn').addEventListener('click',()=>{ if(_empEditId) confirmDelEmp(_empEditId); });
   document.getElementById('emp-del-cancel').addEventListener('click',closeDelConfirm);
-  document.getElementById('emp-del-confirm').addEventListener('click',()=>{ const id=_empDelId; closeDelConfirm(); if(id) delEmp(id); });
+  document.getElementById('emp-del-confirm').addEventListener('click',()=>{ if(_empDelId) delEmp(_empDelId); });
   document.getElementById('emp-import-btn').addEventListener('click',()=>document.getElementById('emp-import-dialog').classList.add('open'));
   document.getElementById('emp-import-cancel').addEventListener('click',()=>document.getElementById('emp-import-dialog').classList.remove('open'));
   document.getElementById('emp-import-preview').addEventListener('click',importPreview);
@@ -257,6 +291,5 @@
     const del=findId(e.target,'del'); if(del){ confirmDelEmp(del); return; }
     const ed=findId(e.target,'edit'); if(ed){ const emp=_emps.find(x=>x._id===ed); if(emp) openEdit(emp); }
   });
-  const empNav=document.querySelector('.sb-item[data-page="employees"]');
-  if(empNav) empNav.addEventListener('click',loadEmployees);
+  window.loadEmployees = loadEmployees;
 })();

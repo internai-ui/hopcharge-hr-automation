@@ -400,12 +400,24 @@ def cache_invalidate(name: str | None = None) -> None:
 
 
 def _background_refresh() -> None:
-    """Quietly re-read each dataset from its local JSON mirror every 5 minutes.
-    This keeps the cache fresh even if something else mutated the JSON files
-    directly, without ever hitting Neon."""
+    """Quietly re-read each dataset every 5 minutes, from Postgres when it's
+    reachable (so another instance's writes eventually become visible here —
+    Postgres is the documented source of truth), falling back to the local
+    JSON mirror otherwise. This never touches the hot request path; it's the
+    existing background timer only, same cost as before when Postgres is
+    unreachable."""
     while True:
         _time.sleep(_REFRESH_INTERVAL)
+        pg_ok = db_available()
         for name, cfg in DATASETS.items():
+            if pg_ok:
+                try:
+                    with session_scope() as session:
+                        payload = cfg["to_json"](session)
+                    _cache_set(name, payload)
+                    continue
+                except Exception as exc:
+                    logger.debug("background PG refresh failed for %s, falling back to JSON mirror: %s", name, exc)
             path = OUTPUT_DIR / cfg["file"]
             if not path.exists():
                 continue

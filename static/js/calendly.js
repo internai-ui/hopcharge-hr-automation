@@ -10,10 +10,6 @@
     catch(e){ _preview = { count:0, mode:'free', calendly_url:'', api_ready:false }; }
     return _preview;
   }
-  function creds(){
-    const a = document.getElementById('gmail-addr'), p = document.getElementById('gmail-pass');
-    return { sender: a ? a.value.trim() : '', pass: p ? p.value.trim() : '' };
-  }
   function setMode(m){
     _mode = m;
     document.getElementById('r1-mode-free').classList.toggle('r1-mode-on', m==='free');
@@ -43,7 +39,6 @@
   function maybeAutoLoadEvents(){ if (_preview.api_ready || _preview.event_type_uri) loadEvents(); }
 
   window.openR1Invite = function(){
-    const c = creds();
     setMode(_preview.mode==='api' ? 'api' : 'free');
     // Populate each role's link from saved settings + show how many go to each.
     const roles = _preview.roles || [];
@@ -58,8 +53,6 @@
     const opsHint = document.getElementById('r1-ops-hint');
     if (cseHint) cseHint.textContent = `Goes to ${cseN} Round 1 candidate${cseN!==1?'s':''} who applied for Customer Support Executive.`;
     if (opsHint) opsHint.textContent = `Goes to ${opsN} Round 1 candidate${opsN!==1?'s':''} who applied for Operations Specialist.`;
-    document.getElementById('r1-sender').value = document.getElementById('r1-sender').value || c.sender;
-    document.getElementById('r1-pass').value   = document.getElementById('r1-pass').value   || c.pass;
     document.getElementById('r1-sub').textContent = _preview.count
       ? `Email ${_preview.count} Round 1 candidate${_preview.count!==1?'s':''} a Calendly booking link for their role.`
       : 'No Round 1 candidates with an email were found yet.';
@@ -71,30 +64,22 @@
   document.addEventListener('keydown', e=>{ if (e.key==='Escape') closeR1Invite(); });
 
   async function doSend(){
-    const senderEl = document.getElementById('r1-sender'), passEl = document.getElementById('r1-pass');
-    const sender = senderEl.value.trim();
-    const pass   = passEl.value.trim();
     const cseEl = document.getElementById('r1-link-cse'), opsEl = document.getElementById('r1-link-ops');
-    const baseFields = [
-      { input: senderEl, message: 'Enter the sender Gmail address.' },
-      { input: passEl, message: 'Enter the Gmail App Password.' },
-    ];
     if (_mode==='free') {
       const bad = u => u && !u.toLowerCase().includes('calendly.com');
-      baseFields.push(
+      if (!validateRequired([
         { input: cseEl, message: 'Must be a valid Calendly URL.', test: v => !bad(v) },
         { input: opsEl, message: 'Must be a valid Calendly URL.', test: v => !bad(v) },
-      );
-    }
-    if (!validateRequired(baseFields)) return;
-    if (_mode==='free' && !cseEl.value.trim() && !opsEl.value.trim()) {
-      showFieldError(cseEl, 'Add at least one role\u2019s Calendly link.');
-      showFieldError(opsEl, 'Add at least one role\u2019s Calendly link.');
-      cseEl.focus();
-      return;
+      ])) return;
+      if (!cseEl.value.trim() && !opsEl.value.trim()) {
+        showFieldError(cseEl, 'Add at least one role\u2019s Calendly link.');
+        showFieldError(opsEl, 'Add at least one role\u2019s Calendly link.');
+        cseEl.focus();
+        return;
+      }
     }
     const btn = document.getElementById('r1-confirm-btn'); const orig = btn.textContent;
-    const payload = { gmail_address: sender, app_password: pass };
+    const payload = {};
     try {
       if (_mode==='free'){
         const cseLink = cseEl.value.trim();
@@ -125,8 +110,8 @@
       const skipped = d.skipped || (d.results||[]).filter(x=>x.status==='skipped').length;
       if (d.sent>0 && !failed && !skipped)  toast(`Sent the Round 1 Calendly invite to ${d.sent} candidate${d.sent!==1?'s':''}`, 'ok');
       else if (d.sent>0 && skipped)         toast(`Sent ${d.sent}; ${skipped} skipped (no link set for their role)`, 'ok');
-      else if (d.sent>0)                    toast(`Sent ${d.sent}, ${failed} failed — check addresses`, 'ok');
-      else if (skipped)                     toast(`Nothing sent — ${skipped} candidate(s) have no link set for their role`, 'err');
+      else if (d.sent>0)                    toast(`Sent ${d.sent}, ${failed} failed - check addresses`, 'ok');
+      else if (skipped)                     toast(`Nothing sent - ${skipped} candidate(s) have no link set for their role`, 'err');
       else                                  toast(d.error || 'Nothing was sent', 'err');
       closeR1Invite();
     } catch(e){ toast('Send failed: ' + e.message, 'err'); }

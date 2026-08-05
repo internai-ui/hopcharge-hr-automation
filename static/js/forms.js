@@ -1,79 +1,72 @@
 /* ───────── FORMS RETRIEVAL ───────── */
 (function () {
-  const formIdEl   = document.getElementById('forms-id');
   const credsEl    = document.getElementById('forms-creds');
   const fetchBtn   = document.getElementById('forms-fetch-btn');
   const loadBtn    = document.getElementById('forms-load-btn');
   const dlBtn      = document.getElementById('forms-dl-btn');
   const infoEl     = document.getElementById('forms-info');
   const lastEl     = document.getElementById('forms-last');
+  const formIdStatus = document.getElementById('forms-id-status');
+  let _formId = '';   // sourced from Admin Settings' saved recruitment form id
+
+  async function loadFormId(){
+    try{
+      const res = await fetch('/api/admin/settings');
+      const d = await res.json();
+      _formId = ((d.settings && d.settings.recruitment_form && d.settings.recruitment_form.form_id) || '').trim();
+    }catch(e){ _formId = ''; }
+    if (formIdStatus) {
+      formIdStatus.innerHTML = _formId
+        ? `<span style="font-family:'JetBrains Mono',monospace;font-size:11.5px">${_formId}</span>`
+        : `No recruitment form set yet. <a href="#" data-goto="admin" style="color:var(--violet)">Set it in Admin Settings</a>.`;
+      formIdStatus.querySelector('[data-goto]')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (window.goToPage) window.goToPage('admin');
+      });
+    }
+    validate();
+  }
+  loadFormId();
+  window.addEventListener('recruitment-form-changed', loadFormId);
 
   /* ── Google account access (same OAuth connection as Send Emails) ── */
   const FORMS_SCOPE = 'https://www.googleapis.com/auth/forms.responses.readonly';
-  const formsOauthPill = document.getElementById('forms-oauth-pill'), formsOauthDetail = document.getElementById('forms-oauth-detail');
-  const formsOauthConnectBtn = document.getElementById('forms-oauth-connect-btn');
   const svcAcctEnable = document.getElementById('forms-svcacct-enable'), svcAcctFields = document.getElementById('forms-svcacct-fields');
-  let _formsOAuthUsable = false;
 
-  function usingOAuthForms(){ return _formsOAuthUsable && !(svcAcctEnable && svcAcctEnable.checked); }
+  function usingOAuthForms(){
+    const auth = window.getGoogleAuthStatus ? window.getGoogleAuthStatus() : { connected: false };
+    const usable = !!auth.connected && (auth.scopes||[]).includes(FORMS_SCOPE);
+    return usable && !(svcAcctEnable && svcAcctEnable.checked);
+  }
 
   function _syncSvcAcctUI(){
     const on = svcAcctEnable && svcAcctEnable.checked;
-    svcAcctFields.classList.toggle('hidden', !on);
-    const knob = svcAcctEnable.closest('.switch').querySelector('.slider');
-    if(knob){ knob.style.setProperty('--knob', on?'translateX(17px)':'translateX(0)'); knob.style.background=on?'#60a5fa':'rgba(255,255,255,0.15)'; }
+    if (svcAcctFields) svcAcctFields.classList.toggle('hidden', !on);
     validate();
   }
   if (svcAcctEnable) svcAcctEnable.addEventListener('change', ()=>{ svcAcctEnable._userTouched = true; _syncSvcAcctUI(); });
 
-  window.refreshFormsOAuthStatus = async function(){
-    try{
-      const res = await fetch('/api/gmail-oauth/status');
-      const d = await res.json();
-      _formsOAuthUsable = !!d.connected && (d.scopes||[]).includes(FORMS_SCOPE);
-
-      if (_formsOAuthUsable){
-        formsOauthPill.textContent = 'Connected';
-        formsOauthPill.style.background = 'rgba(52,211,153,0.15)'; formsOauthPill.style.color = '#34d399';
-        formsOauthDetail.textContent = d.connected_email ? `Using ${d.connected_email}` : 'Connected';
-        formsOauthConnectBtn.classList.add('hidden');
-        if (svcAcctEnable && !svcAcctEnable._userTouched) svcAcctEnable.checked = false;
-      } else if (d.connected){
-        formsOauthPill.textContent = 'Reconnect needed';
-        formsOauthPill.style.background = 'rgba(251,191,36,0.15)'; formsOauthPill.style.color = '#fbbf24';
-        formsOauthDetail.textContent = 'Connected, but without Forms permission yet — reconnect to grant it.';
-        formsOauthConnectBtn.textContent = 'Reconnect Google';
-        formsOauthConnectBtn.classList.remove('hidden');
-        if (svcAcctEnable && !svcAcctEnable._userTouched) svcAcctEnable.checked = true;
-      } else {
-        formsOauthPill.textContent = 'Not connected';
-        formsOauthPill.style.background = 'rgba(248,113,113,0.15)'; formsOauthPill.style.color = '#f87171';
-        formsOauthDetail.textContent = 'Connect your Google account on the Send Emails page, or use a service account below.';
-        formsOauthConnectBtn.textContent = 'Connect Google';
-        formsOauthConnectBtn.classList.remove('hidden');
-        if (svcAcctEnable && !svcAcctEnable._userTouched) svcAcctEnable.checked = true;
-      }
+  window.addEventListener('google-auth-changed', (e) => {
+    const d = e.detail || {};
+    const usable = !!d.connected && (d.scopes||[]).includes(FORMS_SCOPE);
+    if (svcAcctEnable && !svcAcctEnable._userTouched) {
+      svcAcctEnable.checked = !usable;
       _syncSvcAcctUI();
-    }catch(e){
-      formsOauthPill.textContent = 'Unavailable';
-      formsOauthDetail.textContent = 'Could not reach the server to check Google connection status.';
     }
-  };
-  if (formsOauthConnectBtn) formsOauthConnectBtn.addEventListener('click', ()=>{ window.location.href = '/api/gmail-oauth/authorize'; });
-  refreshFormsOAuthStatus();
+    validate();
+  });
 
   function validate() {
-    const idOk = !!formIdEl.value.trim();
-    const credsOk = usingOAuthForms() ? true : credsEl.value.trim().startsWith('{');
+    const idOk = !!_formId;
+    const credsOk = usingOAuthForms() ? true : (credsEl && credsEl.value.trim().startsWith('{'));
     fetchBtn.disabled = !(idOk && credsOk);
   }
-  [formIdEl, credsEl].forEach(el => el.addEventListener('input', validate));
-  formIdEl.addEventListener('blur', () => { if (formIdEl.value.trim()) clearFieldError(formIdEl); else showFieldError(formIdEl, 'Enter the Google Form ID or edit URL.'); });
+  if (credsEl) credsEl.addEventListener('input', validate);
   credsEl.addEventListener('blur', () => {
     if (usingOAuthForms()) { clearFieldError(credsEl); return; }
     const v = credsEl.value.trim();
     if (!v) showFieldError(credsEl, 'Paste the service account JSON key.');
-    else if (!v.startsWith('{')) showFieldError(credsEl, 'This doesn\'t look like JSON — it should start with {.');
+    else if (!v.startsWith('{')) showFieldError(credsEl, 'This doesn\'t look like JSON - it should start with {.');
     else clearFieldError(credsEl);
   });
 
@@ -83,14 +76,14 @@
   function initials(name){ return (name||'?').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase(); }
 
   function pick(answers, patterns){
-    if (!answers) return '—';
+    if (!answers) return '-';
     for (const a of answers){
       const q = (a.question||'').toLowerCase();
       if (patterns.some(p => q.includes(p.toLowerCase()))){
-        return (a.answer||'').trim() || '—';
+        return (a.answer||'').trim() || '-';
       }
     }
-    return '—';
+    return '-';
   }
 
   function extractFields(r){
@@ -125,20 +118,20 @@
     const col = avatarColor(idx);
     document.getElementById('cm-avatar').style.background = `linear-gradient(135deg,${col},${col}99)`;
     document.getElementById('cm-avatar').textContent = initials(f.name);
-    document.getElementById('cm-name').textContent = f.name === '—' ? 'Anonymous' : f.name;
-    const dateStr = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—';
-    document.getElementById('cm-meta').textContent = `Submitted ${dateStr}  ·  ${f.role !== '—' ? f.role : 'Role not specified'}`;
+    document.getElementById('cm-name').textContent = f.name === '-' ? 'Anonymous' : f.name;
+    const dateStr = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '-';
+    document.getElementById('cm-meta').textContent = `Submitted ${dateStr}  ·  ${f.role !== '-' ? f.role : 'Role not specified'}`;
 
     // Render all Q&A pairs
     const body = document.getElementById('cm-body');
     body.innerHTML = '';
 
     // Fast-fill flag banner (form completed in under 5 minutes)
-    const track = f.email !== '—' ? _trackingByEmail[f.email.toLowerCase()] : null;
+    const track = f.email !== '-' ? _trackingByEmail[f.email.toLowerCase()] : null;
     if (isFastFill(track)){
       const warn = document.createElement('div');
       warn.style.cssText = 'grid-column:1/-1;margin-bottom:18px;padding:12px 15px;background:rgba(248,113,113,.10);border:1px solid rgba(248,113,113,.4);border-radius:9px';
-      warn.innerHTML = `<div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:13px;letter-spacing:.5px;color:#f87171">🚩 FLAGGED — FAST COMPLETION</div>
+      warn.innerHTML = `<div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:13px;letter-spacing:.5px;color:#f87171">🚩 FLAGGED - FAST COMPLETION</div>
         <div style="font-size:12px;color:var(--text-mid);margin-top:5px;line-height:1.5">This candidate completed the form in <b style="color:#f87171">${track.time_taken_human}</b> (under 5 minutes). Consider reviewing their answers for low effort or copy-paste responses before advancing them.</div>`;
       body.appendChild(warn);
     }
@@ -152,11 +145,11 @@
       { q:'Marital Status',   a:f.marital },
       { q:'Languages Known',  a:f.languages },
       { q:'Role Applying For',a:f.role, full:true },
-      { q:'High School (10th) — School & Year', a:f.hs_school, full:true },
+      { q:'High School (10th) - School & Year', a:f.hs_school, full:true },
       { q:'High School %',    a:f.hs_pct },
-      { q:'Intermediate (12th) — School & Year', a:f.inter_sch, full:true },
+      { q:'Intermediate (12th) - School & Year', a:f.inter_sch, full:true },
       { q:'Intermediate %',   a:f.inter_pct },
-      { q:'Graduation — University & Year', a:f.grad, full:true },
+      { q:'Graduation - University & Year', a:f.grad, full:true },
       { q:'CGPA',             a:f.cgpa },
       { q:'Previous Experience', a:f.experience, full:true },
       { q:'Professional Skills', a:f.skills, full:true },
@@ -164,12 +157,12 @@
     groups.forEach(g => {
       const div = document.createElement('div');
       div.className = 'cand-qa-item' + (g.full ? ' full' : '');
-      const isEmpty = !g.a || g.a === '—';
+      const isEmpty = !g.a || g.a === '-';
       div.innerHTML = `<div class="cand-qa-q">${g.q}</div><div class="cand-qa-a${isEmpty?' empty':''}">${isEmpty ? 'Not provided' : g.a}</div>`;
       body.appendChild(div);
     });
 
-    // ── Full form responses — every raw question/answer exactly as submitted,
+    // ── Full form responses - every raw question/answer exactly as submitted,
     //    mirroring the view available in the Accepted candidates modal. The
     //    curated groups above only surface known fields; this shows everything.
     const _escFR = s => String(s==null?'':s)
@@ -179,7 +172,7 @@
       const hdr = document.createElement('div');
       hdr.className = 'cand-qa-item full';
       hdr.style.cssText = 'background:none;border:none;padding:14px 0 2px';
-      hdr.innerHTML = `<div class="cand-qa-q" style="font-size:11px;letter-spacing:1.5px;color:var(--text-mid)">Full Form Responses <span style="opacity:.55;font-weight:400">— every answer as submitted</span></div>`;
+      hdr.innerHTML = `<div class="cand-qa-q" style="font-size:11px;letter-spacing:1.5px;color:var(--text-mid)">Full Form Responses <span style="opacity:.55;font-weight:400">- every answer as submitted</span></div>`;
       body.appendChild(hdr);
       allAnswers.forEach(a => {
         const div = document.createElement('div');
@@ -197,56 +190,6 @@
     document.body.style.overflow = 'hidden';
   };
 
-  function renderAiEval(body, r, idx) {
-    const wrap = document.createElement('div');
-    wrap.className = 'cand-qa-item full ai-eval-block';
-    const recSlug = rec => 'rec-' + (rec||'').toLowerCase().replace(/\s+/g,'-');
-
-    if (r.total_score == null) {
-      wrap.innerHTML = `<div class="cand-qa-q">AI Evaluation</div>
-        <div class="ai-unscored">Not scored yet.
-          <div><button class="btn-parse" onclick="scoreOne('${r.response_id}',${idx})">Score this candidate</button></div>
-        </div>`;
-      body.appendChild(wrap); return;
-    }
-
-    const cats = (r.ai_score_detail && r.ai_score_detail.category_scores) || {};
-    const catRows = Object.entries(cats).map(([label,o]) => `
-      <div class="ai-eval-cat">
-        <div class="ai-eval-cat-label">${label}</div>
-        <div class="ai-eval-cat-track"><div class="ai-eval-cat-fill" style="width:${o.max?Math.round(o.score/o.max*100):0}%"></div></div>
-        <div class="ai-eval-cat-num">${o.score}/${o.max}</div>
-      </div>`).join('');
-    const str = (r.ai_score_detail?.strengths||[]).map(s=>`<li>${s}</li>`).join('') || '<li style="opacity:.4">—</li>';
-    const weak = (r.ai_score_detail?.weaknesses||[]).map(s=>`<li>${s}</li>`).join('') || '<li style="opacity:.4">—</li>';
-
-    const errInfo = r.scoring_error;
-    const errBanner = errInfo ? `
-      <div style="background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.4);border-radius:8px;padding:12px 14px;margin-bottom:14px">
-        <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:#EF4444">⚠ AI SCORING DID NOT RUN — ${apiErrLabel(errInfo.status)}</div>
-        <div style="font-size:11.5px;color:var(--text-mid);margin-top:5px;line-height:1.5">${apiErrHelp(errInfo.status)}</div>
-        <div style="font-size:10.5px;color:var(--text-dim);margin-top:6px;font-family:'JetBrains Mono',monospace;word-break:break-word">${(errInfo.message||'').slice(0,180)}</div>
-      </div>` : '';
-
-    wrap.innerHTML = `
-      <div class="cand-qa-q">AI Evaluation${r.provider_used?` · ${r.provider_used}`:''}</div>
-      ${errBanner}
-      <div class="ai-eval-scores">
-        <div class="ai-eval-score"><div class="ai-eval-score-label">Objective</div><div class="ai-eval-score-val">${r.objective_score}<span style="font-size:13px;color:var(--text-dim)">/40</span></div></div>
-        <div class="ai-eval-score"><div class="ai-eval-score-label">AI Score</div><div class="ai-eval-score-val">${errInfo?'—':r.ai_score}<span style="font-size:13px;color:var(--text-dim)">/70</span></div></div>
-        <div class="ai-eval-score total"><div class="ai-eval-score-label">Final</div><div class="ai-eval-score-val">${errInfo?'—':r.total_score}</div></div>
-      </div>
-      <span class="ai-eval-rec ${recSlug(r.recommendation)}">${r.recommendation}</span>
-      ${catRows}
-      <div class="ai-eval-sw">
-        <div class="ai-eval-sw-col str"><h5>Strengths</h5><ul style="margin:0;padding-left:16px">${str}</ul></div>
-        <div class="ai-eval-sw-col weak"><h5>Weaknesses</h5><ul style="margin:0;padding-left:16px">${weak}</ul></div>
-      </div>
-      ${r.ai_reasoning?`<div class="ai-eval-reasoning">${r.ai_reasoning}</div>`:''}
-      <div style="margin-top:12px"><button class="btn-ghost" onclick="scoreOne('${r.response_id}',${idx})">Re-score</button></div>`;
-    body.appendChild(wrap);
-  }
-
   // ── Candidate notes: append-only timeline shown in the modal ──
   function escNote(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
@@ -255,13 +198,13 @@
     wrap.className = 'cand-qa-item full';
     wrap.style.cssText = 'margin-top:8px;border-top:1px solid var(--border-dim);padding-top:18px';
     wrap.innerHTML = `
-      <div class="cand-qa-q">Notes <span style="opacity:.55;font-weight:400">— personal remarks, any round</span></div>
+      <div class="cand-qa-q">Notes <span style="opacity:.55;font-weight:400">- personal remarks, any round</span></div>
       <div id="notes-list-${escNote(responseId)}" style="margin:10px 0 14px">
         <div style="font-size:12px;color:var(--text-dim)">Loading notes…</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <input id="note-stage-${escNote(responseId)}" class="field-input" type="text"
-               placeholder="Stage / round (optional) — e.g. Round 1 Telephonic"
+               placeholder="Stage / round (optional) - e.g. Round 1 Telephonic"
                style="font-size:12px">
         <textarea id="note-text-${escNote(responseId)}" rows="2" class="field-input"
                placeholder="Add a remark about this candidate…"
@@ -337,46 +280,6 @@
     }catch(e){ toast('Could not delete note: '+e.message,'err'); }
   }
 
-  // Friendly labels/help for provider error statuses
-  function apiErrLabel(status){
-    return ({invalid_key:'Invalid API key', no_credits:'Out of quota / credits',
-             rate_limited:'Rate limited', model_not_found:'Model not available',
-             network_error:'Network/connection error', bad_response:'Unexpected API response'
-            })[status] || 'API error';
-  }
-  function apiErrHelp(status){
-    return ({
-      invalid_key:'The configured API key was rejected. Re-check it in the Scoring Mode tab, or switch to Offline scoring.',
-      no_credits:'This API key has no remaining quota for the selected model (often limit: 0 on a free tier). Try a different model (e.g. gemini-1.5-flash), enable billing, or use Offline scoring.',
-      rate_limited:'The provider is throttling requests. Wait a moment and re-score.',
-      model_not_found:'The selected model id is not available to this key. Pick another model in Scoring Mode.',
-      network_error:'Could not reach the provider. Check your internet/firewall and retry.',
-      bad_response:'The provider replied in an unexpected format. Retry, or switch model/provider.'
-    })[status] || 'Open Scoring Mode to review your provider settings, or use Offline scoring.';
-  }
-
-  window.scoreOne = async function(responseId, idx) {
-    toast('Scoring candidate…','inf');
-    try {
-      const r = await fetch(`/api/ai/score/${responseId}`,{method:'POST'});
-      const d = await r.json();
-      if(!r.ok) throw new Error(errDetail(d, 'Scoring failed'));
-      // merge result into the in-memory record and re-open modal
-      Object.assign(_modalResponses[idx], {
-        objective_score:d.result.objective_score, ai_score:d.result.ai_score,
-        total_score:d.result.total_score, recommendation:d.result.recommendation,
-        ai_reasoning:d.result.ai_score_detail.reasoning, ai_score_detail:d.result.ai_score_detail,
-        provider_used:d.result.provider_used, scoring_error:d.result.scoring_error||null,
-        shortlisted:(!d.result.scoring_error) && d.result.total_score>=70 });
-      if(d.result.scoring_error){
-        toast(`AI scoring failed: ${apiErrLabel(d.result.scoring_error.status)} — see details`,'err');
-      } else {
-        toast(`Scored: ${d.result.total_score}/100 — ${d.result.recommendation}`,'ok');
-      }
-      openCandModal(idx);
-    } catch(e){ toast('Score failed: '+e.message,'err'); }
-  };
-
   window.closeCandModal = function(){
     document.getElementById('cand-modal').classList.remove('open');
     document.body.style.overflow = '';
@@ -449,7 +352,7 @@
     const rec = (_fullData?.responses||[]).find(x=>x.response_id===responseId);
     const nm = rec ? (extractFields(rec).name||'this candidate') : 'this candidate';
     document.getElementById('accd-who').textContent =
-      `Move ${nm==='—'?'this candidate':nm} to the Accepted section. They enter at the HR Round stage.`;
+      `Move ${nm==='-'?'this candidate':nm} to the Accepted section. They enter at the HR Round stage.`;
     document.getElementById('accd-note').value = '';
     document.getElementById('accept-dialog').classList.add('open');
   };
@@ -489,7 +392,7 @@
     const rec = (_fullData?.responses||[]).find(x=>x.response_id===responseId);
     const nm = opts.name || (rec ? (extractFields(rec).name||'this candidate') : 'this candidate');
     document.getElementById('rejd-who').textContent =
-      `Move ${nm==='—'?'this candidate':nm} to the Rejected tab. Their full application is preserved.`;
+      `Move ${nm==='-'?'this candidate':nm} to the Rejected tab. Their full application is preserved.`;
     document.getElementById('rejd-reason').value = '';
     // Populate rounds (fetch once, then cache); preselect a preferred round when
     // the caller knows which stage the candidate is being rejected from.
@@ -503,7 +406,7 @@
       fetch('/api/rejected').then(r=>r.json()).then(d=>{
         sel.innerHTML = (d.rounds||[]).map(rd=>`<option value="${rd}">${rd}</option>`).join('');
         preselect();
-      }).catch(()=>{ sel.innerHTML = '<option value="Round 0 — Form Screening">Round 0 — Form Screening</option>'; });
+      }).catch(()=>{ sel.innerHTML = '<option value="Round 0 - Form Screening">Round 0 - Form Screening</option>'; });
     } else {
       preselect();
     }
@@ -571,18 +474,16 @@
     dlBtn.style.display = 'inline-flex';
 
     const n = data.responses.length;
-    const evaluated = data.responses.filter(r => r.ai_score !== null).length;
     const countUp = (id, v) => {
       const el = document.getElementById(id); const t0 = performance.now();
       (function step(now){ const p=Math.min((now-t0)/700,1); el.textContent=Math.round(v*(1-Math.pow(1-p,3))); if(p<1)requestAnimationFrame(step); })(performance.now());
     };
     countUp('fs-total', n);
     countUp('fs-questions', (data.questions||[]).length);
-    countUp('fs-evaluated', evaluated);
     lastEl.value = data.last_synced || '';
 
     const lbl = document.getElementById('forms-title-label');
-    lbl.textContent = (data.form_title || 'Responses') + ' — ' + n + ' response' + (n!==1?'s':'');
+    lbl.textContent = (data.form_title || 'Responses') + ' - ' + n + ' response' + (n!==1?'s':'');
 
     // Save full dataset for modal + filtering. Stamp each response with its
     // true index so sorting/filtering never breaks the modal/delete mapping.
@@ -611,21 +512,6 @@
       if (fEl) fEl.textContent = flaggedCount;
       applyFiltersAndRender();
     });
-
-    // Sync both auto-move and auto-reject threshold labels from backend
-    Promise.allSettled([
-      fetch('/api/accepted').then(r=>r.json()),
-      fetch('/api/rejected').then(r=>r.json()),
-    ]).then(([accRes, rejRes])=>{
-      if (accRes.status==='fulfilled'){
-        const t = document.getElementById('auto-move-thresh');
-        if (t && accRes.value.auto_move_threshold != null) t.textContent = accRes.value.auto_move_threshold;
-      }
-      if (rejRes.status==='fulfilled'){
-        const t = document.getElementById('auto-reject-thresh');
-        if (t && rejRes.value.auto_reject_threshold != null) t.textContent = rejRes.value.auto_reject_threshold;
-      }
-    }).catch(()=>{});
   }
 
   let _rejectedIds = new Set();
@@ -650,8 +536,8 @@
     const prev = sel.value;
     const roles = new Set();
     responses.forEach(r => {
-      const role = r.role_name || r.scored_role || extractFields(r).role;
-      if (role && role !== '—') roles.add(role);
+      const role = r.role_name || extractFields(r).role;
+      if (role && role !== '-') roles.add(role);
     });
     sel.innerHTML = '<option value="">All roles</option>' +
       [...roles].sort().map(role => `<option value="${role}">${role}</option>`).join('');
@@ -660,7 +546,7 @@
 
   // Resolve a single candidate's role string for filtering
   function roleOf(r){
-    return r.role_name || r.scored_role || extractFields(r).role || '';
+    return r.role_name || extractFields(r).role || '';
   }
 
   let _sortDir = 'desc';   // 'asc' | 'desc'
@@ -673,7 +559,7 @@
     let rows = _fullData.responses.slice();
 
     // Once a candidate is routed to the Accepted or Rejected pipeline they drop
-    // off this page — it only lists candidates still awaiting a decision.
+    // off this page - it only lists candidates still awaiting a decision.
     rows = rows.filter(r => !_acceptedIds.has(r.response_id) && !_rejectedIds.has(r.response_id));
     const pendingTotal = rows.length;
 
@@ -681,9 +567,6 @@
     if (roleSel) rows = rows.filter(r => roleOf(r) === roleSel);
 
     // Filter: status
-    if (statusSel === 'scored')  rows = rows.filter(r => r.total_score != null && !r.scoring_error);
-    if (statusSel === 'pending') rows = rows.filter(r => r.total_score == null && !r.scoring_error);
-    if (statusSel === 'failed')  rows = rows.filter(r => !!r.scoring_error);
     if (statusSel === 'flagged') rows = rows.filter(r =>
         isFastFill(_trackingByEmail[(extractFields(r).email||'').toLowerCase()]));
 
@@ -691,8 +574,7 @@
     const dir = _sortDir === 'asc' ? 1 : -1;
     rows.sort((a,b) => {
       let av, bv;
-      if (sortField === 'score'){ av = a.total_score ?? -1; bv = b.total_score ?? -1; }
-      else if (sortField === 'time'){
+      if (sortField === 'time'){
         av = (_trackingByEmail[(extractFields(a).email||'').toLowerCase()]||{}).time_taken_seconds ?? -1;
         bv = (_trackingByEmail[(extractFields(b).email||'').toLowerCase()]||{}).time_taken_seconds ?? -1;
       }
@@ -729,12 +611,12 @@
   }
 
   function timeBadge(rec){
-    if(!rec) return '<span style="opacity:.3;font-size:10px">—</span>';
+    if(!rec) return '<span style="opacity:.3;font-size:10px">-</span>';
     if(rec.time_taken_human){
       const secs=rec.time_taken_seconds||0;
       // colour: green normal, amber moderate/very-fast, red very-long
       let col='#34d399';
-      if(secs<FAST_FILL_SECONDS) col='#fbbf24';   // under 5 min — flagged
+      if(secs<FAST_FILL_SECONDS) col='#fbbf24';   // under 5 min - flagged
       else if(secs>900) col='#f87171';            // very long
       else if(secs>300) col='#fbbf24';            // moderate
       const flag = isFastFill(rec)
@@ -748,13 +630,13 @@
 
   function buildResponseRows(rows, byEmail){
     const thead = document.getElementById('forms-thead');
-    thead.innerHTML = `<th>#</th><th>Candidate</th><th>Role</th><th>Email</th><th>Location</th><th>Submitted</th><th>⏱ Time Taken</th><th>Score</th><th>Decision</th><th></th><th></th>`;
+    thead.innerHTML = `<th>#</th><th>Candidate</th><th>Role</th><th>Email</th><th>Location</th><th>Submitted</th><th>⏱ Time Taken</th><th>Decision</th><th></th><th></th>`;
 
     const tbody = document.getElementById('forms-tbody');
     tbody.innerHTML = '';
 
     if (!rows.length){
-      tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text-dim)">No candidates match the current filters.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text-dim)">No candidates match the current filters.</td></tr>`;
       return;
     }
 
@@ -762,21 +644,10 @@
       const idx = r._idx;                 // true index into _modalResponses
       const f   = extractFields(r);
       const col = avatarColor(idx);
-      const dateStr = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—';
+      const dateStr = r.submitted_at ? new Date(r.submitted_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '-';
       const role = roleOf(r);
-      const displayName = f.name !== '—' ? f.name : 'Anonymous';
-      const track = f.email !== '—' ? byEmail[f.email.toLowerCase()] : null;
-
-      let scoreCell;
-      if (r.scoring_error){
-        scoreCell = `<span class="score-badge rec-scoring-failed" title="${(r.scoring_error.message||'').replace(/"/g,'')}">Failed</span>`;
-      } else if (r.total_score != null){
-        scoreCell = `<span class="score-badge rec-${(r.recommendation||'').toLowerCase().replace(/\s+/g,'-')}">${r.total_score}/100</span>`;
-      } else if (r.ai_score !== null){
-        scoreCell = `<span class="resp-score-badge scored">${r.ai_score}/100</span>`;
-      } else {
-        scoreCell = `<span class="resp-score-badge pending">Pending</span>`;
-      }
+      const displayName = f.name !== '-' ? f.name : 'Anonymous';
+      const track = f.email !== '-' ? byEmail[f.email.toLowerCase()] : null;
 
       const isRejected = _rejectedIds.has(r.response_id);
       const isAccepted = _acceptedIds.has(r.response_id);
@@ -798,7 +669,7 @@
       const flagged = isFastFill(track);
       if (flagged) tr.classList.add('row-flagged');
       const nameFlag = flagged
-        ? ` <span class="fast-flag" title="Filled in under 5 minutes — review for low effort">🚩 ${track.time_taken_human}</span>` : '';
+        ? ` <span class="fast-flag" title="Filled in under 5 minutes - review for low effort">🚩 ${track.time_taken_human}</span>` : '';
       tr.onclick = () => openCandModal(idx);
       tr.innerHTML = `
         <td style="color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:10px">${pos+1}</td>
@@ -808,12 +679,11 @@
             <div><div class="cand-name">${displayName}${nameFlag}</div></div>
           </div>
         </td>
-        <td>${role && role!=='—' ? `<span class="td-pill" style="background:rgba(31,45,89,.12);color:#c4b5fd">${role}</span>` : '<span style="opacity:.35">—</span>'}</td>
-        <td class="td-email">${f.email !== '—' ? f.email : '<span style="opacity:.35;font-style:italic">—</span>'}</td>
-        <td><span class="td-pill">${f.location !== '—' ? f.location : '—'}</span></td>
+        <td>${role && role!=='-' ? `<span class="td-pill" style="background:rgba(31,45,89,.12);color:#c4b5fd">${role}</span>` : '<span style="opacity:.35">-</span>'}</td>
+        <td class="td-email">${f.email !== '-' ? f.email : '<span style="opacity:.35;font-style:italic">-</span>'}</td>
+        <td><span class="td-pill">${f.location !== '-' ? f.location : '-'}</span></td>
         <td style="font-size:10px;white-space:nowrap;color:var(--text-dim)">${dateStr}</td>
         <td style="white-space:nowrap">${timeBadge(track)}</td>
-        <td>${scoreCell}</td>
         <td style="white-space:nowrap">${decisionCell}</td>
         <td><button class="td-view-btn" onclick="event.stopPropagation();openCandModal(${idx})">VIEW</button></td>
         <td><button class="td-del-btn" title="Delete candidate" aria-label="Delete candidate" onclick="event.stopPropagation();confirmDelete(this,'${r.response_id}',${idx})">🗑</button></td>`;
@@ -849,16 +719,17 @@
   // Sync from Google
   fetchBtn.addEventListener('click', async () => {
     const usingOAuth = usingOAuthForms();
-    const requiredFields = [
-      { input: formIdEl, message: 'Enter the Google Form ID or edit URL.' },
-    ];
+    if (!_formId) {
+      toast('Set the recruitment form ID in Admin Settings first.', 'err');
+      return;
+    }
+    const requiredFields = [];
     if (!usingOAuth) {
       requiredFields.push({ input: credsEl, message: 'Paste the service account JSON key (should start with {).',
         test: v => v.startsWith('{') });
     }
     if (!validateRequired(requiredFields)) return;
-    const form_id = formIdEl.value.trim();
-    const payload = { form_id, auth_mode: usingOAuth ? 'oauth' : 'service_account' };
+    const payload = { form_id: _formId, auth_mode: usingOAuth ? 'oauth' : 'service_account' };
     if (!usingOAuth) payload.credentials_json = credsEl.value.trim();
     fetchBtn.disabled = true;
     fetchBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 15 15" fill="none" style="animation:spin 0.9s linear infinite;flex-shrink:0"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="2" stroke-dasharray="18 8" stroke-linecap="round"/></svg> Syncing…`;
@@ -872,7 +743,7 @@
       });
       const data = await res.json();
       if (!res.ok) throw new Error(errDetail(data, res.status));
-      toast(`⚡ ${data.new_added} new response${data.new_added!==1?'s':''} — ${data.total} total`, 'ok');
+      toast(`⚡ ${data.new_added} new response${data.new_added!==1?'s':''} - ${data.total} total`, 'ok');
       infoEl.textContent = `${data.total} responses stored · ${data.new_added} new`;
       renderResponses(data);
     } catch (err) {
@@ -905,64 +776,4 @@
     }
   });
 
-  // Feature 7: Score All Pending
-  document.getElementById('score-all-btn')?.addEventListener('click', async (e) => {
-    const btn = e.currentTarget;
-    btn.disabled = true; const orig = btn.innerHTML; btn.innerHTML = 'Scoring…';
-    try {
-      const r = await fetch('/api/ai/score-all', {method:'POST'});
-      const d = await r.json();
-      if(!r.ok) throw new Error(errDetail(d, 'Scoring failed'));
-      toast(`Scored ${d.scored} candidate${d.scored!==1?'s':''}${d.errors?` (${d.errors} errors)`:''}`, 'ok');
-      const am = d.auto_moved;
-      if (am && am.moved_count > 0)
-        toast(`Auto-moved ${am.moved_count} candidate${am.moved_count!==1?'s':''} (score > ${am.threshold}) to HR Round`, 'ok');
-      const ar = d.auto_rejected;
-      if (ar && ar.rejected_count > 0)
-        toast(`Auto-rejected ${ar.rejected_count} candidate${ar.rejected_count!==1?'s':''} (score < ${ar.threshold})`, 'inf');
-      // reload to show new scores + decision badges
-      const res = await fetch('/api/forms/responses');
-      if (res.ok) renderResponses(await res.json());
-      if (window.refreshDecisionState) window.refreshDecisionState();
-    } catch(err){ toast('Score all failed: '+err.message,'err'); }
-    finally { btn.disabled=false; btn.innerHTML=orig; }
-  });
-
-  // Auto-move qualified candidates (> threshold) into HR Round
-  document.getElementById('auto-move-btn')?.addEventListener('click', async (e) => {
-    const btn = e.currentTarget;
-    btn.disabled = true; const orig = btn.innerHTML; btn.innerHTML = 'Moving…';
-    try {
-      const r = await fetch('/api/accepted/auto-move', {method:'POST'});
-      const d = await r.json();
-      if(!r.ok) throw new Error(errDetail(d, 'Auto-move failed'));
-      if (d.moved_count > 0)
-        toast(`Moved ${d.moved_count} candidate${d.moved_count!==1?'s':''} (score > ${d.threshold}) to HR Round`, 'ok');
-      else
-        toast(`No new candidates above ${d.threshold}`, 'inf');
-      const res = await fetch('/api/forms/responses');
-      if (res.ok) renderResponses(await res.json());
-      if (window.refreshDecisionState) window.refreshDecisionState();
-    } catch(err){ toast('Auto-move failed: '+err.message,'err'); }
-    finally { btn.disabled=false; btn.innerHTML=orig; }
-  });
-
-  document.getElementById('auto-reject-btn')?.addEventListener('click', async (e) => {
-    const btn = e.currentTarget;
-    btn.disabled = true; const orig = btn.innerHTML; btn.innerHTML = 'Rejecting…';
-    try {
-      const r = await fetch('/api/rejected/auto-reject', {method:'POST'});
-      const d = await r.json();
-      if(!r.ok) throw new Error(errDetail(d, 'Auto-reject failed'));
-      if (d.rejected_count > 0)
-        toast(`Auto-rejected ${d.rejected_count} candidate${d.rejected_count!==1?'s':''} (score < ${d.threshold})`, 'inf');
-      else
-        toast(`No new candidates below ${d.threshold}`, 'inf');
-      const res = await fetch('/api/forms/responses');
-      if (res.ok) renderResponses(await res.json());
-      if (window.refreshDecisionState) window.refreshDecisionState();
-      if (window.loadRejectedPage) loadRejectedPage();
-    } catch(err){ toast('Auto-reject failed: '+err.message,'err'); }
-    finally { btn.disabled=false; btn.innerHTML=orig; }
-  });
 })();

@@ -56,15 +56,11 @@ def main():
             ).scalar()
 
         pairs = [
-            ("form_responses", jcount(src / "form_responses.json"), pg(models.FormResponse)),
             ("accepted",       jcount(src / "accepted_candidates.json", key="accepted"), pg(models.AcceptedCandidate)),
             ("rejected",       jcount(src / "rejected_candidates.json", key="rejected"), pg(models.RejectedCandidate)),
             ("selected",       jcount(src / "selected_candidates.json", key="selected"), pg(models.SelectedCandidate)),
             ("employees",      jcount(src / "employees.json", key="employees"), pg(models.Employee)),
             ("colleges",       jcount(src / "colleges.json"), pg(models.College)),
-            ("form_tracking",  jcount(src / "form_tracking.json", nested="tokens"), pg(models.FormTracking)),
-            ("status_tokens",  jcount(src / "status_tokens.json", nested="tokens"), pg(models.StatusToken)),
-            ("rubrics",        len(json.loads((src / "rubrics.json").read_text())) if (src / "rubrics.json").exists() else 0, pg(models.ScoringRubric)),
         ]
         for name, j, p in pairs:
             ok = (j == p)

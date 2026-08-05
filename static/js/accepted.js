@@ -22,7 +22,7 @@
   let _selectedSet = new Set();
 
   // Recompute the derived view (_rows, counts, title, action wraps) from the
-  // in-memory cache for the active stage, then render. Pure local — instant.
+  // in-memory cache for the active stage, then render. Pure local - instant.
   function applyLocal(){
     _rows = _all.filter(r => (r.stage || 'hr') === _stage);
     ['hr','round1','round2','onboarded'].forEach(s=>{
@@ -87,7 +87,7 @@
   function startAutoRefresh(){
     if (_refreshTimer) return;
     _refreshTimer = setInterval(()=>{
-      // Don't refresh while the candidate detail modal is open — the user may be
+      // Don't refresh while the candidate detail modal is open - the user may be
       // typing a note. Resume once it's closed.
       const modal = document.getElementById('cand-modal');
       if (modal && modal.classList.contains('open')) return;
@@ -108,14 +108,13 @@
         msg = 'No onboarded candidates yet. In Round 2, mark someone ★ SELECTED and then move them here with ➜ ONBOARDED.';
       else
         msg = `No candidates in ${_labels[_stage]} yet. Promote them from ${_labels[PREV[_stage]]}.`;
-      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:34px;color:var(--text-dim)">${msg}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:34px;color:var(--text-dim)">${msg}</td></tr>`;
       return;
     }
     tbody.innerHTML = '';
     rows.forEach((r, i)=>{
       const since = r.stage_changed_at || r.accepted_at;
-      const when = since ? new Date(since).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—';
-      const score = (r.total_score!=null) ? `${r.total_score}/100` : (r.ai_score!=null ? `${r.ai_score}` : '—');
+      const when = since ? new Date(since).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '-';
       const isSelected = _selectedSet.has(r.response_id);
       let promoteBtn;
       if (_stage === 'hr' || _stage === 'round1'){
@@ -129,10 +128,10 @@
           promoteBtn = `<button class="td-view-btn" style="border-color:rgba(250,204,21,.6);color:#facc15" title="Mark as selected (hired)" aria-label="Mark as selected (hired)" onclick="event.stopPropagation();markSelected('${esc(r.response_id)}')">★ SELECT</button>`;
         } else {
           promoteBtn = `<span class="dec-badge dec-accepted" title="Selected (hired)" style="border-color:rgba(250,204,21,.55);color:#facc15">★ SELECTED</span> `
-            + `<button class="td-view-btn" style="border-color:rgba(96,165,250,.6);color:#60a5fa" title="Move to Onboarded — do this after sending the onboarding form" aria-label="Move to Onboarded — do this after sending the onboarding form" onclick="event.stopPropagation();promoteAccepted('${esc(r.response_id)}')">➜ ONBOARDED</button> `
+            + `<button class="td-view-btn" style="border-color:rgba(96,165,250,.6);color:#60a5fa" title="Move to Onboarded - do this after sending the onboarding form" aria-label="Move to Onboarded - do this after sending the onboarding form" onclick="event.stopPropagation();promoteAccepted('${esc(r.response_id)}')">➜ ONBOARDED</button> `
             + `<button class="td-mini-btn" title="Undo selection" aria-label="Undo selection" onclick="event.stopPropagation();unmarkSelected('${esc(r.response_id)}')">↩</button>`;
         }
-      } else { // onboarded — terminal stage
+      } else { // onboarded - terminal stage
         promoteBtn = `<span class="dec-badge dec-accepted" title="Hired & onboarding form sent" style="border-color:rgba(96,165,250,.55);color:#60a5fa">✓ ONBOARDED</span>`;
       }
       const backBtn = PREV[_stage]
@@ -141,7 +140,7 @@
       // Reject is available at EVERY stage (HR Round, Round 1, Round 2,
       // Onboarded), not just the HR Round. It moves the candidate to the
       // Rejected tab and removes them from this pipeline.
-      const rejectBtn = `<button class="td-mini-btn labeled" title="Reject — move to the Rejected tab" aria-label="Reject — move to the Rejected tab" style="border-color:rgba(248,113,113,.5);color:#f87171;margin-left:6px" onclick="event.stopPropagation();rejectAccepted('${esc(r.response_id)}')">✕ Reject</button>`;
+      const rejectBtn = `<button class="td-mini-btn labeled" title="Reject - move to the Rejected tab" aria-label="Reject - move to the Rejected tab" style="border-color:rgba(248,113,113,.5);color:#f87171;margin-left:6px" onclick="event.stopPropagation();rejectAccepted('${esc(r.response_id)}')">✕ Reject</button>`;
       const tr = document.createElement('tr');
       tr.style.animationDelay = `${i*25}ms`;
       tr.style.cursor = 'pointer';
@@ -149,10 +148,9 @@
       tr.innerHTML = `
         <td style="color:var(--text-dim);font-family:'JetBrains Mono',monospace;font-size:10px">${i+1}</td>
         <td><div class="cand-name">${esc(r.name)||'Anonymous'}</div></td>
-        <td class="td-email">${esc(r.email)||'<span style="opacity:.35">—</span>'}</td>
-        <td class="td-phone">${esc(r.phone)||'<span style="opacity:.35">—</span>'}</td>
-        <td>${r.role?`<span class="td-pill" style="background:rgba(31,45,89,.12);color:#c4b5fd">${esc(r.role)}</span>`:'<span style="opacity:.35">—</span>'}</td>
-        <td style="font-family:'JetBrains Mono',monospace;font-size:11.5px">${score}</td>
+        <td class="td-email">${esc(r.email)||'<span style="opacity:.35">-</span>'}</td>
+        <td class="td-phone">${esc(r.phone)||'<span style="opacity:.35">-</span>'}</td>
+        <td>${r.role?`<span class="td-pill" style="background:rgba(31,45,89,.12);color:#c4b5fd">${esc(r.role)}</span>`:'<span style="opacity:.35">-</span>'}</td>
         <td style="font-size:10px;white-space:nowrap;color:var(--text-dim)">${when}</td>
         <td style="white-space:nowrap">${promoteBtn}</td>
         <td style="white-space:nowrap">${backBtn}${rejectBtn}</td>`;
@@ -180,7 +178,7 @@
     if (nm) nm.textContent = r.name || 'Anonymous';
     const meta = document.getElementById('cm-meta');
     const since = r.stage_changed_at || r.accepted_at;
-    const sinceStr = since ? new Date(since).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—';
+    const sinceStr = since ? new Date(since).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '-';
     if (meta) meta.textContent = `${_labels[_stage]||_stage}  ·  ${r.role || 'Role not specified'}  ·  since ${sinceStr}`;
 
     const body = document.getElementById('cm-body');
@@ -193,7 +191,6 @@
       { q:'Phone Number',  a:r.phone },
       { q:'Location / City', a:r.location || r.city },
       { q:'Role',          a:r.role, full:true },
-      { q:'Score',         a:(r.score!=null? r.score+'/100' : (r.total_score!=null? r.total_score : null)) },
     ];
     idItems.forEach(g=>{
       const div = document.createElement('div');
@@ -235,7 +232,7 @@
     notesWrap.className = 'cand-qa-item full';
     notesWrap.style.cssText = 'margin-top:8px;border-top:1px solid var(--border-dim);padding-top:18px';
     notesWrap.innerHTML = `
-      <div class="cand-qa-q">Notes <span style="opacity:.55;font-weight:400">— personal remarks, any round</span></div>
+      <div class="cand-qa-q">Notes <span style="opacity:.55;font-weight:400">- personal remarks, any round</span></div>
       <div id="accnotes-list-${rid}" style="margin:10px 0 14px"><div style="font-size:12px;color:var(--text-dim)">Loading notes…</div></div>
       <div style="display:flex;flex-direction:column;gap:8px">
         <input id="accnote-stage-${rid}" type="text" placeholder="Stage / round (optional)" class="field-input" style="font-size:12px">
@@ -393,7 +390,7 @@
         who.style.color = 'var(--text-mid)';
       } else {
         who.innerHTML = `No Round 2 candidates are marked <b style="color:#facc15">★ SELECTED</b> yet. `
-          + `Use the SELECT button on a candidate first — onboarding only goes to selected people.`;
+          + `Use the SELECT button on a candidate first - onboarding only goes to selected people.`;
         who.style.color = '#facc15';
       }
     }
@@ -403,22 +400,18 @@
   _obDialog.addEventListener('click', e => { if (e.target === _obDialog) _obDialog.style.display = 'none'; });
 
   document.getElementById('ob-send').addEventListener('click', async () => {
-    const gmailEl = document.getElementById('ob-gmail'), passEl2 = document.getElementById('ob-pass'), formEl2 = document.getElementById('ob-form');
+    const formEl2 = document.getElementById('ob-form');
     if (!validateRequired([
-      { input: gmailEl, message: 'Enter the sender Gmail address.' },
-      { input: passEl2, message: 'Enter the Gmail App Password.' },
       { input: formEl2, message: 'Enter the onboarding form link.' },
     ])) return;
-    const gmail = gmailEl.value.trim();
-    const pass  = passEl2.value.trim();
-    const form  = formEl2.value.trim();
+    const form = formEl2.value.trim();
 
-    // Onboarding goes ONLY to the candidates explicitly marked SELECTED in Round 2.
+    // Onboarding goes ONLY to candidates explicitly marked SELECTED in Round 2.
     const selectedIds = _all
       .filter(r => (r.stage||'hr')==='round2' && _selectedSet.has(r.response_id))
       .map(r => r.response_id);
     if (!selectedIds.length){
-      toast('Select at least one candidate first — onboarding only goes to ★ SELECTED people', 'err');
+      toast('Select at least one candidate first - onboarding only goes to ★ SELECTED people', 'err');
       return;
     }
 
@@ -431,8 +424,7 @@
       const res = await fetch('/api/send-onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gmail_address: gmail, app_password: pass, form_link: form,
-                               response_ids: selectedIds })
+        body: JSON.stringify({ form_link: form, response_ids: selectedIds })
       });
       const d = await res.json();
       if (!res.ok) throw new Error(errDetail(d, res.status));
@@ -442,12 +434,12 @@
       const rows   = (d.results || []).map(r =>
         `<div style="font-size:12px;margin-top:4px;">
            ${r.status === 'sent' ? '&#x2713;' : '&#x2717;'}
-           <b>${r.name}</b> — ${r.email}
+           <b>${r.name}</b> - ${r.email}
            ${r.error ? `<span style="color:#f87171"> (${r.error})</span>` : ''}
          </div>`).join('');
 
       statusBox.innerHTML = `<b style="color:${failed ? '#fbbf24' : '#34d399'}">
-        ${sent} sent${failed ? ', ' + failed + ' failed' : ' — all done!'}</b>${rows}`;
+        ${sent} sent${failed ? ', ' + failed + ' failed' : ' - all done!'}</b>${rows}`;
       statusBox.style.display = 'block';
       toast(`Onboarding email sent to ${sent} selected candidate${sent !== 1 ? 's' : ''}`, 'ok');
     } catch(e) {
@@ -494,7 +486,7 @@
     }
   };
 
-  // Stage tab switching — purely local, no network. Instant.
+  // Stage tab switching - purely local, no network. Instant.
   document.querySelectorAll('#acc-stage-tabs .stage-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       document.querySelectorAll('#acc-stage-tabs .stage-tab').forEach(b=>b.classList.remove('active'));

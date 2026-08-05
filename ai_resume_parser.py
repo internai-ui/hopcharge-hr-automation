@@ -97,6 +97,7 @@ def _coerce_confidence(v) -> dict:
 
 
 def is_available() -> bool:
+<<<<<<< HEAD
     """True when master AI feature toggle is enabled."""
     return ai_config_store.is_feature_enabled()
 
@@ -105,6 +106,30 @@ def parse_resume_ai(raw_text: str, source_file: str = "") -> CandidateRecord:
     """Parse resume text via the configured LLM provider."""
     if not is_available():
         raise ProviderError("AI resume parsing is disabled", status="disabled")
+=======
+    """
+    True only when the master AI toggle is on AND a real provider (API key)
+    is configured. Mirrors the exact guard scoring/providers.get_provider()
+    already applies, so this stays in sync with the Admin Settings toggle
+    without duplicating its logic.
+    """
+    if not config_store.is_feature_enabled():
+        return False
+    return get_provider(config_store.get_runtime_config()) is not None
+
+
+def parse_resume_ai(raw_text: str, source_file: str = "") -> CandidateRecord:
+    """
+    Parse resume text via the configured LLM provider.
+
+    Raises ProviderError/ValueError on any failure (disabled, bad key, no
+    credits, unusable response, etc.) — callers must catch and fall back to
+    parser.parse_resume(), which always works offline.
+    """
+    provider = get_provider(config_store.get_runtime_config())
+    if provider is None:
+        raise ProviderError("AI-based resume parsing is not enabled.", status="disabled")
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
 
     text = (raw_text or "").strip()
     if not text:

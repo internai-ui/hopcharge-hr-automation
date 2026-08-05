@@ -125,9 +125,26 @@ def _b64_decode(data: str) -> str:
 # which is a cosmetic issue, not a correctness one.
 _QUOTE_MARKERS_TEXT = [
     re.compile(r"^[ \t]*-{2,}\s*Original Message\s*-{2,}", re.IGNORECASE | re.MULTILINE),
+    re.compile(r"^[ \t]*-{2,}\s*Forwarded message\s*-{2,}", re.IGNORECASE | re.MULTILINE),
     re.compile(r"^_{5,}\s*$", re.MULTILINE),
-    re.compile(r"(?:\n|^)[ \t]*On\s+.*?\s+wrote:\s*", re.IGNORECASE | re.DOTALL),
-    re.compile(r"^From:\s.+\n(?:.*\n){0,3}?^(?:Sent|Date|To|Subject):\s.+$", re.IGNORECASE | re.MULTILINE),
+    # Gmail's quote-attribution line: "On <weekday>, <month> <day>, <year>
+    # at <time> <name> <email> wrote:". Anchored on the distinctive
+    # weekday+month+year date stamp (not just "On ... wrote:") so it can't
+    # false-positive on a candidate's own sentence like "On the form I
+    # wrote: ..." or "...I already wrote a detailed cover letter" — and
+    # deliberately NOT anchored to a line start, since some clients run the
+    # quote header on directly after the reply's last sentence with no
+    # separating newline.
+    re.compile(
+        r"\bOn\s+(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*,?\s+"
+        r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4}"
+        r".{0,150}?\bwrote:",
+        re.IGNORECASE | re.DOTALL,
+    ),
+    # Outlook-style header block: a "From:" line followed within a few lines
+    # by Sent:/Date:/To:/Subject: — narrower than a bare "From:" match so a
+    # candidate's own reply starting a line with "From:" isn't cut short.
+    re.compile(r"^[ \t]*From:\s.+\n(?:.*\n){0,3}?^(?:Sent|Date|To|Subject):\s.+$", re.IGNORECASE | re.MULTILINE),
     re.compile(r"^[ \t]*>", re.MULTILINE),
 ]
 _QUOTE_MARKER_HTML = re.compile(
@@ -140,32 +157,14 @@ def _strip_quoted_text(text: str) -> str:
     thread history re-quoted underneath it."""
     if not text:
         return ""
-    
-    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
-    patterns = [
-        r'\n[ \t]*On\s+.*?\s+wrote:\s*',
-        r'^[ \t]*On\s+.*?\s+wrote:\s*',
-        r'\n[ \t]*-{2,}\s*Original Message\s*-{2,}',
-        r'^[ \t]*-{2,}\s*Original Message\s*-{2,}',
-        r'\n[ \t]*From:\s+.*?\n[ \t]*Sent:',
-        r'\n[ \t]*_{5,}',
-        r'\n[ \t]*>',
-    ]
-    
-    clean = normalized
-    for pat in patterns:
-        m = re.search(pat, clean, flags=re.IGNORECASE | re.DOTALL)
-        if m and m.start() >= 0:
-            clean = clean[:m.start()]
-
-    lines = []
-    for line in clean.split("\n"):
-        if line.strip().startswith(">"):
-            continue
-        lines.append(line)
-
-    res = "\n".join(lines).strip()
-    return res if res else text.strip()
+    cut = len(text)
+    for pattern in _QUOTE_MARKERS_TEXT:
+        m = pattern.search(text)
+        if m and m.start() < cut:
+            if m.start() > 0:
+                cut = m.start()
+    cleaned = text[:cut].rstrip()
+    return cleaned if cleaned else text.strip()
 
 
 def _strip_quoted_html(html: str) -> str:
@@ -194,8 +193,7 @@ def _detect_reply_intent(text: str) -> dict:
                 "category": "not_interested",
                 "label": "Not Interested",
                 "badge_bg": "rgba(239, 68, 68, 0.18)",
-                "badge_color": "#f87171",
-                "icon": "🔴"
+                "badge_color": "#f87171"
             }
 
     # 2. Out of Office / Auto Reply
@@ -209,8 +207,7 @@ def _detect_reply_intent(text: str) -> dict:
                 "category": "auto_reply",
                 "label": "Auto-Reply / OOO",
                 "badge_bg": "rgba(156, 163, 175, 0.18)",
-                "badge_color": "#9ca3af",
-                "icon": "⚪"
+                "badge_color": "#9ca3af"
             }
 
     # 3. Question / Inquiry
@@ -224,8 +221,7 @@ def _detect_reply_intent(text: str) -> dict:
                 "category": "question",
                 "label": "Question / Inquiry",
                 "badge_bg": "rgba(245, 158, 11, 0.18)",
-                "badge_color": "#fbbf24",
-                "icon": "🟡"
+                "badge_color": "#fbbf24"
             }
 
     # 4. Interested / Applied
@@ -240,8 +236,7 @@ def _detect_reply_intent(text: str) -> dict:
                 "category": "interested",
                 "label": "Interested / Form Submitted",
                 "badge_bg": "rgba(52, 211, 153, 0.18)",
-                "badge_color": "#34d399",
-                "icon": "🟢"
+                "badge_color": "#34d399"
             }
 
     # Default / General Response
@@ -249,8 +244,7 @@ def _detect_reply_intent(text: str) -> dict:
         "category": "neutral",
         "label": "Replied",
         "badge_bg": "rgba(96, 165, 250, 0.18)",
-        "badge_color": "#60a5fa",
-        "icon": "🔵"
+        "badge_color": "#60a5fa"
     }
 
 
@@ -273,6 +267,17 @@ def _extract_body(payload: dict) -> tuple[str, str]:
 
     walk(payload or {})
     return text, html
+
+
+def _make_preview(body_text: str, fallback: str, limit: int = 160) -> str:
+    """Short one-line preview for the Replies table — derived from the
+    already quote-stripped body_text, not Gmail's own raw snippet (which
+    can include quote-header text like "On Tue, ... wrote:" right after the
+    real reply when a client doesn't put the quote on its own line)."""
+    text = " ".join((_strip_quoted_text(body_text) or "").split())
+    if not text:
+        text = " ".join((fallback or "").split())
+    return text[:limit] + ("…" if len(text) > limit else "")
 
 
 def _internal_date_to_iso(ms: Optional[str]) -> Optional[str]:
@@ -329,7 +334,7 @@ def poll_once() -> dict:
             rec["status"] = "replied"
             rec["reply"] = {
                 "from": _header(headers, "From"),
-                "snippet": reply_msg.get("snippet", ""),
+                "snippet": _make_preview(body_text, reply_msg.get("snippet", "")),
                 "clean_text": clean_text,
                 "intent": intent,
                 "body_text": body_text,

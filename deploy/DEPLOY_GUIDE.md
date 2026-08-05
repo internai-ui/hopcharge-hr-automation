@@ -138,19 +138,14 @@ DATABASE_URL=postgresql://...your Neon pooled connection string...
 EMPLOYEE_FIELD_KEY=...same key as your Mac, or encrypted fields won't decrypt...
 
 # ── the login page (this is the whole point of hosting privately) ──
+# Sign-in is Google-only, restricted to emails already in the Employee
+# Database (no separate accounts/passwords). See auth.py's module docstring
+# for the one-time Google Cloud Console step this needs.
 DASHBOARD_AUTH=on
-DASHBOARD_ADMIN_PASSWORD=choose-a-strong-admin-password
 SESSION_DAYS=1
 
-# ── links inside reset/invite emails point here ──
+# ── the Google sign-in redirect is built from this ──
 DASHBOARD_BASE_URL=https://dashboard.hopcharge.com
-
-# ── forgot-password + invite emails (recommended; needs a Gmail APP password) ──
-SMTP_GMAIL=hr@hopcharge.com
-SMTP_APP_PASSWORD=your16charapppassword
-
-# ── share sign-in accounts with the desktop installs (optional) ──
-# AUTH_SYNC=on
 ```
 
 Save (Ctrl-O, Enter, Ctrl-X), then copy the Google service-account files up
@@ -184,13 +179,19 @@ Enter an email for renewal notices, agree to the terms. Certbot fetches a free
 Let's Encrypt certificate, rewires nginx for HTTPS, redirects all HTTP to
 HTTPS, and **renews itself automatically** — this is a one-time step, forever.
 
-## Part 7 — First login & users (~3 min)
+## Part 7 — First login & admin access (~3 min)
 
 1. Open **https://dashboard.hopcharge.com** → the HopCharge login page appears.
-2. Sign in: `admin@hopcharge.com` / your `DASHBOARD_ADMIN_PASSWORD`.
-3. In the sidebar under **Account → Users**, add your teammates. Each gets an
-   invite email (or a link you copy to them) to set their own password.
-4. Anyone who forgets their password: **"Forgot password?"** on the login page.
+2. Click **Sign in with Google** and use your Hopcharge Google account. You
+   must already exist in the Employee Database (add yourself there first if
+   this is a fresh install — the dashboard is open with no login until
+   `DASHBOARD_AUTH=on` is set).
+3. To make yourself (or a teammate) a dashboard admin, open **Employee
+   Database**, edit their record, and check **"Can sign in to this
+   dashboard as an admin"**. The first admin can be set by anyone while no
+   admin exists yet; after that, only an existing admin can grant it.
+4. Anyone whose email isn't in the Employee Database is rejected at sign-in
+   with a clear message — add them there to grant access.
 
 ---
 
@@ -202,9 +203,8 @@ HTTPS, and **renews itself automatically** — this is a one-time step, forever.
 | HTTPS + login wall | open the domain in a private/incognito window | padlock + login page, no dashboard |
 | API is protected | `curl https://dashboard.hopcharge.com/api/accepted` | `{"detail":"Not authenticated"}` |
 | Candidate links public | `curl -I https://dashboard.hopcharge.com/status` | `200` |
-| Login works | sign in as admin | dashboard loads, all pages work |
-| Users page | sidebar → Account → Users | list, add, reset-link all work |
-| Forgot password | log out → "Forgot password?" → your email | reset email arrives, link works |
+| Login works | sign in with Google | dashboard loads, all pages work |
+| Unregistered email rejected | sign in with a Google account not in the Employee Database | clear rejection message, no access |
 | Survives reboot | `sudo reboot`, wait 2 min, reload the site | everything back by itself |
 
 ## Routine operations
@@ -214,7 +214,7 @@ HTTPS, and **renews itself automatically** — this is a one-time step, forever.
 | **Update the code** | `bash deploy/upload_code.sh` (uploads + restarts) |
 | Watch live logs | on server: `journalctl -u hopcharge -f` |
 | Restart the app | on server: `sudo systemctl restart hopcharge` |
-| Manage users | `/users` page, or on server: `cd /opt/hopcharge/app && HOPCHARGE_HOME=/opt/hopcharge/data /opt/hopcharge/venv/bin/python auth.py list` |
+| Manage admin access | Employee Database page → edit an employee → "Can sign in to this dashboard as an admin" |
 | Back up the data | `scp -i KEY -r ubuntu@IP:/opt/hopcharge/data ./server-backup/` |
 | OS security updates | on server: `sudo apt update && sudo apt upgrade -y` (monthly) |
 
@@ -225,11 +225,14 @@ HTTPS, and **renews itself automatically** — this is a one-time step, forever.
 - **502 Bad Gateway** → the app isn't running. On server:
   `sudo systemctl status hopcharge` and `journalctl -u hopcharge -n 50`.
   Most common cause: a typo in `/opt/hopcharge/data/neon.env`.
-- **Can't sign in / locked out** → on server, reset the admin password:
-  `cd /opt/hopcharge/app && HOPCHARGE_HOME=/opt/hopcharge/data /opt/hopcharge/venv/bin/python auth.py set-password admin@hopcharge.com`
-- **Reset emails don't arrive** → `SMTP_APP_PASSWORD` must be a Gmail *app*
-  password (16 characters), not the normal password; check spam folder;
-  `journalctl -u hopcharge -n 50` shows the SMTP error.
+- **Can't sign in — "not registered in the Employee Database"** → add that
+  email (personal or official) to an employee record on the Employee
+  Database page, then try again.
+- **Google sign-in fails / redirect_uri_mismatch** → make sure
+  `/api/auth/google/callback` is added as an Authorized redirect URI on the
+  same OAuth client used by "Connect Google Account" (Google Cloud Console
+  → Credentials → your Web application client), alongside the existing
+  `/api/gmail-oauth/callback` one.
 - **Google Drive/Forms/Sheets features fail** → the two service-account JSONs
   must be in `/opt/hopcharge/data/` (Part 5).
 - **Upload/parse fails for big batches** → already handled (nginx allows 100 MB

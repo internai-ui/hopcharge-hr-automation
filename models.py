@@ -18,8 +18,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import (
-    BigInteger, CheckConstraint, Column, DateTime, Float, Integer,
-    LargeBinary, String, Text, func,
+    CheckConstraint, Column, DateTime, Integer, LargeBinary, Text, func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase
@@ -34,57 +33,7 @@ def _uuid_col():
     return Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
 
-# ── 1. form_responses ────────────────────────────────────────────────────────
-class FormResponse(Base):
-    __tablename__ = "form_responses"
-    id = _uuid_col()
-    response_id = Column(Text, unique=True, nullable=False)
-    form_id = Column(Text)
-    form_title = Column(Text)
-    name = Column(Text)
-    email = Column(Text)
-    phone = Column(Text)
-    role = Column(Text)
-    answers = Column(JSONB, nullable=False, default=list)
-    questions = Column(JSONB, nullable=False, default=list)
-    objective_score = Column(Integer)
-    ai_score = Column(Integer)
-    total_score = Column(Integer)
-    recommendation = Column(Text)
-    submitted_at = Column(DateTime(timezone=True))
-    last_synced = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    deleted_at = Column(DateTime(timezone=True))
-
-
-# ── 2. candidates ────────────────────────────────────────────────────────────
-class Candidate(Base):
-    __tablename__ = "candidates"
-    id = _uuid_col()
-    full_name = Column(Text)
-    email = Column(Text)
-    phone_number = Column(Text)
-    location_city = Column(Text)
-    linkedin_profile = Column(Text)
-    source_file = Column(Text)
-    summary_objective_profile = Column(Text)
-    work_experience = Column(JSONB, default=list)
-    education = Column(JSONB, default=list)
-    skills = Column(JSONB, default=list)
-    languages = Column(JSONB, default=list)
-    certifications_courses = Column(JSONB, default=list)
-    internships_projects = Column(JSONB, default=list)
-    awards_achievements = Column(JSONB, default=list)
-    personal_details = Column(JSONB, default=dict)
-    field_confidence = Column(JSONB, default=dict)
-    raw_text = Column(Text)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    deleted_at = Column(DateTime(timezone=True))
-
-
-# ── 3. accepted_candidates ───────────────────────────────────────────────────
+# ── 1. accepted_candidates ───────────────────────────────────────────────────
 class AcceptedCandidate(Base):
     __tablename__ = "accepted_candidates"
     __table_args__ = (
@@ -111,7 +60,7 @@ class AcceptedCandidate(Base):
     deleted_at = Column(DateTime(timezone=True))
 
 
-# ── 4. rejected_candidates ───────────────────────────────────────────────────
+# ── 2. rejected_candidates ───────────────────────────────────────────────────
 class RejectedCandidate(Base):
     __tablename__ = "rejected_candidates"
     id = _uuid_col()
@@ -134,7 +83,7 @@ class RejectedCandidate(Base):
     deleted_at = Column(DateTime(timezone=True))
 
 
-# ── 5. selected_candidates ───────────────────────────────────────────────────
+# ── 3. selected_candidates ───────────────────────────────────────────────────
 class SelectedCandidate(Base):
     __tablename__ = "selected_candidates"
     id = _uuid_col()
@@ -146,7 +95,7 @@ class SelectedCandidate(Base):
     deleted_at = Column(DateTime(timezone=True))
 
 
-# ── 6. employees (sensitive columns are BYTEA, handled in crypto.py) ──────────
+# ── 4. employees (sensitive columns are BYTEA, handled in crypto.py) ──────────
 class Employee(Base):
     __tablename__ = "employees"
     id = _uuid_col()
@@ -193,7 +142,7 @@ class Employee(Base):
     deleted_at = Column(DateTime(timezone=True))
 
 
-# ── 7. colleges ──────────────────────────────────────────────────────────────
+# ── 5. colleges ──────────────────────────────────────────────────────────────
 class College(Base):
     __tablename__ = "colleges"
     id = _uuid_col()
@@ -227,79 +176,7 @@ class College(Base):
     deleted_at = Column(DateTime(timezone=True))
 
 
-# ── 8. form_tracking ─────────────────────────────────────────────────────────
-class FormTracking(Base):
-    __tablename__ = "form_tracking"
-    id = _uuid_col()
-    token = Column(Text, unique=True, nullable=False)
-    email = Column(Text)
-    name = Column(Text)
-    issued_at = Column(DateTime(timezone=True))
-    click_time = Column(DateTime(timezone=True))
-    click_count = Column(Integer, default=0)
-    last_click_time = Column(DateTime(timezone=True))
-    submit_time = Column(DateTime(timezone=True))
-    time_taken_seconds = Column(Float)
-    status = Column(Text)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    deleted_at = Column(DateTime(timezone=True))
-
-
-# ── 9. status_tokens ─────────────────────────────────────────────────────────
-class StatusToken(Base):
-    __tablename__ = "status_tokens"
-    id = _uuid_col()
-    token = Column(Text, unique=True, nullable=False)
-    email = Column(Text)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    deleted_at = Column(DateTime(timezone=True))
-
-
-# ── 10. scoring_rubrics ──────────────────────────────────────────────────────
-class ScoringRubric(Base):
-    __tablename__ = "scoring_rubrics"
-    id = _uuid_col()
-    role_key = Column(Text, unique=True, nullable=False)
-    role_name = Column(Text)
-    objective_max = Column(Integer)
-    ai_max = Column(Integer)
-    rubric = Column(JSONB, nullable=False)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    deleted_at = Column(DateTime(timezone=True))
-
-
-# ── 11. calendly_invites ─────────────────────────────────────────────────────
-class CalendlyInvite(Base):
-    __tablename__ = "calendly_invites"
-    id = _uuid_col()
-    sent_at = Column(DateTime(timezone=True))
-    sender = Column(Text)
-    mode = Column(Text)
-    link = Column(Text)
-    total = Column(Integer)
-    sent = Column(Integer)
-    failed = Column(Integer)
-    results = Column(JSONB, default=list)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    deleted_at = Column(DateTime(timezone=True))
-
-
-# ── 12. app_config ───────────────────────────────────────────────────────────
-class AppConfig(Base):
-    __tablename__ = "app_config"
-    id = _uuid_col()
-    config_key = Column(Text, unique=True, nullable=False)
-    value = Column(JSONB, nullable=False)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    deleted_at = Column(DateTime(timezone=True))
-
-
-# ── 13. sync_ledger ──────────────────────────────────────────────────────────
+# ── 6. sync_ledger ───────────────────────────────────────────────────────────
 class SyncLedger(Base):
     __tablename__ = "sync_ledger"
     id = _uuid_col()

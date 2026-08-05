@@ -79,7 +79,7 @@
     if (rows.length === 0 && _colleges.length > 0 && filtersActive) {
       emptyEl.classList.add('hidden');
       tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-dim)">
-        No colleges match your filters — but you still have <b style="color:var(--text-mid)">${_colleges.length}</b> saved.
+        No colleges match your filters - but you still have <b style="color:var(--text-mid)">${_colleges.length}</b> saved.
         <button class="td-view-btn" style="margin-left:10px" onclick="clearCollegeFilters()">Clear filters</button>
       </td></tr>`;
       $('col-info').textContent = `${rows.length} of ${_colleges.length} shown`;
@@ -91,11 +91,11 @@
       <tr style="animation-delay:${i*25}ms">
         <td><div class="cand-name">${c.college_name}</div>${c.state?`<div class="cand-role">${c.state}</div>`:''}</td>
         <td><span class="col-type-tag">${c.college_type}</span></td>
-        <td style="font-size:12px">${c.placement_officer_name||'<span style="opacity:.35">—</span>'}</td>
-        <td class="td-email">${c.email||'<span style="opacity:.35">—</span>'}</td>
-        <td style="font-size:12px">${c.city||'<span style="opacity:.35">—</span>'}</td>
+        <td style="font-size:12px">${c.placement_officer_name||'<span style="opacity:.35">-</span>'}</td>
+        <td class="td-email">${c.email||'<span style="opacity:.35">-</span>'}</td>
+        <td style="font-size:12px">${c.city||'<span style="opacity:.35">-</span>'}</td>
         <td><span class="col-status-pill ${slug(c.outreach_status)}" onclick="event.stopPropagation();openStatusMenu(event,'${c.id}')">${c.outreach_status} ▾</span></td>
-        <td><span class="col-prio-badge ${c.priority_level}">${c.priority_score??'—'}</span> <span style="font-size:10px;color:var(--text-dim)">${c.priority_level||''}</span></td>
+        <td><span class="col-prio-badge ${c.priority_level}">${c.priority_score??'-'}</span> <span style="font-size:10px;color:var(--text-dim)">${c.priority_level||''}</span></td>
         <td style="white-space:nowrap">
           <button class="td-view-btn" onclick="editCollege('${c.id}')">EDIT</button>
           <button class="td-del-btn" title="Delete" aria-label="Delete" onclick="delCollege(this,'${c.id}')">🗑</button>
@@ -122,7 +122,7 @@
       _loaded = true;
       renderTable();
       $('col-info').textContent = `${d.total} college${d.total!==1?'s':''}`;
-      // Dashboard stats are secondary — never let them break the table render.
+      // Dashboard stats are secondary - never let them break the table render.
       try { await loadDashboard(); } catch(e){ console.warn('dashboard stats failed:', e); }
     } catch(e) {
       $('col-info').textContent = 'Error loading colleges: '+e.message;
@@ -308,7 +308,7 @@
         html += '<br style="margin:8px 0">';
       }
     } else {
-      html += `<div style="font-size:11px;letter-spacing:.5px;color:var(--text-dim);margin:12px 0 8px">${cands.length} CANDIDATE${cands.length!==1?'S':''} — REVIEW & SAVE</div>`;
+      html += `<div style="font-size:11px;letter-spacing:.5px;color:var(--text-dim);margin:12px 0 8px">${cands.length} CANDIDATE${cands.length!==1?'S':''} - REVIEW & SAVE</div>`;
       cands.forEach((c,i)=>{
         const conf = c.confidence||0;
         const cc = conf>=90?'#34d399':conf>=75?'#fbbf24':'#f0a05a';

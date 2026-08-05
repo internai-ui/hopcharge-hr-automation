@@ -8,6 +8,7 @@
       const d = await res.json();
       const s = d.settings, def = d.defaults;
       _defaults = def;
+<<<<<<< HEAD
       // Thresholds (optional elements)
       const rej = document.getElementById('adm-reject'), mov = document.getElementById('adm-move');
       if (rej && s.thresholds) rej.value = s.thresholds.auto_reject;
@@ -36,6 +37,43 @@
   window.loadAdminSettings = load;
 
   // Admin settings loaded cleanly
+=======
+      // Emails
+      document.getElementById('adm-rec-subject').value = s.email.recruitment.subject || '';
+      document.getElementById('adm-rec-body').value    = s.email.recruitment.body || '';
+      document.getElementById('adm-ob-subject').value  = s.email.onboarding.subject || '';
+      document.getElementById('adm-ob-body').value     = s.email.onboarding.body || '';
+      document.getElementById('adm-rej-subject').value = s.email.rejection.subject || '';
+      document.getElementById('adm-rej-body').value    = s.email.rejection.body || '';
+      // Refresh any preview panes that are already open (e.g. re-navigating
+      // back to this page) so they don't show stale content.
+      ['recruitment','onboarding','rejection'].forEach(refreshPreview);
+      // Recruitment form
+      const rf = s.recruitment_form || {};
+      document.getElementById('adm-form-id').value   = rf.form_id || '';
+      document.getElementById('adm-form-link').value = rf.form_link || '';
+    }catch(e){ toast('Could not load admin settings','err'); }
+  }
+  window.loadAdminSettings = load;
+
+  // Save recruitment form
+  document.getElementById('adm-form-save')?.addEventListener('click', async ()=>{
+    const idEl = document.getElementById('adm-form-id'), linkEl = document.getElementById('adm-form-link');
+    const msg = document.getElementById('adm-form-msg');
+    if (linkEl.value.trim() && !linkEl.value.trim().startsWith('http')) {
+      msg.textContent = 'The form link must start with http(s)://'; msg.style.color = 'var(--red)';
+      return;
+    }
+    try{
+      const res = await fetch('/api/admin/recruitment-form', {method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({form_id: idEl.value.trim(), form_link: linkEl.value.trim()})});
+      const d = await res.json(); if(!res.ok) throw new Error(errDetail(d, res.status));
+      msg.textContent = 'Saved.'; msg.style.color = 'var(--text-dim)';
+      toast('Recruitment form saved','ok');
+      window.dispatchEvent(new CustomEvent('recruitment-form-changed', {detail: d.recruitment_form}));
+    }catch(e){ msg.textContent = 'Save failed: '+e.message; msg.style.color = 'var(--red)'; }
+  });
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
 
   // Email save/reset helper
   async function saveEmail(kind, subjId, bodyId){
@@ -134,5 +172,8 @@
       target.dispatchEvent(new Event('input', {bubbles:true}));
     });
   });
+<<<<<<< HEAD
 
+=======
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
 })();

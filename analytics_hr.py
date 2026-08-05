@@ -3,9 +3,8 @@ analytics_hr.py — HR operations analytics across time windows.
 
 Powers the "Analytics" section of the dashboard. It answers: how much work is
 the platform doing for HR (CVs parsed, forms/emails sent, responses received,
-candidates scored, accepted vs rejected) over today / 7d / 30d / 90d / 180d /
-1y / all — broken down role-wise, stage/round-wise, and by recommendation band,
-plus a time-series trend for charts.
+accepted vs rejected) over today / 7d / 30d / 90d / 180d / 1y / all — broken
+down role-wise and stage/round-wise, plus a time-series trend for charts.
 
 Two data sources are combined:
 
@@ -16,7 +15,7 @@ Two data sources are combined:
      log_event() is best-effort and must NEVER raise into a caller's flow.
 
   2. Records the app already timestamps:
-        form_responses.json      -> submitted_at      (responses + scoring/bands)
+        form_responses.json      -> submitted_at      (responses)
         accepted_candidates.json -> accepted_at, history[].at
         rejected_candidates.json -> rejected_at
         calendly_invite_log.json -> at / timestamp     (interview invites)
@@ -146,7 +145,7 @@ def _calendly() -> list[dict]:
 
 def _role_of(rec: dict) -> str:
     """Best-effort role label for a record (response / accepted / rejected)."""
-    r = rec.get("role") or rec.get("role_name") or rec.get("scored_role")
+    r = rec.get("role") or rec.get("role_name")
     if r:
         return str(r).strip()
     for a in rec.get("answers", []) or []:
@@ -156,14 +155,6 @@ def _role_of(rec: dict) -> str:
             if v:
                 return v
     return "Unspecified"
-
-
-def _band(rec: dict) -> str | None:
-    """Recommendation band of a scored response, if present."""
-    rec_rec = rec.get("recommendation")
-    if rec_rec:
-        return str(rec_rec)
-    return None
 
 
 def _cutoff(window: str) -> datetime | None:
@@ -293,21 +284,14 @@ def overview(window: str = "30d") -> dict:
             kind = str(meta.get("kind", "recruitment"))
             emails_by_kind[kind] = emails_by_kind.get(kind, 0) + cnt
 
-    # ── Responses received + scored + band distribution (role-wise too) ──
+    # ── Responses received (role-wise) ──
     responses_received = 0
-    scored = 0
-    band_counts: dict[str, int] = {}
     role_responses: dict[str, int] = {}
     for r in _responses():
         if not _in_window(_parse_ts(r.get("submitted_at")), cutoff):
             continue
         responses_received += 1
         role_responses[_role_of(r)] = role_responses.get(_role_of(r), 0) + 1
-        if r.get("total_score") is not None and not r.get("scoring_error"):
-            scored += 1
-            b = _band(r)
-            if b:
-                band_counts[b] = band_counts.get(b, 0) + 1
 
     # ── Accepted / rejected within window, role-wise + round/stage-wise ──
     accepted_total = 0
@@ -364,14 +348,12 @@ def overview(window: str = "30d") -> dict:
             "cvs_parsed": cvs_parsed,
             "emails_sent": emails_sent,
             "responses_received": responses_received,
-            "candidates_scored": scored,
             "accepted": accepted_total,
             "rejected": rejected_total,
             "interviews_invited": invites,
             "accept_rate": accept_rate,
         },
         "emails_by_kind": emails_by_kind,
-        "band_distribution": band_counts,
         "role_breakdown": role_breakdown,
         "stage_accepted": stage_accepted,
         "round_rejected": round_rejected,

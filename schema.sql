@@ -30,73 +30,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================================================
--- 1. form_responses — raw Google Form submissions (Round 0 screening)
--- ============================================================================
-CREATE TABLE IF NOT EXISTS form_responses (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    response_id   TEXT UNIQUE NOT NULL,          -- Google's responseId
-    form_id       TEXT,
-    form_title    TEXT,
-    name          TEXT,
-    email         TEXT,
-    phone         TEXT,
-    role          TEXT,
-    answers       JSONB NOT NULL DEFAULT '[]',   -- [{question,type,answer}, ...]
-    questions     JSONB NOT NULL DEFAULT '[]',   -- form schema snapshot
-    objective_score  INTEGER,
-    ai_score         INTEGER,
-    total_score      INTEGER,
-    recommendation   TEXT,                        -- Shortlist / Hold / Reject
-    submitted_at  TIMESTAMPTZ,
-    last_synced   TIMESTAMPTZ,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at    TIMESTAMPTZ
-);
-CREATE INDEX IF NOT EXISTS idx_fr_email        ON form_responses (lower(email)) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_fr_phone        ON form_responses (phone)        WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_fr_total_score  ON form_responses (total_score)  WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_fr_role         ON form_responses (role)         WHERE deleted_at IS NULL;
-DROP TRIGGER IF EXISTS trg_fr_updated ON form_responses;
-CREATE TRIGGER trg_fr_updated BEFORE UPDATE ON form_responses
-    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- ============================================================================
--- 2. candidates — parsed CV data (from PDFs via pdfplumber / OCR)
--- ============================================================================
-CREATE TABLE IF NOT EXISTS candidates (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    full_name     TEXT,
-    email         TEXT,
-    phone_number  TEXT,
-    location_city TEXT,
-    linkedin_profile TEXT,
-    source_file   TEXT,                           -- original PDF filename
-    summary_objective_profile TEXT,
-    -- Unstructured extraction kept whole as JSONB:
-    work_experience        JSONB DEFAULT '[]',
-    education              JSONB DEFAULT '[]',
-    skills                 JSONB DEFAULT '[]',
-    languages              JSONB DEFAULT '[]',
-    certifications_courses JSONB DEFAULT '[]',
-    internships_projects   JSONB DEFAULT '[]',
-    awards_achievements    JSONB DEFAULT '[]',
-    personal_details       JSONB DEFAULT '{}',
-    field_confidence       JSONB DEFAULT '{}',
-    raw_text      TEXT,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at    TIMESTAMPTZ
-);
-CREATE INDEX IF NOT EXISTS idx_cand_email  ON candidates (lower(email))   WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_cand_phone  ON candidates (phone_number)   WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_cand_source ON candidates (source_file)    WHERE deleted_at IS NULL;
-DROP TRIGGER IF EXISTS trg_cand_updated ON candidates;
-CREATE TRIGGER trg_cand_updated BEFORE UPDATE ON candidates
-    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- ============================================================================
--- 3. accepted_candidates — candidates moving through the 3-stage pipeline
+-- 1. accepted_candidates — candidates moving through the 3-stage pipeline
 --    stage ∈ {hr, round1, round2}.  history kept as JSONB audit trail.
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS accepted_candidates (
@@ -129,7 +63,7 @@ CREATE TRIGGER trg_acc_updated BEFORE UPDATE ON accepted_candidates
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- ============================================================================
--- 4. rejected_candidates — rejected pipeline + reason + round
+-- 2. rejected_candidates — rejected pipeline + reason + round
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS rejected_candidates (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -158,7 +92,7 @@ CREATE TRIGGER trg_rej_updated BEFORE UPDATE ON rejected_candidates
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- ============================================================================
--- 5. selected_candidates — candidates marked ★ Selected (triggers onboarding)
+-- 3. selected_candidates — candidates marked ★ Selected (triggers onboarding)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS selected_candidates (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -175,7 +109,7 @@ CREATE TRIGGER trg_sel_updated BEFORE UPDATE ON selected_candidates
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- ============================================================================
--- 6. employees — 35-field master sheet.  Sensitive columns encrypted at rest.
+-- 4. employees — 35-field master sheet.  Sensitive columns encrypted at rest.
 --    Plaintext columns stay TEXT; the 5 sensitive ones are bytea (pgp_sym).
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS employees (
@@ -230,7 +164,7 @@ CREATE TRIGGER trg_emp_updated BEFORE UPDATE ON employees
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- ============================================================================
--- 7. colleges — college outreach directory
+-- 5. colleges — college outreach directory
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS colleges (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -271,104 +205,7 @@ CREATE TRIGGER trg_col_updated BEFORE UPDATE ON colleges
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- ============================================================================
--- 8. form_tracking — email→token, click + completion timestamps
--- ============================================================================
-CREATE TABLE IF NOT EXISTS form_tracking (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    token         TEXT UNIQUE NOT NULL,
-    email         TEXT,
-    name          TEXT,
-    issued_at     TIMESTAMPTZ,
-    click_time    TIMESTAMPTZ,
-    click_count   INTEGER DEFAULT 0,
-    last_click_time TIMESTAMPTZ,
-    submit_time   TIMESTAMPTZ,
-    time_taken_seconds DOUBLE PRECISION,
-    status        TEXT,                            -- issued / submitted
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at    TIMESTAMPTZ
-);
-CREATE INDEX IF NOT EXISTS idx_ft_email  ON form_tracking (lower(email)) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_ft_status ON form_tracking (status)       WHERE deleted_at IS NULL;
-DROP TRIGGER IF EXISTS trg_ft_updated ON form_tracking;
-CREATE TRIGGER trg_ft_updated BEFORE UPDATE ON form_tracking
-    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- ============================================================================
--- 9. status_tokens — magic-link tokens for the candidate status portal
--- ============================================================================
-CREATE TABLE IF NOT EXISTS status_tokens (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    token         TEXT UNIQUE NOT NULL,
-    email         TEXT,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at    TIMESTAMPTZ
-);
-CREATE INDEX IF NOT EXISTS idx_st_email ON status_tokens (lower(email)) WHERE deleted_at IS NULL;
-DROP TRIGGER IF EXISTS trg_st_updated ON status_tokens;
-CREATE TRIGGER trg_st_updated BEFORE UPDATE ON status_tokens
-    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- ============================================================================
--- 10. scoring_rubrics — role-based scoring config (one row per role)
--- ============================================================================
-CREATE TABLE IF NOT EXISTS scoring_rubrics (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    role_key      TEXT UNIQUE NOT NULL,            -- customer_support_executive
-    role_name     TEXT,
-    objective_max INTEGER,
-    ai_max        INTEGER,
-    rubric        JSONB NOT NULL,                  -- full rule set kept whole
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at    TIMESTAMPTZ
-);
-DROP TRIGGER IF EXISTS trg_rub_updated ON scoring_rubrics;
-CREATE TRIGGER trg_rub_updated BEFORE UPDATE ON scoring_rubrics
-    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- ============================================================================
--- 11. calendly_invites — interview scheduling log (one row per send batch)
--- ============================================================================
-CREATE TABLE IF NOT EXISTS calendly_invites (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    sent_at       TIMESTAMPTZ,
-    sender        TEXT,
-    mode          TEXT,
-    link          TEXT,
-    total         INTEGER,
-    sent          INTEGER,
-    failed        INTEGER,
-    results       JSONB DEFAULT '[]',              -- [{name,email,status}, ...]
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at    TIMESTAMPTZ
-);
-DROP TRIGGER IF EXISTS trg_cal_updated ON calendly_invites;
-CREATE TRIGGER trg_cal_updated BEFORE UPDATE ON calendly_invites
-    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- ============================================================================
--- 12. app_config — key/value store for settings JSON blobs
---     (ai_config, tracking_config, drive_settings, calendly_settings,
---      employee_sheet_settings, drive_sync_state). One row per config name.
--- ============================================================================
-CREATE TABLE IF NOT EXISTS app_config (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    config_key    TEXT UNIQUE NOT NULL,            -- e.g. "tracking_config"
-    value         JSONB NOT NULL,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at    TIMESTAMPTZ
-);
-DROP TRIGGER IF EXISTS trg_cfg_updated ON app_config;
-CREATE TRIGGER trg_cfg_updated BEFORE UPDATE ON app_config
-    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- ============================================================================
--- 13. sync_ledger — drift tracking between JSON files and Postgres
+-- 6. sync_ledger — drift tracking between JSON files and Postgres
 --     Records the checksum + last sync of each mirrored JSON file so the
 --     background sync job can detect when an "offline" edit happened.
 -- ============================================================================

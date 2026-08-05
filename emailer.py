@@ -2,22 +2,14 @@
 emailer.py — Personalised email dispatch for Hopcharge recruitment.
 
 Loads candidate data from the parsed JSON output, composes an HTML email
-for each candidate with a valid email address, and sends it via Gmail SMTP
-using an App Password (OAuth is not required).
-
-Gmail setup (one-time):
-  1. Enable 2-Step Verification on the sending Gmail account.
-  2. Go to: Google Account → Security → App Passwords
-  3. Generate an app password for "Mail / Other (custom)" and use it here.
-     Do NOT use your regular Gmail password — SMTP will reject it.
+for each candidate with a valid email address, and sends it via the Gmail
+API using the connected Google account (see gmail_oauth.py) — no password
+is ever typed into this app.
 """
 
 import base64
 import json
 import logging
-import smtplib
-import ssl
-import socket
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
@@ -58,30 +50,6 @@ def _logo_path() -> Optional[Path]:
 LOGO_CID = "hopcharge_logo_white"
 
 logger = logging.getLogger("volt_cv.emailer")
-
-# ──────────────────────────────────────────────
-# IPv4-forced SMTP for macOS compatibility
-# ──────────────────────────────────────────────
-
-class SMTP_IPv4(smtplib.SMTP):
-    """SMTP client that forces IPv4 (works around macOS IPv6 issues)."""
-    def _get_socket(self, host, port, timeout):
-        """Create socket with IPv4 only."""
-        for family, socktype, proto, canonname, sockaddr in socket.getaddrinfo(
-            host, port, socket.AF_INET, socket.SOCK_STREAM
-        ):
-            try:
-                sock = socket.socket(family, socktype, proto)
-                if timeout is not None:
-                    sock.settimeout(timeout)
-                sock.connect(sockaddr)
-                return sock
-            except socket.error:
-                continue
-        raise socket.error("Could not connect to %s:%s" % (host, port))
-
-
-# ──────────────────────────────────────────────
 
 SUBJECT = "Thank You for Applying to Hopcharge — Next Steps"
 
@@ -277,45 +245,33 @@ def _build_message(
 # ──────────────────────────────────────────────
 
 def send_campaign(
-    gmail_address: str,
-    app_password: str,
     form_link: str,
     candidates: Optional[list[dict]] = None,
     tracking_base_url: Optional[str] = None,
     gmail_service=None,
 ) -> dict:
     """
-    Send a personalised email to every candidate that has a valid email address.
+    Send a personalised email to every candidate that has a valid email address
+    via the connected Google/Gmail account (Gmail OAuth API).
 
     Parameters
     ----------
-    gmail_address     : str   The Gmail account used to send (e.g. hr@hopcharge.com).
-                              With gmail_service set, this is the connected OAuth
-                              account's own address (used only for the "From" header
-                              and the reply-to hint in the template) — not user-typed.
-    app_password      : str   A Gmail App Password. Ignored when gmail_service is set.
-    form_link         : str   The Google Forms URL (used as fallback / stored as base).
+    form_link         : str   The Google Forms URL.
     candidates        : list  Optional — uses the parsed JSON output if not supplied.
-    tracking_base_url : str   Optional — if set (e.g. "https://hr.hopcharge.com" or
-                              "http://localhost:8000"), each email links to
-                              "{tracking_base_url}/t/{token}" so we can measure the
-                              time each candidate takes to complete the form. If not
-                              set, the raw form_link is used (no timing).
-    gmail_service      : Resource  Optional — a Gmail API service object (see
-                              gmail_oauth.get_gmail_service()). When provided, mail is
-                              sent via the Gmail API instead of SMTP + App Password,
-                              and each send is registered with email_replies for
-                              reply tracking. When None (default), behaviour is
-                              unchanged from before this feature existed.
-
-    Returns
-    -------
-    dict with keys: total, sent, failed, skipped_no_email, tracked, results
+    tracking_base_url : str   Optional — timing redirect base URL.
+    gmail_service     : Resource  Optional — Gmail API service object.
     """
+    import gmail_oauth
+    if gmail_service is None:
+        gmail_service = gmail_oauth.get_gmail_service()
+
+    sender_address = (gmail_oauth.public_status().get("connected_email") or "").strip()
+    if not sender_address:
+        sender_address = "hr@hopcharge.com"
+
     if candidates is None:
         candidates = load_candidates()
 
-    # Separate candidates with usable email addresses
     valid   = [c for c in candidates if c.get("email") and "@" in c["email"]]
     skipped = len(candidates) - len(valid)
 
@@ -331,7 +287,6 @@ def send_campaign(
     results = []
     tracked = 0
 
-    # If tracking is enabled, import the tracking module lazily
     _ft = None
     if tracking_base_url:
         try:
@@ -353,92 +308,40 @@ def send_campaign(
             logger.warning("Could not issue token for %s: %s", email, exc)
             return form_link
 
-    if gmail_service is not None:
-        # ── Gmail API transport (OAuth) ──
-        for cand in valid:
-            name  = (cand.get("full_name") or "").strip() or "Applicant"
-            email = cand["email"].strip()
-            candidate_link = _candidate_link(email, name)
-            try:
-                msg = _build_message(gmail_address, name, email, candidate_link)
-                raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("ascii")
-                sent_msg = gmail_service.users().messages().send(
-                    userId="me", body={"raw": raw}
-                ).execute()
-                results.append({"name": name, "email": email, "status": "sent"})
-                logger.info("Sent (Gmail API) → %s <%s>", name, email)
-                try:
-                    import email_replies
-                    email_replies.register_sent(
-                        sent_msg.get("threadId"), sent_msg.get("id"),
-                        email, name, form_link,
-                    )
-                except Exception as exc:
-                    # A broken replies store must never block sending.
-                    logger.warning("Reply tracking registration failed for %s "
-                                    "(send still succeeded): %s", email, exc)
-            except HttpError as exc:
-                if exc.status_code in (401, 403):
-                    raise ValueError(
-                        "Gmail connection has expired or was revoked. "
-                        "Please reconnect Gmail on the Send Emails page."
-                    )
-                results.append({"name": name, "email": email,
-                                "status": "failed", "error": str(exc)})
-                logger.error("Failed (Gmail API) → %s <%s>: %s", name, email, exc)
-            except Exception as exc:
-                results.append({"name": name, "email": email,
-                                "status": "failed", "error": str(exc)})
-                logger.error("Failed (Gmail API) → %s <%s>: %s", name, email, exc)
-
-    else:
-        # ── SMTP transport (App Password, fallback) ──
-        context = ssl.create_default_context()
+    for cand in valid:
+        name  = (cand.get("full_name") or "").strip() or "Applicant"
+        email = cand["email"].strip()
+        candidate_link = _candidate_link(email, name)
         try:
-            with SMTP_IPv4("smtp.gmail.com", 587, timeout=10) as server:
-                server.ehlo()
-                server.starttls(context=context)
-                # Enable UTF8 support for headers/content
-                if server.has_extn("SMTPUTF8"):
-                    server.enable_smtputf8()
-                server.login(gmail_address, app_password)
-
-                for cand in valid:
-                    name  = (cand.get("full_name") or "").strip() or "Applicant"
-                    email = cand["email"].strip()
-                    candidate_link = _candidate_link(email, name)
-
-                    try:
-                        msg = _build_message(gmail_address, name, email, candidate_link)
-                        # Use as_bytes() and encode to ensure proper UTF-8 handling with SMTP
-                        msg_bytes = msg.as_bytes()
-                        server.sendmail(gmail_address, email, msg_bytes)
-                        results.append({"name": name, "email": email, "status": "sent"})
-                        logger.info("Sent  → %s <%s>", name, email)
-
-                    except Exception as exc:
-                        results.append({"name": name, "email": email,
-                                        "status": "failed", "error": str(exc)})
-                        logger.error("Failed → %s <%s>: %s", name, email, exc)
-
-        except smtplib.SMTPAuthenticationError:
-            raise ValueError(
-                "Gmail authentication failed. Verify the sender address and ensure "
-                "you are using a Gmail App Password, not your account password."
-            )
-        except OSError as exc:
-            # Network connectivity issues
-            raise RuntimeError(
-                f"Network error connecting to Gmail SMTP:\n"
-                f"  Error: {exc}\n"
-                f"  Possible causes:\n"
-                f"    • No internet connection\n"
-                f"    • Firewall blocking port 587\n"
-                f"    • Corporate network restrictions\n"
-                f"  Try: Restart your internet or use a different network"
-            )
+            msg = _build_message(sender_address, name, email, candidate_link)
+            raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("ascii")
+            sent_msg = gmail_service.users().messages().send(
+                userId="me", body={"raw": raw}
+            ).execute()
+            results.append({"name": name, "email": email, "status": "sent"})
+            logger.info("Sent (Gmail API) → %s <%s>", name, email)
+            try:
+                import email_replies
+                email_replies.register_sent(
+                    sent_msg.get("threadId"), sent_msg.get("id"),
+                    email, name, form_link,
+                )
+            except Exception as exc:
+                logger.warning("Reply tracking registration failed for %s "
+                                "(send still succeeded): %s", email, exc)
+        except HttpError as exc:
+            if exc.status_code in (401, 403):
+                raise ValueError(
+                    "Gmail connection has expired or was revoked. "
+                    "Please connect your Google account."
+                )
+            results.append({"name": name, "email": email,
+                            "status": "failed", "error": str(exc)})
+            logger.error("Failed (Gmail API) → %s <%s>: %s", name, email, exc)
         except Exception as exc:
-            raise RuntimeError(f"SMTP connection error: {exc}")
+            results.append({"name": name, "email": email,
+                            "status": "failed", "error": str(exc)})
+            logger.error("Failed (Gmail API) → %s <%s>: %s", name, email, exc)
 
     sent   = sum(1 for r in results if r["status"] == "sent")
     failed = sum(1 for r in results if r["status"] == "failed")
@@ -647,49 +550,39 @@ def _build_onboarding_message(
 
 
 def send_onboarding(
-    gmail_address: str,
-    app_password: str,
     form_link: str,
     candidates: list,
+    gmail_service=None,
 ) -> dict:
     """
-    Send the onboarding congratulations email to a list of finalised candidates.
+    Send the onboarding congratulations email to a list of finalised candidates via Gmail API.
     `candidates` should be a list of accepted-candidate dicts (name, email, role).
     """
+    import gmail_oauth
+    if gmail_service is None:
+        gmail_service = gmail_oauth.get_gmail_service()
+
+    sender_address = (gmail_oauth.public_status().get("connected_email") or "").strip()
+    if not sender_address:
+        sender_address = "hr@hopcharge.com"
+
     valid = [c for c in candidates if c.get("email") and "@" in c["email"]]
     skipped = len(candidates) - len(valid)
-
     results = []
-    context = ssl.create_default_context()
 
-    try:
-        with SMTP_IPv4("smtp.gmail.com", 587, timeout=10) as server:
-            server.ehlo()
-            server.starttls(context=context)
-            if server.has_extn("SMTPUTF8"):
-                server.enable_smtputf8()
-            server.login(gmail_address, app_password)
-
-            for cand in valid:
-                name  = (cand.get("name") or "").strip() or "Candidate"
-                email = cand["email"].strip()
-                role  = cand.get("role", "")
-                try:
-                    msg = _build_onboarding_message(
-                        gmail_address, name, email, form_link, role)
-                    server.sendmail(gmail_address, email, msg.as_bytes())
-                    results.append({"name": name, "email": email, "status": "sent"})
-                    logger.info("Onboarding sent → %s <%s>", name, email)
-                except Exception as exc:
-                    results.append({"name": name, "email": email,
-                                    "status": "failed", "error": str(exc)})
-                    logger.error("Onboarding failed → %s <%s>: %s", name, email, exc)
-
-    except smtplib.SMTPAuthenticationError:
-        raise ValueError(
-            "Gmail authentication failed. Check the sender address and App Password.")
-    except OSError as exc:
-        raise RuntimeError(f"Network error: {exc}")
+    for cand in valid:
+        name  = (cand.get("name") or "").strip() or "Candidate"
+        email = cand["email"].strip()
+        role  = cand.get("role", "")
+        try:
+            msg = _build_onboarding_message(sender_address, name, email, form_link, role)
+            raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("ascii")
+            gmail_service.users().messages().send(userId="me", body={"raw": raw}).execute()
+            results.append({"name": name, "email": email, "status": "sent"})
+            logger.info("Onboarding sent (Gmail API) → %s <%s>", name, email)
+        except Exception as exc:
+            results.append({"name": name, "email": email, "status": "failed", "error": str(exc)})
+            logger.error("Onboarding failed → %s <%s>: %s", name, email, exc)
 
     sent   = sum(1 for r in results if r["status"] == "sent")
     failed = sum(1 for r in results if r["status"] == "failed")
@@ -751,9 +644,7 @@ def _build_rejection_message(
     recipient_email: str,
     role: str = "",
 ) -> MIMEMultipart:
-    """Compose the considerate rejection notice. No CTA button — there is
-    nothing left for the candidate to do — but the same brand chrome + inline
-    logo as the recruitment email."""
+    """Compose the considerate rejection notice."""
     safe_name = _sanitize_name(recipient_name)
     role_display = role.replace("_", " ").title() if role else ""
 
@@ -800,50 +691,41 @@ def _build_rejection_message(
 
 
 def send_rejection(
-    gmail_address: str,
-    app_password: str,
     candidates: list,
+    gmail_service=None,
 ) -> dict:
     """
-    Send the rejection notice to a list of candidates.
-    `candidates` should be a list of rejected-candidate dicts (name, email,
-    role, response_id) — see rejected_store.py.
+    Send the rejection notice to a list of candidates via Gmail API.
+    `candidates` should be a list of rejected-candidate dicts (name, email, role, response_id).
     """
+    import gmail_oauth
+    if gmail_service is None:
+        gmail_service = gmail_oauth.get_gmail_service()
+
+    sender_address = (gmail_oauth.public_status().get("connected_email") or "").strip()
+    if not sender_address:
+        sender_address = "hr@hopcharge.com"
+
     valid = [c for c in candidates if c.get("email") and "@" in c["email"]]
     skipped = len(candidates) - len(valid)
-
     results = []
-    context = ssl.create_default_context()
 
-    try:
-        with SMTP_IPv4("smtp.gmail.com", 587, timeout=10) as server:
-            server.ehlo()
-            server.starttls(context=context)
-            if server.has_extn("SMTPUTF8"):
-                server.enable_smtputf8()
-            server.login(gmail_address, app_password)
-
-            for cand in valid:
-                name  = (cand.get("name") or "").strip() or "Candidate"
-                email = cand["email"].strip()
-                role  = cand.get("role", "")
-                try:
-                    msg = _build_rejection_message(gmail_address, name, email, role)
-                    server.sendmail(gmail_address, email, msg.as_bytes())
-                    results.append({"name": name, "email": email,
-                                     "response_id": cand.get("response_id"), "status": "sent"})
-                    logger.info("Rejection sent → %s <%s>", name, email)
-                except Exception as exc:
-                    results.append({"name": name, "email": email,
-                                     "response_id": cand.get("response_id"),
-                                     "status": "failed", "error": str(exc)})
-                    logger.error("Rejection failed → %s <%s>: %s", name, email, exc)
-
-    except smtplib.SMTPAuthenticationError:
-        raise ValueError(
-            "Gmail authentication failed. Check the sender address and App Password.")
-    except OSError as exc:
-        raise RuntimeError(f"Network error: {exc}")
+    for cand in valid:
+        name  = (cand.get("name") or "").strip() or "Candidate"
+        email = cand["email"].strip()
+        role  = cand.get("role", "")
+        try:
+            msg = _build_rejection_message(sender_address, name, email, role)
+            raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("ascii")
+            gmail_service.users().messages().send(userId="me", body={"raw": raw}).execute()
+            results.append({"name": name, "email": email,
+                             "response_id": cand.get("response_id"), "status": "sent"})
+            logger.info("Rejection sent (Gmail API) → %s <%s>", name, email)
+        except Exception as exc:
+            results.append({"name": name, "email": email,
+                             "response_id": cand.get("response_id"),
+                             "status": "failed", "error": str(exc)})
+            logger.error("Rejection failed → %s <%s>: %s", name, email, exc)
 
     sent   = sum(1 for r in results if r["status"] == "sent")
     failed = sum(1 for r in results if r["status"] == "failed")

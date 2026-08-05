@@ -136,8 +136,9 @@ app.include_router(status_router)
 from employee_db import router as employee_router
 app.include_router(employee_router)
 
-# Gmail OAuth "Connect Gmail" (send + reply tracking) — App Password stays as
-# a fallback, see EmailRequest.send_via below.
+# Gmail OAuth "Connect Google Account" — required for every candidate-facing
+# send (recruitment, onboarding, rejection, Round 1 Calendly) and for Forms
+# sync's OAuth path (Service Account JSON remains a Forms-only fallback).
 from gmail_oauth import router as gmail_oauth_router
 app.include_router(gmail_oauth_router)
 
@@ -160,6 +161,25 @@ app.middleware("http")(auth_middleware)
 async def root():
     """Serve the single-page frontend."""
     return FileResponse(str(STATIC_DIR / "index.html"))
+
+
+# Client-side routed pages — same SPA, different deep-link URLs. Each of these
+# just re-serves index.html; static/js/core.js's router reads location.pathname
+# on load and activates the matching <section>. Kept as explicit routes (not a
+# catch-all) so auth_middleware gates exactly these paths like "/" already is,
+# without becoming a public catch-all that would swallow unrelated 404s. This
+# list must stay in sync with core.js's PAGE_NAMES (minus "main", which is "/").
+_SPA_PAGES = ["parser", "email", "replies", "forms", "rejected",
+              "accepted", "analytics", "colleges", "employees", "admin"]
+
+
+async def _serve_spa():
+    return FileResponse(str(STATIC_DIR / "index.html"))
+
+
+for _page in _SPA_PAGES:
+    app.add_api_route(f"/{_page}", _serve_spa, methods=["GET"], include_in_schema=False)
+del _page
 
 
 @app.get("/api/health", include_in_schema=False)
@@ -432,55 +452,36 @@ async def download_results(fmt: str):
 # ──────────────────────────────────────────────
 
 class EmailRequest(BaseModel):
-    send_via: str = "app_password"   # "oauth" (default in the UI) or "app_password" (fallback)
-    gmail_address: Optional[str] = None   # required only when send_via == "app_password"
-    app_password:  Optional[str] = None   # required only when send_via == "app_password"
-    form_link:     str
+    form_link:         Optional[str] = None   # falls back to Admin Settings' saved recruitment form link
     tracking_base_url: Optional[str] = None   # e.g. http://localhost:8000
     email_entry_id:    Optional[str] = None   # e.g. entry.123456789 (form email field)
-    manual_emails: Optional[str]  = None   # newline/comma-separated — send without parsed CVs
+    manual_emails:     Optional[str] = None   # newline/comma-separated — send without parsed CVs
 
 
 @app.post("/api/send-emails")
 async def send_emails(req: EmailRequest):
     """
     Send a personalised HopCharge recruitment email to every parsed candidate
-    that has a valid email address.
-
-    Two transports, selected by req.send_via:
-      "oauth"        — uses the connected Gmail account (see gmail_oauth.py);
-                       no password ever passed through this app.
-      "app_password" — SMTP with a Gmail App Password (fallback, unchanged
-                       from before this feature existed).
+    that has a valid email address via the connected Google account (Gmail OAuth).
     """
     from emailer import send_campaign
+    import gmail_oauth
+    import admin_settings
 
-    if not req.form_link or not req.form_link.startswith("http"):
-        raise HTTPException(status_code=400, detail="A valid Google Forms URL is required.")
+    form_link = (req.form_link or "").strip() or admin_settings.get_recruitment_form().get("form_link", "")
+    if not form_link or not form_link.startswith("http"):
+        raise HTTPException(status_code=400, detail="No recruitment form link configured. Set it in Admin Settings first.")
 
-    gmail_service = None
-    sender_address = req.gmail_address
+    if not gmail_oauth.is_connected():
+        raise HTTPException(
+            status_code=400,
+            detail="Google account is not connected. Click 'Connect Google Account' above first."
+        )
+    try:
+        gmail_service = gmail_oauth.get_gmail_service()
+    except gmail_oauth.GmailNotConnectedError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
-    if req.send_via == "oauth":
-        import gmail_oauth
-        if not gmail_oauth.is_connected():
-            raise HTTPException(
-                status_code=400,
-                detail="Gmail is not connected. Connect it on the Send Emails page first."
-            )
-        try:
-            gmail_service = gmail_oauth.get_gmail_service()
-        except gmail_oauth.GmailNotConnectedError as exc:
-            raise HTTPException(status_code=400, detail=str(exc))
-        # Use the connected account's own address — never user-typed for OAuth.
-        sender_address = gmail_oauth.public_status().get("connected_email")
-    else:
-        if not req.gmail_address or "@" not in req.gmail_address:
-            raise HTTPException(status_code=400, detail="Invalid sender email address.")
-        if not req.app_password:
-            raise HTTPException(status_code=400, detail="App password is required.")
-
-    # Build manual candidates list if provided (name defaults to email prefix)
     manual_candidates = None
     if req.manual_emails and req.manual_emails.strip():
         import re as _re
@@ -495,15 +496,13 @@ async def send_emails(req: EmailRequest):
     try:
         if req.tracking_base_url:
             _save_tracking_config({
-                "base_form_url": req.form_link.strip(),
+                "base_form_url": form_link,
                 "email_entry_id": (req.email_entry_id or "").strip() or None,
                 "public_base_url": req.tracking_base_url.strip().rstrip("/"),
             })
 
         summary = send_campaign(
-            gmail_address=sender_address,
-            app_password=req.app_password,
-            form_link=req.form_link,
+            form_link=form_link,
             tracking_base_url=req.tracking_base_url,
             candidates=manual_candidates,
             gmail_service=gmail_service,
@@ -541,7 +540,7 @@ if __name__ == "__main__":
 # ──────────────────────────────────────────────
 
 class FormsRequest(BaseModel):
-    form_id:          str
+    form_id:          Optional[str] = None      # falls back to Admin Settings' saved recruitment form ID
     auth_mode:        str = "service_account"   # "oauth" (same connection as Send Emails) or "service_account" (fallback)
     credentials_json: Optional[str] = None      # required only when auth_mode == "service_account"
 
@@ -553,9 +552,11 @@ async def fetch_form_responses(req: FormsRequest):
     into output/form_responses.json, and return the full structured dataset.
     """
     from forms_retriever import sync_form_responses
+    import admin_settings
 
-    if not req.form_id.strip():
-        raise HTTPException(status_code=400, detail="form_id is required.")
+    form_id = (req.form_id or "").strip() or admin_settings.get_recruitment_form().get("form_id", "")
+    if not form_id:
+        raise HTTPException(status_code=400, detail="No recruitment form ID configured. Set it in Admin Settings first.")
     if req.auth_mode == "oauth":
         import gmail_oauth
         if not gmail_oauth.is_connected():
@@ -569,7 +570,7 @@ async def fetch_form_responses(req: FormsRequest):
 
     try:
         result = sync_form_responses(
-            form_id=req.form_id.strip(),
+            form_id=form_id,
             credentials_json=(req.credentials_json or "").strip(),
             auth_mode=req.auth_mode,
         )
@@ -647,28 +648,24 @@ async def delete_form_response(response_id: str):
 # ──────────────────────────────────────────────
 
 class OnboardingEmailRequest(BaseModel):
-    gmail_address: str
-    app_password: str
-    form_link: str
-    response_ids: Optional[List[str]] = None   # required: only these candidates are emailed
+    form_link:     str
+    response_ids:  Optional[List[str]] = None   # required: only these candidates are emailed
 
 
 @app.post("/api/send-onboarding")
 async def send_onboarding_emails(req: OnboardingEmailRequest):
     """
-    Send the onboarding congratulations email to selected (or all) Round 2 candidates.
-    Reads candidate list directly from accepted_candidates.json so no additional
-    state needs to be passed from the frontend.
+    Send the onboarding congratulations email to selected Round 2 candidates via connected Google account.
     """
     from emailer import send_onboarding
     from accepted_store import list_accepted
+    import gmail_oauth
+
+    if not gmail_oauth.is_connected():
+        raise HTTPException(status_code=400, detail="Google account is not connected.")
 
     try:
         all_r2 = list_accepted(stage="round2")
-        # Onboarding must target an explicit set of candidates (the ones marked
-        # SELECTED in the UI). We deliberately do NOT fall back to "everyone in
-        # Round 2" — that previously caused onboarding mail to go to unselected
-        # candidates. An empty/missing list is rejected.
         if not req.response_ids:
             raise HTTPException(
                 status_code=400,
@@ -684,8 +681,6 @@ async def send_onboarding_emails(req: OnboardingEmailRequest):
             )
 
         result = send_onboarding(
-            gmail_address=req.gmail_address.strip(),
-            app_password=req.app_password.strip(),
             form_link=req.form_link.strip(),
             candidates=candidates,
         )
@@ -707,9 +702,7 @@ async def send_onboarding_emails(req: OnboardingEmailRequest):
 # ──────────────────────────────────────────────
 
 class RejectionEmailRequest(BaseModel):
-    gmail_address: str
-    app_password: str
-    response_ids: Optional[List[str]] = None   # required: only these candidates are emailed
+    response_ids:  Optional[List[str]] = None   # required: only these candidates are emailed
 
 
 @app.post("/api/send-rejection")
@@ -723,6 +716,10 @@ async def send_rejection_emails(req: RejectionEmailRequest):
     """
     from emailer import send_rejection
     import rejected_store
+    import gmail_oauth
+
+    if not gmail_oauth.is_connected():
+        raise HTTPException(status_code=400, detail="Google account is not connected.")
 
     if not req.response_ids:
         raise HTTPException(
@@ -739,11 +736,7 @@ async def send_rejection_emails(req: RejectionEmailRequest):
         )
 
     try:
-        result = send_rejection(
-            gmail_address=req.gmail_address.strip(),
-            app_password=req.app_password.strip(),
-            candidates=candidates,
-        )
+        result = send_rejection(candidates=candidates)
         # Only stamp candidates whose send genuinely succeeded — a failed
         # send must stay retryable, not silently marked as notified.
         for r in result.get("results", []):

@@ -5,7 +5,7 @@ Internal FastAPI dashboard that automates HopCharge's recruitment operations end
 ## What it does
 
 - **CV Parser** — upload resume PDFs (or sync from a Google Drive folder); text is extracted via pdfplumber → PyMuPDF → Tesseract OCR fallback, then parsed into structured fields (name, email, phone, work experience, education, skills, etc.) with a confidence score per field.
-- **Send Emails** — dispatches personalised recruitment emails via Gmail SMTP, embedding your Google Form assessment link. Optional click-tracking (off by default — see below).
+- **Send Emails** — dispatches personalised recruitment emails via your connected Google account (OAuth — see "Connect Google Account" below), embedding your Google Form assessment link. Optional click-tracking (off by default — see below).
 - **Form Responses** — pulls candidate submissions from the Google Forms API.
 - **Scoring** — hybrid model: deterministic rubric rules (`objective_score`) plus an `ai_score` component computed either by a fully offline rules engine (default, no API key, no network calls) or a real LLM provider if you explicitly enable it (see below).
 - **Accepted / Rejected** — a four-stage pipeline (HR Round → Round 1 → Round 2 → Onboarded) with restore-from-rejected support.

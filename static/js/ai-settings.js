@@ -1,5 +1,11 @@
+<<<<<<< HEAD
 /* ───────── AI SETTINGS IN ADMIN PAGE ───────── */
 (function () {
+=======
+/* ───────── AI-ASSISTED CV PARSING SETTINGS (lives inside Admin Settings) ───────── */
+(function () {
+  if (!document.getElementById('ai-feature-enable')) return;
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
   const $ = id => document.getElementById(id);
   const MODELS = {
     huggingface: ['meta-llama/Llama-3.1-8B-Instruct', 'Qwen/Qwen2.5-Coder-32B-Instruct', 'deepseek-ai/DeepSeek-R1'],
@@ -9,6 +15,7 @@
     groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'gemma2-9b-it']
   };
   let _provider = 'huggingface';
+<<<<<<< HEAD
   let _featureEnabled = false;
 
   function fillModels(sel) {
@@ -22,12 +29,68 @@
     }
   }
 
+=======
+  let _currentMode = 'offline';  // offline or api
+  let _loaded = false;
+  let _featureEnabled = false;   // master AI-parsing toggle - off by default, persisted server-side
+
+  function fillModels(sel) {
+    // Populate the datalist with suggestions for the current provider
+    $('ai-model-list').innerHTML = MODELS[_provider].map(m => `<option value="${m}">`).join('');
+    // Set the input value: keep saved value if provided, else first suggestion
+    if (sel) $('ai-model').value = sel;
+    else if (!$('ai-model').value) $('ai-model').value = MODELS[_provider][0];
+  }
+
+  // Mode toggle - real radio inputs, native label-click semantics select them.
+  document.querySelectorAll('.ai-mode-radio-input').forEach(radio => {
+    radio.addEventListener('change', async () => {
+      const mode = radio.value;
+      document.querySelectorAll('.ai-mode-option').forEach(o => o.classList.toggle('selected', o.dataset.mode === mode));
+      _currentMode = mode;
+      updateModeUI();
+
+      // If switching TO offline, remove the API key
+      if (mode === 'offline') {
+        try {
+          const payload = { provider: 'anthropic', model: 'claude-sonnet', temperature: 0.2, api_key: '' };
+          const r = await fetch('/api/ai/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+          const d = await r.json();
+          if (r.ok) {
+            toast('Switched to offline parsing','ok');
+          }
+        } catch(e){ console.error('Switch to offline failed:', e); }
+      }
+    });
+  });
+
+  function updateModeUI() {
+    const apiSection = $('api-config-section');
+    const switchBtn = $('ai-switch-btn');
+    // While the master AI-parsing feature is off, force the offline view
+    // regardless of what mode was last selected - the API section, key
+    // fields, etc. must never be reachable until the toggle is turned on.
+    const effectiveMode = _featureEnabled ? _currentMode : 'offline';
+    if (effectiveMode === 'offline') {
+      apiSection.classList.add('hidden');
+      switchBtn.textContent = 'Switch to API Mode';
+      switchBtn.onclick = () => { document.querySelector('input[name="ai-mode"][value="api"]').click(); };
+    } else {
+      apiSection.classList.remove('hidden');
+      switchBtn.textContent = 'Switch to Offline Mode';
+      switchBtn.onclick = () => { document.querySelector('input[name="ai-mode"][value="offline"]').click(); };
+    }
+  }
+
+  // ── Master feature toggle: enable/disable AI-based (external LLM) CV parsing ──
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
   function updateFeatureUI() {
     const section = $('api-config-section');
     if (section) section.classList.toggle('hidden', !_featureEnabled);
   }
 
   const featureToggle = $('ai-feature-enable');
+<<<<<<< HEAD
   if (featureToggle) {
     featureToggle.addEventListener('change', async () => {
       featureToggle.disabled = true;
@@ -59,6 +122,35 @@
       } catch (e) { }
     }
     loadFeature();
+=======
+  featureToggle.addEventListener('change', async () => {
+    featureToggle.disabled = true;
+    try {
+      const r = await fetch('/api/ai/feature', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ enabled: featureToggle.checked }),
+      });
+      const d = await r.json();
+      _featureEnabled = !!d.enabled;
+      featureToggle.checked = _featureEnabled;
+      updateFeatureUI();
+      toast(_featureEnabled ? 'AI-assisted CV parsing enabled' : 'AI-assisted CV parsing disabled - offline parser only', 'ok');
+    } catch (e) {
+      featureToggle.checked = !featureToggle.checked;
+      alert('Failed to update the AI-parsing toggle: ' + e.message);
+    } finally {
+      featureToggle.disabled = false;
+    }
+  });
+
+  async function loadFeature() {
+    try {
+      const d = await fetch('/api/ai/feature').then(r => r.json());
+      _featureEnabled = !!d.enabled;
+      featureToggle.checked = _featureEnabled;
+      updateFeatureUI();
+    } catch (e) { }
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
   }
 
   document.querySelectorAll('.ai-prov-btn').forEach(btn => {
@@ -88,8 +180,15 @@
         document.querySelectorAll('.ai-prov-btn').forEach(b =>
           b.classList.toggle('active', b.dataset.provider === _provider));
         fillModels(c.model);
+<<<<<<< HEAD
         if ($('ai-temp')) $('ai-temp').value = c.temperature;
         if ($('ai-temp-val')) $('ai-temp-val').textContent = (c.temperature || 0.2).toFixed(2);
+=======
+        $('ai-temp').value = c.temperature; $('ai-temp-val').textContent = c.temperature.toFixed(2);
+        $('api-status').textContent = `✓ Configured · ${_provider}`;
+      } else {
+        $('offline-status').textContent = 'Active · Parsing now';
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
       }
     } catch (e) { }
   }
@@ -119,6 +218,7 @@
       } finally {
         saveBtn.disabled = false;
       }
+<<<<<<< HEAD
     });
   }
 
@@ -160,6 +260,39 @@
       } catch (e) { alert('Failed to clear key: ' + e.message); }
     });
   }
+=======
+      $('ai-key').value = '';
+      alert('API key saved. CVs will now be parsed using Claude, OpenAI, Gemini, Groq, or Hugging Face. If the key is invalid or out of credits, parsing will fall back to the offline parser.');
+      await loadConfig();
+    } catch(e) {
+      alert('Save failed: ' + e.message);
+    } finally {
+      $('ai-save-btn').disabled = false;
+    }
+  });
+
+  // Clear key (switch to offline)
+  $('ai-clear-btn').addEventListener('click', async () => {
+    if (!confirm('Remove the API key and switch to offline parsing?')) return;
+    $('ai-clear-btn').disabled = true;
+    try {
+      await fetch('/api/ai/config', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({provider:_provider, model:$('ai-model').value, temperature:parseFloat($('ai-temp').value), api_key:''})
+      });
+      alert('API key removed. CVs will be parsed with the offline regex + spaCy parser.');
+      await loadConfig();
+    } catch(e) {
+      alert('Clear failed: ' + e.message);
+    } finally {
+      $('ai-clear-btn').disabled = false;
+    }
+  });
+
+  document.querySelector('.sb-item[data-page="admin"]')
+    ?.addEventListener('click', () => { if(!_loaded) loadConfig(); loadFeature(); });
+>>>>>>> a528b5087ddcd8947f05302f951f1e53a60dd15b
 
   loadConfig();
 })();

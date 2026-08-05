@@ -23,6 +23,7 @@ import io
 import json
 import logging
 import re
+import threading
 import urllib.request
 import urllib.error
 import uuid
@@ -30,7 +31,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from google.oauth2 import service_account
@@ -44,6 +45,8 @@ logger = logging.getLogger("volt_cv.employee_db")
 
 EMPLOYEES_FILE = OUTPUT_DIR / "employees.json"
 SHEET_SETTINGS_FILE = OUTPUT_DIR / "employee_sheet_settings.json"
+
+_lock = threading.Lock()
 
 SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 FORMS_SCOPES = ["https://www.googleapis.com/auth/forms.responses.readonly",
@@ -89,6 +92,10 @@ FIELDS = [
     ("account_number", "Account Number", False, True, ["account number", "account no", "bank account"]),
     ("ifsc", "IFSC Code", False, False, ["ifsc code", "ifsc"]),
     ("salary_ctc", "Monthly Salary (CTC)", False, True, ["monthly salary", "ctc", "salary"]),
+    # Dashboard admin access (Google Sign-In). Never auto-mapped from an
+    # imported form/sheet (empty aliases) — set explicitly via the Employee
+    # Database UI or API only.
+    ("is_admin", "Dashboard Admin", False, False, []),
 ]
 
 FIELD_KEYS = [f[0] for f in FIELDS]
@@ -180,7 +187,7 @@ def _compute_derived(emp: dict) -> dict:
         if months == 12:
             whole, months = whole + 1, 0
         emp["service_duration"] = f"{whole}y {months}m"
-        emp["years_of_service_achievement"] = f"{whole} year{'s' if whole != 1 else ''}" if whole >= 1 else "—"
+        emp["years_of_service_achievement"] = f"{whole} year{'s' if whole != 1 else ''}" if whole >= 1 else "-"
     else:
         emp["service_duration"] = ""
         emp["years_of_service_achievement"] = ""
@@ -199,6 +206,30 @@ def list_employees() -> list:
     return _load()["employees"]
 
 
+def find_employee_by_email(email: str) -> Optional[dict]:
+    """Look up an employee by either their personal or official email
+    (case-insensitive). Used by auth.py to gate Google Sign-In to registered
+    employees and to resolve admin access (is_admin)."""
+    email = (email or "").strip().lower()
+    if not email:
+        return None
+    for emp in list_employees():
+        if (emp.get("email") or "").strip().lower() == email:
+            return emp
+        if (emp.get("email_official") or "").strip().lower() == email:
+            return emp
+    return None
+
+
+def _truthy(v) -> bool:
+    return (v or "").strip().lower() in ("true", "1", "yes")
+
+
+def is_admin_email(email: str) -> bool:
+    emp = find_employee_by_email(email)
+    return bool(emp) and _truthy(emp.get("is_admin"))
+
+
 def _dedupe_key(emp: dict) -> str:
     for k in ("employee_id", "email_official", "email", "aadhaar", "pan"):
         v = (emp.get(k) or "").strip().lower()
@@ -208,40 +239,46 @@ def _dedupe_key(emp: dict) -> str:
 
 
 def create_employee(data: dict) -> dict:
-    store = _load()
-    emp = _normalize(data)
-    emp["_id"] = uuid.uuid4().hex
-    emp["created_at"] = emp["updated_at"] = _now()
-    store["employees"].append(emp)
-    _save(store)
+    with _lock:
+        store = _load()
+        emp = _normalize(data)
+        emp["_id"] = uuid.uuid4().hex
+        emp["created_at"] = emp["updated_at"] = _now()
+        store["employees"].append(emp)
+        _save(store)
     _sheet_sync_safe(store["employees"])
     return emp
 
 
 def update_employee(emp_id: str, data: dict) -> dict:
-    store = _load()
-    for i, e in enumerate(store["employees"]):
-        if e.get("_id") == emp_id:
-            merged = {**e, **_normalize({**e, **data})}
-            merged["_id"] = emp_id
-            merged["created_at"] = e.get("created_at", _now())
-            merged["updated_at"] = _now()
-            store["employees"][i] = merged
-            _save(store)
-            _sheet_sync_safe(store["employees"])
-            return merged
-    raise KeyError(emp_id)
+    with _lock:
+        store = _load()
+        for i, e in enumerate(store["employees"]):
+            if e.get("_id") == emp_id:
+                merged = {**e, **_normalize({**e, **data})}
+                merged["_id"] = emp_id
+                merged["created_at"] = e.get("created_at", _now())
+                merged["updated_at"] = _now()
+                store["employees"][i] = merged
+                _save(store)
+                break
+        else:
+            raise KeyError(emp_id)
+    _sheet_sync_safe(store["employees"])
+    return merged
 
 
 def delete_employee(emp_id: str) -> bool:
-    store = _load()
-    before = len(store["employees"])
-    store["employees"] = [e for e in store["employees"] if e.get("_id") != emp_id]
-    if len(store["employees"]) == before:
-        return False
-    _save(store)
-    _sheet_sync_safe(store["employees"])
-    return True
+    with _lock:
+        store = _load()
+        before = len(store["employees"])
+        store["employees"] = [e for e in store["employees"] if e.get("_id") != emp_id]
+        removed = len(store["employees"]) != before
+        if removed:
+            _save(store)
+    if removed:
+        _sheet_sync_safe(store["employees"])
+    return removed
 
 
 # ──────────────────────────────────────────────
@@ -493,7 +530,7 @@ def _fetch_public_csv(raw_url: str) -> list:
     except urllib.error.HTTPError as exc:
         if exc.code in (401, 403):
             raise ValueError(
-                "Access denied — the sheet isn't shared publicly. Set General "
+                "Access denied - the sheet isn't shared publicly. Set General "
                 "access to 'Anyone with the link' (Viewer)."
             )
         if exc.code == 404:
@@ -655,7 +692,7 @@ def _http(exc: Exception):
             return HTTPException(403, f"Access denied. Share the Sheet/Form with the service account ({sa}) "
                                       "as Editor/Viewer, and enable the Sheets & Forms APIs.")
         if st == 404:
-            return HTTPException(404, "Not found — check the link/ID and that it's shared with the service account.")
+            return HTTPException(404, "Not found - check the link/ID and that it's shared with the service account.")
         return HTTPException(502, f"Google API error ({st}).")
     if isinstance(exc, (ValueError, FileNotFoundError)):
         return HTTPException(400, str(exc))
@@ -672,24 +709,73 @@ async def api_schema():
     return {"fields": field_schema()}
 
 
+def _any_admin_exists() -> bool:
+    return any(_truthy(e.get("is_admin")) for e in list_employees())
+
+
+def _gate_is_admin(data: dict, request: Request) -> tuple[dict, list[str]]:
+    """Returns (cleaned_data, ignored_fields). Only a signed-in admin may
+    grant/revoke dashboard admin access through this endpoint. Employee CRUD
+    here is otherwise open to any signed-in dashboard user — without this, a
+    non-admin could self-promote by including is_admin in their own record's
+    create/update body. The caller surfaces `ignored_fields` back to the
+    frontend so a stripped is_admin change is never silently swallowed.
+
+    Bootstrap exception: while auth is off, or once auth is on but no
+    employee is yet marked admin, edits are allowed unrestricted — otherwise
+    nobody could ever grant the first admin."""
+    if "is_admin" not in data:
+        return data, []
+    try:
+        from auth import auth_enabled, current_user
+        if not auth_enabled() or not _any_admin_exists():
+            return data, []
+        email = current_user(request)
+        if email and is_admin_email(email):
+            return data, []
+    except Exception:
+        pass
+    data = dict(data)
+    data.pop("is_admin", None)
+    return data, ["is_admin"]
+
+
 @router.post("")
-async def api_create(body: EmployeeBody):
-    return create_employee(body.data)
+async def api_create(body: EmployeeBody, request: Request):
+    try:
+        cleaned, ignored = _gate_is_admin(body.data, request)
+        result = create_employee(cleaned)
+        if ignored:
+            result = {**result, "_ignored_fields": ignored}
+        return result
+    except Exception as exc:
+        raise _http(exc)
 
 
 @router.put("/{emp_id}")
-async def api_update(emp_id: str, body: EmployeeBody):
+async def api_update(emp_id: str, body: EmployeeBody, request: Request):
     try:
-        return update_employee(emp_id, body.data)
+        cleaned, ignored = _gate_is_admin(body.data, request)
+        result = update_employee(emp_id, cleaned)
+        if ignored:
+            result = {**result, "_ignored_fields": ignored}
+        return result
     except KeyError:
         raise HTTPException(404, "Employee not found.")
+    except Exception as exc:
+        raise _http(exc)
 
 
 @router.delete("/{emp_id}")
 async def api_delete(emp_id: str):
-    if not delete_employee(emp_id):
-        raise HTTPException(404, "Employee not found.")
-    return {"ok": True}
+    try:
+        if not delete_employee(emp_id):
+            raise HTTPException(404, "Employee not found.")
+        return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _http(exc)
 
 
 @router.get("/sheet/settings")
