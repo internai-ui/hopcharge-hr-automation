@@ -1,8 +1,6 @@
 """
 scoring/config_store.py — Secure persistence for AI provider configuration.
 
-Feature 1 + Feature 9 (security).
-
 Responsibilities
   • Persist provider/model/temperature to output/ai_config.json
   • Encrypt the API key at rest with Fernet (symmetric AES-128-CBC + HMAC)
@@ -192,14 +190,15 @@ def public_config() -> dict:
 
 
 # ──────────────────────────────────────────────
-# AI-based scoring feature toggle
+# AI-assisted CV parsing feature toggle
 #
 # Master switch, OFF by default. While off, get_provider() (providers.py)
-# ignores any stored provider/key and always returns the offline
-# RulesEngineProvider — so no external LLM call can happen even if a key was
-# saved before the feature was disabled. Persisted in the same file as the
-# rest of the AI config, so it survives app restarts and is shared by every
-# browser/session hitting this server (not a per-browser localStorage flag).
+# ignores any stored provider/key and returns None — so no external LLM call
+# can happen even if a key was saved before the feature was disabled, and
+# ai_resume_parser.py falls back to the offline regex+spaCy parser. Persisted
+# in the same file as the rest of the AI config, so it survives app restarts
+# and is shared by every browser/session hitting this server (not a
+# per-browser localStorage flag).
 # ──────────────────────────────────────────────
 
 def is_feature_enabled() -> bool:

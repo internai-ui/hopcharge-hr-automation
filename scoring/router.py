@@ -1,28 +1,20 @@
 """
-scoring/router.py — All HTTP endpoints for the AI Scoring feature.
+scoring/router.py — AI provider connection endpoints (shared by CV parsing).
 
 Mounted via:  app.include_router(scoring_router)
 
-  AI Settings (Feature 1)
-    GET   /api/ai/feature           whether AI-based (external LLM) scoring is enabled
+    GET   /api/ai/feature           whether AI-based parsing is enabled
     POST  /api/ai/feature           enable/disable it (persisted, off by default)
     GET   /api/ai/config            current config (NO key)
     POST  /api/ai/config            save provider/model/temp/(key) — 403 while disabled
     POST  /api/ai/test              test connection — 403 while disabled
+    POST  /api/ai/validate          test a key/model before saving
     GET   /api/ai/models            available providers + models
 
-  Rubrics (Feature 5)
-    GET   /api/ai/rubrics           list roles
-    GET   /api/ai/rubrics/{key}     full rubric
-    PUT   /api/ai/rubrics/{key}     upsert rubric
-
-  Scoring (Features 3,4,7)
-    POST  /api/ai/score/{response_id}   score one candidate
-    POST  /api/ai/score-all             bulk score pending
-
-  Analytics + audit (Features 8,9)
-    GET   /api/ai/analytics
-    GET   /api/ai/audit
+Candidate/form-response scoring has been removed from this app entirely —
+this module now exists solely to configure the AI provider ai_resume_parser.py
+uses for CV parsing. The name "scoring" is legacy; kept to avoid an unrelated
+rename churning imports elsewhere.
 """
 
 from __future__ import annotations
@@ -32,12 +24,12 @@ import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from scoring import config_store, rubrics, engine, analytics, audit
+from scoring import config_store
 from scoring.providers import get_provider
 
 logger = logging.getLogger("volt_cv.scoring")
 
-router = APIRouter(prefix="/api/ai", tags=["ai-scoring"])
+router = APIRouter(prefix="/api/ai", tags=["ai-provider"])
 
 
 # ──────────────────────────────────────────────
@@ -59,7 +51,7 @@ def _require_ai_feature_enabled():
     if not config_store.is_feature_enabled():
         raise HTTPException(
             status_code=403,
-            detail="AI-based scoring is disabled. Enable it in Scoring Mode settings first.",
+            detail="AI-based parsing is disabled. Enable it in Admin Settings first.",
         )
 
 
@@ -79,7 +71,7 @@ async def set_feature(body: FeatureBody):
 
 
 # ──────────────────────────────────────────────
-# Feature 1 — AI Settings
+# Provider configuration
 # ──────────────────────────────────────────────
 
 @router.get("/models")
@@ -124,6 +116,8 @@ async def test_connection():
     """
     _require_ai_feature_enabled()
     provider = get_provider(config_store.get_runtime_config())
+    if provider is None:
+        raise HTTPException(status_code=400, detail="No provider configured yet. Save a provider and API key first.")
     result = provider.validate()
     return {"success": result.ok, "provider": provider.name, **result.to_dict()}
 
@@ -153,78 +147,3 @@ async def validate_key(body: ValidateBody):
     provider = cls(body.model, body.temperature, body.api_key.strip())
     result = provider.validate()
     return {"success": result.ok, "provider": provider.name, **result.to_dict()}
-
-
-# ──────────────────────────────────────────────
-# Feature 5 — Rubrics
-# ──────────────────────────────────────────────
-
-@router.get("/rubrics")
-async def list_rubrics():
-    return {"success": True, "roles": rubrics.list_roles()}
-
-
-@router.get("/rubrics/{role_key}")
-async def get_rubric(role_key: str):
-    r = rubrics.get_rubric(role_key)
-    if r is None:
-        raise HTTPException(status_code=404, detail=f"Rubric '{role_key}' not found.")
-    return {"success": True, "rubric": r}
-
-
-@router.put("/rubrics/{role_key}")
-async def put_rubric(role_key: str, rubric: dict):
-    saved = rubrics.upsert_rubric(role_key, rubric)
-    return {"success": True, "rubric": saved}
-
-
-# ──────────────────────────────────────────────
-# Features 3, 4, 7 — Scoring
-# ──────────────────────────────────────────────
-
-@router.post("/score/{response_id}")
-async def score_one(response_id: str):
-    if not audit.scoring_limiter.acquire():
-        raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again shortly.")
-    try:
-        result = engine.score_response(response_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
-    except Exception as exc:
-        logger.error("Scoring failed: %s", exc)
-        raise HTTPException(status_code=500, detail=f"Scoring failed: {exc}")
-    # If this candidate now qualifies, auto-move them into HR Round.
-    try:
-        from accepted_store import auto_move_qualified
-        auto_move_qualified()
-    except Exception as exc:
-        logger.warning("Auto-move after scoring failed: %s", exc)
-    return {"success": True, "result": result}
-
-
-@router.post("/score-all")
-async def score_all():
-    if not audit.scoring_limiter.acquire():
-        raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again shortly.")
-    summary = engine.score_all_pending()
-    # After scoring, auto-move candidates above the score threshold into HR Round.
-    try:
-        from accepted_store import auto_move_qualified
-        summary["auto_moved"] = auto_move_qualified()
-    except Exception as exc:
-        logger.warning("Auto-move after scoring failed: %s", exc)
-    return {"success": True, **summary}
-
-
-# ──────────────────────────────────────────────
-# Features 8, 9 — Analytics + audit
-# ──────────────────────────────────────────────
-
-@router.get("/analytics")
-async def get_analytics():
-    return {"success": True, **analytics.analytics()}
-
-
-@router.get("/audit")
-async def get_audit(limit: int = 200):
-    return {"success": True, "entries": audit.read_audit(limit)}

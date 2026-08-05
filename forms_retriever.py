@@ -37,10 +37,7 @@ STORAGE SCHEMA  (output/form_responses.json)
       "submitted_at":  "2025-06-03T08:17:05Z",
       "answers": [
         {"question": "Why do you want to join HopCharge?", "type": "textQuestion", "answer": "..."}
-      ],
-      "ai_score":      null,   ← filled by AI evaluator later
-      "ai_reasoning":  null,   ← filled by AI evaluator later
-      "shortlisted":   null    ← filled after scoring
+      ]
     }
   ]
 }
@@ -284,10 +281,6 @@ def parse_response(raw: dict, q_index: dict) -> dict:
         "email":        raw.get("respondentEmail", ""),
         "submitted_at": raw.get("lastSubmittedTime", raw.get("createTime", "")),
         "answers":      answers,
-        # ── slots for the AI evaluator (filled in the next sprint) ──
-        "ai_score":     None,
-        "ai_reasoning": None,
-        "shortlisted":  None,
     }
 
 

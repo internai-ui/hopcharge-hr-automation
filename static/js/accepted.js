@@ -108,14 +108,13 @@
         msg = 'No onboarded candidates yet. In Round 2, mark someone ★ SELECTED and then move them here with ➜ ONBOARDED.';
       else
         msg = `No candidates in ${_labels[_stage]} yet. Promote them from ${_labels[PREV[_stage]]}.`;
-      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:34px;color:var(--text-dim)">${msg}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:34px;color:var(--text-dim)">${msg}</td></tr>`;
       return;
     }
     tbody.innerHTML = '';
     rows.forEach((r, i)=>{
       const since = r.stage_changed_at || r.accepted_at;
       const when = since ? new Date(since).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—';
-      const score = (r.total_score!=null) ? `${r.total_score}/100` : (r.ai_score!=null ? `${r.ai_score}` : '—');
       const isSelected = _selectedSet.has(r.response_id);
       let promoteBtn;
       if (_stage === 'hr' || _stage === 'round1'){
@@ -152,7 +151,6 @@
         <td class="td-email">${esc(r.email)||'<span style="opacity:.35">—</span>'}</td>
         <td class="td-phone">${esc(r.phone)||'<span style="opacity:.35">—</span>'}</td>
         <td>${r.role?`<span class="td-pill" style="background:rgba(31,45,89,.12);color:#c4b5fd">${esc(r.role)}</span>`:'<span style="opacity:.35">—</span>'}</td>
-        <td style="font-family:'JetBrains Mono',monospace;font-size:11.5px">${score}</td>
         <td style="font-size:10px;white-space:nowrap;color:var(--text-dim)">${when}</td>
         <td style="white-space:nowrap">${promoteBtn}</td>
         <td style="white-space:nowrap">${backBtn}${rejectBtn}</td>`;
@@ -193,7 +191,6 @@
       { q:'Phone Number',  a:r.phone },
       { q:'Location / City', a:r.location || r.city },
       { q:'Role',          a:r.role, full:true },
-      { q:'Score',         a:(r.score!=null? r.score+'/100' : (r.total_score!=null? r.total_score : null)) },
     ];
     idItems.forEach(g=>{
       const div = document.createElement('div');

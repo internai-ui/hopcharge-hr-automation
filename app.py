@@ -432,7 +432,7 @@ async def download_results(fmt: str):
 # ──────────────────────────────────────────────
 
 class EmailRequest(BaseModel):
-    form_link:         str
+    form_link:         Optional[str] = None   # falls back to Admin Settings' saved recruitment form link
     tracking_base_url: Optional[str] = None   # e.g. http://localhost:8000
     email_entry_id:    Optional[str] = None   # e.g. entry.123456789 (form email field)
     manual_emails:     Optional[str] = None   # newline/comma-separated — send without parsed CVs
@@ -446,9 +446,11 @@ async def send_emails(req: EmailRequest):
     """
     from emailer import send_campaign
     import gmail_oauth
+    import admin_settings
 
-    if not req.form_link or not req.form_link.startswith("http"):
-        raise HTTPException(status_code=400, detail="A valid Google Forms URL is required.")
+    form_link = (req.form_link or "").strip() or admin_settings.get_recruitment_form().get("form_link", "")
+    if not form_link or not form_link.startswith("http"):
+        raise HTTPException(status_code=400, detail="No recruitment form link configured. Set it in Admin Settings first.")
 
     if not gmail_oauth.is_connected():
         raise HTTPException(
@@ -474,13 +476,13 @@ async def send_emails(req: EmailRequest):
     try:
         if req.tracking_base_url:
             _save_tracking_config({
-                "base_form_url": req.form_link.strip(),
+                "base_form_url": form_link,
                 "email_entry_id": (req.email_entry_id or "").strip() or None,
                 "public_base_url": req.tracking_base_url.strip().rstrip("/"),
             })
 
         summary = send_campaign(
-            form_link=req.form_link,
+            form_link=form_link,
             tracking_base_url=req.tracking_base_url,
             candidates=manual_candidates,
             gmail_service=gmail_service,
@@ -518,7 +520,7 @@ if __name__ == "__main__":
 # ──────────────────────────────────────────────
 
 class FormsRequest(BaseModel):
-    form_id:          str
+    form_id:          Optional[str] = None      # falls back to Admin Settings' saved recruitment form ID
     auth_mode:        str = "service_account"   # "oauth" (same connection as Send Emails) or "service_account" (fallback)
     credentials_json: Optional[str] = None      # required only when auth_mode == "service_account"
 
@@ -530,9 +532,11 @@ async def fetch_form_responses(req: FormsRequest):
     into output/form_responses.json, and return the full structured dataset.
     """
     from forms_retriever import sync_form_responses
+    import admin_settings
 
-    if not req.form_id.strip():
-        raise HTTPException(status_code=400, detail="form_id is required.")
+    form_id = (req.form_id or "").strip() or admin_settings.get_recruitment_form().get("form_id", "")
+    if not form_id:
+        raise HTTPException(status_code=400, detail="No recruitment form ID configured. Set it in Admin Settings first.")
     if req.auth_mode == "oauth":
         import gmail_oauth
         if not gmail_oauth.is_connected():
@@ -546,7 +550,7 @@ async def fetch_form_responses(req: FormsRequest):
 
     try:
         result = sync_form_responses(
-            form_id=req.form_id.strip(),
+            form_id=form_id,
             credentials_json=(req.credentials_json or "").strip(),
             auth_mode=req.auth_mode,
         )

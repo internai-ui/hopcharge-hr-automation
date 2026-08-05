@@ -1,6 +1,7 @@
 /* ───────── EMAIL CAMPAIGN ───────── */
 (function(){
-  const linkEl = document.getElementById('form-link');
+  const formLinkStatus = document.getElementById('form-link-status');
+  let _formLink = '';   // sourced from Admin Settings' saved recruitment form link
   const manualEnable = document.getElementById('manual-enable');
   const manualFields = document.getElementById('manual-fields');
   const manualEmailsEl = document.getElementById('manual-emails');
@@ -30,7 +31,7 @@
   function validateEmailForm(){
     const auth = window.getGoogleAuthStatus ? window.getGoogleAuthStatus() : { connected: false };
     const recipients = manualActive() ? parseManualEmails().length : validEmails();
-    const linkOk = linkEl && linkEl.value.trim().startsWith('http');
+    const linkOk = _formLink.startsWith('http');
     const ok = auth.connected && linkOk && recipients > 0;
 
     if (sendBtn) sendBtn.disabled = !ok;
@@ -38,7 +39,7 @@
       if (!auth.connected) {
         sendInfo.textContent = 'Connect your Google account above to send emails.';
       } else if (!linkOk) {
-        sendInfo.textContent = 'Enter a valid Google Forms URL above.';
+        sendInfo.textContent = 'Set the recruitment form link in Admin Settings first.';
       } else if (recipients === 0) {
         sendInfo.textContent = manualActive() ? 'Enter at least one valid recipient email below.' : 'Parse CVs first, or use manually added emails.';
       } else {
@@ -50,11 +51,25 @@
   window.refreshEmailCount = validateEmailForm;
   window.addEventListener('google-auth-changed', validateEmailForm);
 
-  if (linkEl) linkEl.addEventListener('input', validateEmailForm);
-  if (linkEl) linkEl.addEventListener('blur', () => {
-    if (linkEl.value.trim()) clearFieldError(linkEl);
-    else showFieldError(linkEl, 'Enter the Google Forms assessment link.');
-  });
+  async function loadFormLink(){
+    try{
+      const res = await fetch('/api/admin/settings');
+      const d = await res.json();
+      _formLink = ((d.settings && d.settings.recruitment_form && d.settings.recruitment_form.form_link) || '').trim();
+    }catch(e){ _formLink = ''; }
+    if (formLinkStatus) {
+      formLinkStatus.innerHTML = _formLink
+        ? `Recruitment form: <a href="${_formLink}" target="_blank" rel="noopener" style="color:var(--violet)">${_formLink}</a>`
+        : `No recruitment form set yet. <a href="#" data-goto="admin" style="color:var(--violet)">Set it in Admin Settings</a>.`;
+      formLinkStatus.querySelector('[data-goto]')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (window.goToPage) window.goToPage('admin');
+      });
+    }
+    validateEmailForm();
+  }
+  loadFormLink();
+  window.addEventListener('recruitment-form-changed', loadFormLink);
 
   if (manualEnable) {
     const syncManualUI = function(){
@@ -137,10 +152,12 @@
         return;
       }
 
-      const form_link = linkEl.value.trim();
-      const requiredFields = [
-        { input: linkEl, message: 'Enter the Google Forms assessment link.' },
-      ];
+      if (!_formLink.startsWith('http')) {
+        toast('Set the recruitment form link in Admin Settings first.', 'err');
+        return;
+      }
+      const form_link = _formLink;
+      const requiredFields = [];
       if (manualActive()) {
         requiredFields.push({
           input: manualEmailsEl,

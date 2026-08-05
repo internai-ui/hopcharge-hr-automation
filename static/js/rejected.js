@@ -39,14 +39,13 @@
 
     const tbody = document.getElementById('rej-tbody');
     if (!rows.length){
-      tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:34px;color:var(--text-dim)">No rejected candidates yet. Use the ✕ Reject button on the Form Responses tab.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:34px;color:var(--text-dim)">No rejected candidates yet. Use the ✕ Reject button on the Form Responses tab.</td></tr>';
       _updateRejEmailCount();
       return;
     }
     tbody.innerHTML = '';
     rows.forEach((r, i)=>{
       const when = r.rejected_at ? new Date(r.rejected_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—';
-      const score = (r.total_score!=null) ? `${r.total_score}/100` : (r.ai_score!=null ? `${r.ai_score}` : '—');
       const notifiedCell = r.rejection_email_sent_at
         ? `<span title="${esc(r.rejection_email_sent_at)}" style="font-size:10px;color:#34d399">&#10003; ${new Date(r.rejection_email_sent_at).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span>`
         : '<span style="opacity:.35;font-size:10px">—</span>';
@@ -61,7 +60,6 @@
         <td class="td-email">${esc(r.email)||'<span style="opacity:.35">—</span>'}</td>
         <td class="td-phone">${esc(r.phone)||'<span style="opacity:.35">—</span>'}</td>
         <td>${r.role?`<span class="td-pill" style="background:rgba(31,45,89,.12);color:#c4b5fd">${esc(r.role)}</span>`:'<span style="opacity:.35">—</span>'}</td>
-        <td style="font-family:'JetBrains Mono',monospace;font-size:11.5px">${score}</td>
         <td><span class="dec-badge dec-rejected">${esc(r.rejected_round)||'—'}</span></td>
         <td style="font-size:10px;white-space:nowrap;color:var(--text-dim)">${when}</td>
         <td>${notifiedCell}</td>
@@ -187,14 +185,11 @@
     const body = document.getElementById('cm-body');
     body.innerHTML = '';
 
-    const score = (r.total_score!=null) ? (r.total_score+'/100') : (r.ai_score!=null ? String(r.ai_score) : null);
     const idItems = [
       { q:'Full Name',      a:r.name },
       { q:'Email Address',  a:r.email },
       { q:'Phone Number',   a:r.phone },
       { q:'Role',           a:r.role, full:true },
-      { q:'Score',          a:score },
-      { q:'Recommendation', a:r.recommendation },
     ];
     idItems.forEach(g=>{
       const div = document.createElement('div');

@@ -89,6 +89,10 @@ FIELDS = [
     ("account_number", "Account Number", False, True, ["account number", "account no", "bank account"]),
     ("ifsc", "IFSC Code", False, False, ["ifsc code", "ifsc"]),
     ("salary_ctc", "Monthly Salary (CTC)", False, True, ["monthly salary", "ctc", "salary"]),
+    # Dashboard admin access (Google Sign-In). Never auto-mapped from an
+    # imported form/sheet (empty aliases) — set explicitly via the Employee
+    # Database UI or API only.
+    ("is_admin", "Dashboard Admin", False, False, []),
 ]
 
 FIELD_KEYS = [f[0] for f in FIELDS]
@@ -197,6 +201,28 @@ def _normalize(emp: dict) -> dict:
 # ──────────────────────────────────────────────
 def list_employees() -> list:
     return _load()["employees"]
+
+
+def find_employee_by_email(email: str) -> Optional[dict]:
+    """Look up an employee by either their personal or official email
+    (case-insensitive). Used by auth.py to gate Google Sign-In to registered
+    employees and to resolve admin access (is_admin)."""
+    email = (email or "").strip().lower()
+    if not email:
+        return None
+    for emp in list_employees():
+        if (emp.get("email") or "").strip().lower() == email:
+            return emp
+        if (emp.get("email_official") or "").strip().lower() == email:
+            return emp
+    return None
+
+
+def is_admin_email(email: str) -> bool:
+    emp = find_employee_by_email(email)
+    if not emp:
+        return False
+    return (emp.get("is_admin") or "").strip().lower() in ("true", "1", "yes")
 
 
 def _dedupe_key(emp: dict) -> str:

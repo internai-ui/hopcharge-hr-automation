@@ -1,11 +1,10 @@
 /* Sidebar auth-check (was inline right after the sidebar markup) */
-    /* Reveal the Account section only when sign-in is enabled; the Users link
-       only for admins. Fails silently — the dashboard never depends on this. */
+    /* Reveal the Account section only when sign-in is enabled.
+       Fails silently — the dashboard never depends on this. */
     fetch('/api/auth/me').then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
       if (!d || d.auth === 'disabled' || !d.email) return;
       document.getElementById('sb-account').style.display = '';
       document.getElementById('sb-account-email').textContent = d.email;
-      if (d.role === 'admin') document.getElementById('sb-users-link').style.display = '';
     }).catch(function(){});
 
 'use strict';

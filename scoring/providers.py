@@ -1,13 +1,17 @@
 """
-scoring/providers.py — Feature 2: provider abstraction layer.
+scoring/providers.py — provider abstraction layer for AI-assisted CV parsing.
 
     AIProvider (ABC)
-    ├── ClaudeProvider     real Anthropic Messages API
-    ├── OpenAIProvider     real OpenAI Chat Completions API
-    └── RulesEngineProvider  offline, deterministic (in rules_engine.py)
+    ├── ClaudeProvider       real Anthropic Messages API
+    ├── OpenAIProvider       real OpenAI Chat Completions API
+    ├── GeminiProvider       real Google Gemini API
+    ├── GroqProvider         real Groq API
+    └── HuggingFaceProvider  real Hugging Face Inference Providers API
 
-The scoring engine calls provider.complete_json(system, user) and gets a parsed
-dict. It never knows which concrete provider answered.
+ai_resume_parser.py calls provider.complete_json(system, user) and gets a
+parsed dict back. It never knows which concrete provider answered.
+get_provider() returns None (rather than any object) when no real provider
+is configured — see its docstring below.
 
 Key validation
   Every real provider implements validate() -> ValidationResult, which makes a
@@ -561,7 +565,11 @@ def _friendly(status: str, provider: str) -> str:
 # Factory
 # ──────────────────────────────────────────────
 
-def get_provider(runtime_cfg: dict) -> AIProvider:
+def get_provider(runtime_cfg: dict) -> Optional[AIProvider]:
+    """Returns None when no real provider is usable (feature disabled, or no
+    API key saved) — callers (ai_resume_parser.is_available()/parse_resume_ai())
+    treat that as "AI parsing isn't available right now" and fall back to the
+    offline regex+spaCy parser, which always works."""
     provider = runtime_cfg.get("provider", "huggingface")
     model = runtime_cfg.get("model", "hf-default")
     temperature = runtime_cfg.get("temperature", 0.2)
@@ -569,15 +577,13 @@ def get_provider(runtime_cfg: dict) -> AIProvider:
 
     # Master feature toggle — OFF by default (see scoring/config_store.py).
     # While disabled, external LLM providers are never invoked, even if a key
-    # is still saved from an earlier session: force the offline engine.
+    # is still saved from an earlier session.
     from scoring import config_store
     if not config_store.is_feature_enabled():
         api_key = None
 
     if not api_key:
-        logger.info("No API key configured — using offline RulesEngineProvider.")
-        from scoring.rules_engine import RulesEngineProvider
-        return RulesEngineProvider(model=model, temperature=temperature if temperature is not None else 0.2)
+        return None
 
     if provider == "anthropic":
         return ClaudeProvider(model, temperature, api_key)

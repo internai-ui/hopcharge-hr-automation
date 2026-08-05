@@ -87,6 +87,7 @@
       const fid=`emp-f-${eA(fl.key)}`;
       let input;
       if(fl.derived){ input=`<input id="${fid}" class="field-input" value="${eA(val)}" disabled><span class="emp-hint">auto-calculated</span>`; }
+      else if(fl.key==='is_admin'){ input=`<label style="display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid)"><input type="checkbox" id="${fid}" data-k="${fl.key}" value="true" ${String(val).toLowerCase()==='true'?'checked':''} style="width:16px;height:16px"> Can sign in to this dashboard as an admin</label>`; }
       else if(SELECTS[fl.key]){ input=`<select id="${fid}" class="field-input" data-k="${fl.key}">`+SELECTS[fl.key].map(o=>`<option ${o===val?'selected':''}>${eT(o)}</option>`).join('')+`</select>`; }
       else if(TEXTAREAS.has(fl.key)){ input=`<textarea id="${fid}" class="field-input" data-k="${fl.key}" rows="2">${eT(val)}</textarea>`; }
       else { input=`<input id="${fid}" class="field-input" data-k="${fl.key}" value="${eA(val)}"${fl.key==='name'?' required':''}>`; }
@@ -106,7 +107,9 @@
   async function saveEmp(){
     const nameEl = document.querySelector('#emp-form [data-k="name"]');
     if (nameEl && !validateRequired([{ input: nameEl, message: 'Enter the employee\'s name.' }])) return;
-    const data={}; document.querySelectorAll('#emp-form [data-k]').forEach(el=>{ data[el.dataset.k]=el.value; });
+    const data={}; document.querySelectorAll('#emp-form [data-k]').forEach(el=>{
+      data[el.dataset.k] = el.type==='checkbox' ? String(el.checked) : el.value;
+    });
     try{
       const url = _empEditId?`/api/employees/${encodeURIComponent(_empEditId)}`:'/api/employees';
       const r=await fetch(url,{method:_empEditId?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});

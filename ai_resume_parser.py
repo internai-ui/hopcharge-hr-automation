@@ -117,15 +117,14 @@ def _coerce_confidence(v) -> dict:
 
 def is_available() -> bool:
     """
-    True only when the master AI-scoring toggle is on AND a real provider
-    (not the offline rules-engine) is configured. Mirrors the exact guard
-    scoring/providers.get_provider() already applies, so this stays in sync
-    with the AI Settings toggle without duplicating its logic.
+    True only when the master AI toggle is on AND a real provider (API key)
+    is configured. Mirrors the exact guard scoring/providers.get_provider()
+    already applies, so this stays in sync with the Admin Settings toggle
+    without duplicating its logic.
     """
     if not config_store.is_feature_enabled():
         return False
-    provider = get_provider(config_store.get_runtime_config())
-    return getattr(provider, "name", "") != "rules-engine"
+    return get_provider(config_store.get_runtime_config()) is not None
 
 
 def parse_resume_ai(raw_text: str, source_file: str = "") -> CandidateRecord:
@@ -137,7 +136,7 @@ def parse_resume_ai(raw_text: str, source_file: str = "") -> CandidateRecord:
     parser.parse_resume(), which always works offline.
     """
     provider = get_provider(config_store.get_runtime_config())
-    if getattr(provider, "name", "") == "rules-engine":
+    if provider is None:
         raise ProviderError("AI-based resume parsing is not enabled.", status="disabled")
 
     text = (raw_text or "").strip()

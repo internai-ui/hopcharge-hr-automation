@@ -1,6 +1,6 @@
-/* ───────── AI SETTINGS ───────── */
+/* ───────── AI-ASSISTED CV PARSING SETTINGS (lives inside Admin Settings) ───────── */
 (function () {
-  if (!document.getElementById('page-aisettings')) return;
+  if (!document.getElementById('ai-feature-enable')) return;
   const $ = id => document.getElementById(id);
   const MODELS = { huggingface:['meta-llama/Llama-3.1-8B-Instruct','Qwen/Qwen2.5-Coder-32B-Instruct','deepseek-ai/DeepSeek-R1'],
                    anthropic:['claude-3-5-sonnet-latest','claude-3-5-haiku-latest','claude-3-opus-latest','claude-sonnet-4-20250514'],
@@ -10,7 +10,7 @@
   let _provider = 'huggingface';
   let _currentMode = 'offline';  // offline or api
   let _loaded = false;
-  let _featureEnabled = false;   // master AI-scoring toggle — off by default, persisted server-side
+  let _featureEnabled = false;   // master AI-parsing toggle — off by default, persisted server-side
 
   function fillModels(sel) {
     // Populate the datalist with suggestions for the current provider
@@ -36,7 +36,7 @@
           const r = await fetch('/api/ai/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
           const d = await r.json();
           if (r.ok) {
-            toast('Switched to offline scoring','ok');
+            toast('Switched to offline parsing','ok');
           }
         } catch(e){ console.error('Switch to offline failed:', e); }
       }
@@ -46,7 +46,7 @@
   function updateModeUI() {
     const apiSection = $('api-config-section');
     const switchBtn = $('ai-switch-btn');
-    // While the master AI-scoring feature is off, force the offline view
+    // While the master AI-parsing feature is off, force the offline view
     // regardless of what mode was last selected — the API section, key
     // fields, etc. must never be reachable until the toggle is turned on.
     const effectiveMode = _featureEnabled ? _currentMode : 'offline';
@@ -61,7 +61,7 @@
     }
   }
 
-  // ── Master feature toggle: enable/disable AI-based (external LLM) scoring ──
+  // ── Master feature toggle: enable/disable AI-based (external LLM) CV parsing ──
   function updateFeatureUI() {
     const apiOption = $('ai-mode-api-option');
     const switchRow = $('ai-switch-btn-row');
@@ -91,11 +91,11 @@
       featureToggle.checked = _featureEnabled;
       _syncFeatureKnob();
       updateFeatureUI();
-      toast(_featureEnabled ? 'AI-based scoring enabled' : 'AI-based scoring disabled — offline rules engine only', 'ok');
+      toast(_featureEnabled ? 'AI-assisted CV parsing enabled' : 'AI-assisted CV parsing disabled — offline parser only', 'ok');
     } catch (e) {
       featureToggle.checked = !featureToggle.checked;
       _syncFeatureKnob();
-      alert('Failed to update the AI-scoring toggle: ' + e.message);
+      alert('Failed to update the AI-parsing toggle: ' + e.message);
     } finally {
       featureToggle.disabled = false;
     }
@@ -140,7 +140,7 @@
         $('ai-temp').value = c.temperature; $('ai-temp-val').textContent = c.temperature.toFixed(2);
         $('api-status').textContent = `✓ Configured · ${_provider}`;
       } else {
-        $('offline-status').textContent = 'Active · Scoring now';
+        $('offline-status').textContent = 'Active · Parsing now';
       }
       _loaded = true;
     } catch(e) { }
@@ -167,7 +167,7 @@
         return;
       }
       $('ai-key').value = '';
-      alert('API key saved. You can now score candidates using Claude, OpenAI, or Gemini. If the key is invalid or out of credits, scoring will fail with a clear error.');
+      alert('API key saved. CVs will now be parsed using Claude, OpenAI, Gemini, Groq, or Hugging Face. If the key is invalid or out of credits, parsing will fall back to the offline parser.');
       await loadConfig();
     } catch(e) {
       alert('Save failed: ' + e.message);
@@ -178,7 +178,7 @@
 
   // Clear key (switch to offline)
   $('ai-clear-btn').addEventListener('click', async () => {
-    if (!confirm('Remove the API key and switch to offline scoring?')) return;
+    if (!confirm('Remove the API key and switch to offline parsing?')) return;
     $('ai-clear-btn').disabled = true;
     try {
       await fetch('/api/ai/config', {
@@ -186,7 +186,7 @@
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({provider:_provider, model:$('ai-model').value, temperature:parseFloat($('ai-temp').value), api_key:''})
       });
-      alert('API key removed. Scoring will use the offline rules engine.');
+      alert('API key removed. CVs will be parsed with the offline regex + spaCy parser.');
       await loadConfig();
     } catch(e) {
       alert('Clear failed: ' + e.message);
@@ -195,7 +195,7 @@
     }
   });
 
-  document.querySelector('.sb-item[data-page="aisettings"]')
+  document.querySelector('.sb-item[data-page="admin"]')
     ?.addEventListener('click', () => { if(!_loaded) loadConfig(); loadFeature(); });
 
   // Initialize immediately so the page is functional without needing a sidebar click:
