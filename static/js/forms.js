@@ -190,9 +190,6 @@
       });
     }
 
-    // ── AI Evaluation section (Feature 6) ──
-    renderAiEval(body, r, idx);
-
     // ── Candidate Notes (append-only timeline) ──
     renderNotes(body, r.response_id);
 

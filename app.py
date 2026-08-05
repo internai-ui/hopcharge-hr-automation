@@ -109,9 +109,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 from colleges import router as colleges_router
 app.include_router(colleges_router)
 
-# AI Provider Configuration & Candidate Scoring Engine (scoring/ sub-package)
-from scoring import router as scoring_router
-app.include_router(scoring_router)
+# AI Provider Configuration & Candidate Scoring Engine (scoring/ sub-package removed)
 app.include_router(rejected_router)
 app.include_router(accepted_router)
 
@@ -122,9 +120,12 @@ app.include_router(calendly_invite_router)
 from notes_store import router as notes_router
 app.include_router(notes_router)
 
-# Admin settings (editable email text + score thresholds)
+# Admin settings (editable email text + thresholds + AI configuration)
 from admin_settings import router as admin_router
 app.include_router(admin_router)
+
+from ai_router import router as ai_router
+app.include_router(ai_router)
 
 from drive_sync import router as drive_router
 app.include_router(drive_router)

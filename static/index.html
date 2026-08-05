@@ -69,10 +69,6 @@
       <span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2l7 3.5L9 9 2 5.5 9 2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M5 7.5V11c0 1 1.8 2 4 2s4-1 4-2V7.5M15 6v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       <span class="label-wrap">College Outreach<span class="sub">Partnership pipeline</span></span>
     </button>
-    <button class="sb-item" data-page="aisettings">
-      <span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="2.4" stroke="currentColor" stroke-width="1.4"/><path d="M9 1.5v2M9 14.5v2M16.5 9h-2M3.5 9h-2M14.3 3.7l-1.4 1.4M5.1 12.9l-1.4 1.4M14.3 14.3l-1.4-1.4M5.1 5.1L3.7 3.7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
-      <span class="label-wrap">AI Settings<span class="sub">Provider &amp; scoring</span></span>
-    </button>
     <button class="sb-item" data-page="employees">
       <span class="ic"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2.5" y="3" width="13" height="12" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 7h13M6.5 7v8" stroke="currentColor" stroke-width="1.4"/></svg></span>
       <span class="label-wrap">Employee Database<span class="sub">Master sheet &amp; records</span></span>
@@ -524,9 +520,6 @@
       <div class="results-header" style="margin-bottom:14px">
         <span class="results-title" id="forms-title-label">Responses</span>
         <div class="header-controls">
-          <button id="score-all-btn" class="btn-ghost" style="white-space:nowrap"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1l1.6 3.3 3.6.5-2.6 2.5.6 3.6-3.2-1.7-3.2 1.7.6-3.6L1.3 4.8l3.6-.5L6.5 1Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg> Score All Pending</button>
-          <button id="auto-move-btn" class="btn-ghost" style="white-space:nowrap;border-color:rgba(52,211,153,.4);color:#34d399" title="Move candidates scoring above the threshold into HR Round" aria-label="Move candidates scoring above the threshold into HR Round">➜ Auto-move &gt; <span id="auto-move-thresh">65</span></button>
-          <button id="auto-reject-btn" class="btn-ghost" style="white-space:nowrap;border-color:rgba(248,113,113,.4);color:#f87171" title="Reject candidates scoring below the threshold" aria-label="Reject candidates scoring below the threshold">✕ Auto-reject &lt; <span id="auto-reject-thresh">30</span></button>
           <div class="search-wrap"><span class="search-icon">&#x2315;</span><input id="forms-search" type="text" placeholder="Search email or answer&#x2026;"></div>
         </div>
       </div>
@@ -849,132 +842,7 @@
   </div>
 </section>
 
-<!-- ═══ AI SETTINGS ═══ -->
-<section id="page-aisettings" class="page">
-  <div class="shell page-pad-top">
-    <div class="page-head">
-      <div class="eyebrow">Module 05</div>
-      <h1>Scoring <span class="grad-text">Mode</span></h1>
-      <p>Choose how candidates are scored. Offline mode (rules engine) requires no API key and scores instantly using the rubrics directly. API mode uses Claude, OpenAI, Google Gemini, or Groq for more nuanced evaluation. Both produce identical output — switch anytime without losing anything.</p>
-    </div>
-
-    <div class="glass-card ai-cfg-card" style="margin-bottom:20px;padding:16px 20px;display:flex;align-items:center;gap:14px">
-      <label class="switch" style="position:relative;display:inline-block;width:38px;height:21px;flex-shrink:0">
-        <input type="checkbox" id="ai-feature-enable" style="opacity:0;width:0;height:0">
-        <span class="slider" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.15);border-radius:21px;transition:.25s"></span>
-      </label>
-      <div style="flex:1">
-        <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--violet)">🤖 ENABLE AI-BASED SCORING (EXTERNAL PROVIDERS)</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:1px" id="ai-feature-desc">Off by default. Scoring runs on the offline rules engine only — no API key fields, no external calls. Turning this on reveals the Claude / OpenAI / Gemini / Groq configuration below.</div>
-      </div>
-    </div>
-
-    <div id="ai-cfg-grid" class="ai-cfg-grid">
-      <!-- Mode selector -->
-      <div class="glass-card ai-cfg-card">
-        <div class="ai-cfg-title">Scoring Mode</div>
-
-        <div class="ai-mode-options">
-          <div class="ai-mode-option" data-mode="offline">
-            <div class="ai-mode-radio"></div>
-            <div class="ai-mode-text">
-              <div class="ai-mode-label">📊 Offline (Rules Engine)</div>
-              <div class="ai-mode-desc">Deterministic scoring from rubrics. No API key needed. Instant evaluation.</div>
-              <div class="ai-mode-status" id="offline-status">Active · Scoring now</div>
-            </div>
-          </div>
-
-          <div class="ai-mode-option hidden" data-mode="api" id="ai-mode-api-option">
-            <div class="ai-mode-radio"></div>
-            <div class="ai-mode-text">
-              <div class="ai-mode-label">🤖 API-Based (Claude / OpenAI / Gemini / Groq)</div>
-              <div class="ai-mode-desc">LLM-based scoring for nuanced evaluation. Requires an API key.</div>
-              <div class="ai-mode-status" id="api-status">Not configured</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- API config section (shown only when API mode selected) -->
-        <div id="api-config-section" class="ai-api-config hidden" style="margin-top:24px;padding-top:24px;border-top:1px solid var(--border-dim)">
-          <label class="field-label">Provider</label>
-          <div class="ai-provider-toggle">
-            <button class="ai-prov-btn active" data-provider="huggingface">
-              <span class="ai-prov-name">Hugging Face <span style="opacity:.6;font-weight:600">(free)</span></span>
-            </button>
-            <button class="ai-prov-btn" data-provider="anthropic">
-              <span class="ai-prov-name">Anthropic Claude</span>
-            </button>
-            <button class="ai-prov-btn" data-provider="openai">
-              <span class="ai-prov-name">OpenAI</span>
-            </button>
-            <button class="ai-prov-btn" data-provider="gemini">
-              <span class="ai-prov-name">Google Gemini</span>
-            </button>
-            <button class="ai-prov-btn" data-provider="groq">
-              <span class="ai-prov-name">Groq</span>
-            </button>
-          </div>
-          <span class="field-hint">Hugging Face uses a free-tier shared inference API (no billing) — get a token at huggingface.co/settings/tokens with "Inference Providers" permission.</span>
-
-          <label class="field-label" for="ai-model" style="margin-top:18px">Model<span class="req-mark">*</span></label>
-          <input id="ai-model" class="field-input" list="ai-model-list" placeholder="e.g. claude-3-5-sonnet-latest" autocomplete="off" required>
-          <datalist id="ai-model-list"></datalist>
-          <span class="field-hint">Pick a suggestion or type the exact model id from your provider console.</span>
-
-          <label class="field-label" for="ai-key" style="margin-top:18px">API Key<span class="req-mark">*</span></label>
-          <input id="ai-key" class="field-input" type="password" placeholder="Enter your API key" required>
-          <span class="field-hint">Stored encrypted · never displayed after save</span>
-
-          <label class="field-label" for="ai-temp" style="margin-top:18px">Temperature <span id="ai-temp-val" style="color:var(--violet)">0.2</span></label>
-          <input id="ai-temp" type="range" min="0" max="1" step="0.05" value="0.2" class="ai-slider">
-          <div class="ai-temp-labels"><span>Precise (0.0)</span><span>Creative (1.0)</span></div>
-
-          <div class="send-row" style="margin-top:22px">
-            <button id="ai-save-btn" class="btn-parse">Save API Key</button>
-            <button id="ai-clear-btn" class="btn-ghost">Clear Key (Use Offline)</button>
-          </div>
-        </div>
-
-        <div class="send-row hidden" id="ai-switch-btn-row" style="margin-top:18px;gap:8px">
-          <button id="ai-switch-btn" class="btn-ghost" style="flex:1">Switch to API Mode</button>
-        </div>
-      </div>
-
-      <!-- Info card -->
-      <div class="glass-card ai-cfg-card">
-        <div class="ai-cfg-title">How It Works</div>
-
-        <div style="font-size:13px;color:var(--text-mid);line-height:1.7">
-          <div style="margin-bottom:16px">
-            <div style="font-weight:700;color:var(--text-on);margin-bottom:6px">📊 Offline Scoring</div>
-            <ul style="margin:0;padding-left:20px">
-              <li>Uses your role rubrics (objective + AI = 100 per role)</li>
-              <li>Concept matching, not keyword-based</li>
-              <li>Paraphrase-robust (same meaning = same score)</li>
-              <li>Honours per-role strictness &amp; creativeness</li>
-              <li>Instant, no latency</li>
-            </ul>
-          </div>
-
-          <div class="hidden" id="ai-how-it-works-api" style="margin-bottom:16px">
-            <div style="font-weight:700;color:var(--text-on);margin-bottom:6px">🤖 API-Based Scoring</div>
-            <ul style="margin:0;padding-left:20px">
-              <li>LLM reads your rubric guides</li>
-              <li>Understands intent, sarcasm, novel phrasing</li>
-              <li>May score more generously</li>
-              <li>Requires API calls (slight latency)</li>
-            </ul>
-          </div>
-
-          <div style="background:var(--glass-2);border-radius:var(--r-sm);padding:12px;border:1px solid var(--border-dim)">
-            <strong style="color:var(--violet)">✓ Switch anytime</strong><br/>
-            Both paths produce identical output. Your evaluations, modal, analytics — all unchanged.
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+<!-- ═══ AI SETTINGS REMOVED (MERGED INTO ADMIN SETTINGS) ═══ -->
 
 <!-- ── COLLEGE ADD/EDIT MODAL ── -->
 <div id="discover-modal">
@@ -1219,33 +1087,51 @@
       <p>Edit the emails sent at each stage and tune the score thresholds that drive auto-reject and auto-accept. Changes apply to every email and pipeline action from the moment you save.</p>
     </div>
 
-    <!-- Score thresholds -->
+    <!-- AI CV Parsing Settings -->
     <div class="ccard" style="margin-bottom:26px">
-      <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;color:var(--text-on);margin-bottom:4px">Score thresholds</div>
-      <div style="font-size:13px;color:var(--text-mid);margin-bottom:22px">Candidates scoring <b>below</b> the auto-reject value are moved to Rejected; those scoring <b>above</b> the auto-accept value are moved into the HR Round.</div>
-
-      <div style="margin-bottom:24px">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
-          <label style="font-size:13px;font-weight:600;color:var(--text-on)">Auto-reject below</label>
-          <span id="adm-reject-val" style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--red)">30</span>
-        </div>
-        <input type="range" id="adm-reject" min="0" max="100" value="30" class="adm-slider">
-        <div style="font-size:11px;color:var(--text-dim);margin-top:4px">Score 0–100. Anything strictly below this is auto-rejected.</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;color:var(--text-on)">🤖 AI CV Parsing Settings</div>
+        <span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);background:var(--violet-dim);border-radius:5px;padding:3px 9px">LLM Parser</span>
       </div>
+      <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">Configure the external AI provider used for intelligent CV parsing. When enabled, uploaded PDFs are parsed via your chosen LLM (Claude, OpenAI, Gemini, Groq, or Hugging Face) for consistent extraction across complex resume layouts. When disabled, the free offline regex+spaCy parser is used.</div>
 
-      <div style="margin-bottom:22px">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
-          <label style="font-size:13px;font-weight:600;color:var(--text-on)">Auto-accept above</label>
-          <span id="adm-move-val" style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--green)">65</span>
+      <label class="switch-row" style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding:14px 16px;background:rgba(255,255,255,0.03);border:1px solid var(--border-dim);border-radius:10px;cursor:pointer">
+        <span class="switch">
+          <input type="checkbox" id="ai-feature-enable">
+          <span class="slider"></span>
+        </span>
+        <div style="flex:1">
+          <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;color:var(--text-on)">ENABLE AI-BASED CV PARSING</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:2px" id="ai-feature-desc">Off by default. Parses CVs using offline regex+spaCy. Enable to configure LLM provider.</div>
         </div>
-        <input type="range" id="adm-move" min="0" max="100" value="65" class="adm-slider">
-        <div style="font-size:11px;color:var(--text-dim);margin-top:4px">Score 0–100. Anything strictly above this is auto-moved to HR Round.</div>
-      </div>
+      </label>
 
-      <div id="adm-threshold-warn" style="display:none;font-size:12px;color:var(--red);margin-bottom:14px">⚠ Auto-reject value should be lower than auto-accept, or candidates in between have no auto-action.</div>
-      <div style="display:flex;gap:10px;align-items:center">
-        <button class="btn-send" id="adm-threshold-save">Save thresholds</button>
-        <button class="btn-ghost" id="adm-threshold-reset">Reset to default (30 / 65)</button>
+      <div id="api-config-section" class="hidden">
+        <label class="field-label" style="font-size:12px;font-weight:600;margin-bottom:6px">Provider</label>
+        <div class="ai-provider-toggle" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+          <button type="button" class="ai-prov-btn active" data-provider="huggingface"><span class="ai-prov-name">Hugging Face (free)</span></button>
+          <button type="button" class="ai-prov-btn" data-provider="anthropic"><span class="ai-prov-name">Anthropic Claude</span></button>
+          <button type="button" class="ai-prov-btn" data-provider="openai"><span class="ai-prov-name">OpenAI</span></button>
+          <button type="button" class="ai-prov-btn" data-provider="gemini"><span class="ai-prov-name">Google Gemini</span></button>
+          <button type="button" class="ai-prov-btn" data-provider="groq"><span class="ai-prov-name">Groq</span></button>
+        </div>
+
+        <label class="field-label" for="ai-model" style="font-size:12px;font-weight:600;margin-bottom:6px">Model<span class="req-mark">*</span></label>
+        <input id="ai-model" class="field-input" list="ai-model-list" placeholder="e.g. meta-llama/Llama-3.1-8B-Instruct" autocomplete="off" required style="margin-bottom:14px">
+        <datalist id="ai-model-list"></datalist>
+
+        <label class="field-label" for="ai-key" style="font-size:12px;font-weight:600;margin-bottom:6px">API Key<span class="req-mark">*</span></label>
+        <input id="ai-key" class="field-input" type="password" placeholder="Enter your API key" required style="margin-bottom:14px">
+
+        <label class="field-label" for="ai-temp" style="font-size:12px;font-weight:600;margin-bottom:6px">Temperature <span id="ai-temp-val" style="color:var(--violet)">0.2</span></label>
+        <input id="ai-temp" type="range" min="0" max="1" step="0.05" value="0.2" class="adm-slider" style="margin-bottom:18px">
+
+        <div style="display:flex;gap:10px;align-items:center">
+          <button id="ai-save-btn" class="btn-send" type="button">Save AI Settings</button>
+          <button id="ai-test-btn" class="btn-ghost" type="button">Test Connection</button>
+          <button id="ai-clear-btn" class="btn-ghost" type="button">Clear Key (Use Offline)</button>
+        </div>
+        <div id="ai-config-msg" style="font-size:12px;color:var(--text-dim);margin-top:10px"></div>
       </div>
     </div>
 
@@ -1264,8 +1150,8 @@
       </div>
       <textarea id="adm-rec-body" rows="9" class="field-input" required style="resize:vertical;line-height:1.6" placeholder="Email body text…"></textarea>
       <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap">
-        <button class="btn-send" id="adm-rec-save">Save recruitment email</button>
-        <button class="btn-ghost" id="adm-rec-reset">Reset to default</button>
+        <button class="btn-send" id="adm-rec-save" type="button">Save recruitment email</button>
+        <button class="btn-ghost" id="adm-rec-reset" type="button">Reset to default</button>
         <button class="btn-ghost adm-preview-toggle" type="button" data-kind="recruitment">👁 Preview</button>
       </div>
       <div id="adm-recruitment-preview-wrap" class="hidden adm-preview-wrap">
@@ -1293,8 +1179,8 @@
       </div>
       <textarea id="adm-ob-body" rows="6" class="field-input" required style="resize:vertical;line-height:1.6" placeholder="Onboarding body…"></textarea>
       <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap">
-        <button class="btn-send" id="adm-ob-save">Save onboarding email</button>
-        <button class="btn-ghost" id="adm-ob-reset">Reset to default</button>
+        <button class="btn-send" id="adm-ob-save" type="button">Save onboarding email</button>
+        <button class="btn-ghost" id="adm-ob-reset" type="button">Reset to default</button>
         <button class="btn-ghost adm-preview-toggle" type="button" data-kind="onboarding">👁 Preview</button>
       </div>
       <div id="adm-onboarding-preview-wrap" class="hidden adm-preview-wrap">
@@ -1322,50 +1208,14 @@
       </div>
       <textarea id="adm-rej-body" rows="6" class="field-input" required style="resize:vertical;line-height:1.6" placeholder="Rejection body…"></textarea>
       <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap">
-        <button class="btn-send" id="adm-rej-save">Save rejection email</button>
-        <button class="btn-ghost" id="adm-rej-reset">Reset to default</button>
+        <button class="btn-send" id="adm-rej-save" type="button">Save rejection email</button>
+        <button class="btn-ghost" id="adm-rej-reset" type="button">Reset to default</button>
         <button class="btn-ghost adm-preview-toggle" type="button" data-kind="rejection">👁 Preview</button>
       </div>
       <div id="adm-rejection-preview-wrap" class="hidden adm-preview-wrap">
         <div style="font-size:11px;color:var(--text-dim);margin:14px 0 8px">Live preview — sample candidate data, exact email layout.</div>
         <div id="adm-rejection-preview-subject" class="adm-preview-subject">Subject: —</div>
         <iframe id="adm-rejection-preview-frame" sandbox="" class="adm-preview-frame"></iframe>
-      </div>
-    </div>
-
-    <!-- Role scoring tuning (strictness + custom semantic traits) -->
-    <div class="ccard" style="margin-bottom:22px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:10px">
-        <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;color:var(--text-on)">Scoring tuning per role</div>
-        <select id="adm-role-select" class="field-input" style="max-width:280px"></select>
-      </div>
-      <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">Tune how the assessment answers are scored for each role. <b>Strictness</b> makes marking harsher or more forgiving. <b>Creativeness</b> controls how much original, unconventional-but-sound answers are rewarded versus standard textbook wording. Both apply in <b>AI and offline modes</b>. <b>Custom traits</b> are qualities the AI should look for, judged by <i>meaning</i> — not keywords: add “high ownership” and the AI rates whether each answer <i>shows</i> ownership, however it’s worded. (Semantic trait judging needs your AI provider key from AI Settings; without a key, strictness and creativeness still apply and traits stay neutral.)</div>
-
-      <label style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">
-        <span>Scoring strictness</span>
-        <span id="adm-strict-val" style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:#2F5BEA">50</span>
-      </label>
-      <input type="range" id="adm-strict" min="0" max="100" value="50" class="adm-slider">
-      <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--text-dim);margin:5px 0 18px">
-        <span>0 · Lenient · gives benefit of doubt</span><span>50 · Neutral</span><span>Strict · demands evidence · 100</span>
-      </div>
-
-      <label style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:6px">
-        <span>Answer creativeness</span>
-        <span id="adm-creative-val" style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:#7c5cff">50</span>
-      </label>
-      <input type="range" id="adm-creative" min="0" max="100" value="50" class="adm-slider">
-      <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--text-dim);margin:5px 0 18px">
-        <span>0 · Literal · textbook wording</span><span>50 · Neutral</span><span>Rewards original ideas · 100</span>
-      </div>
-
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--text-on);margin-bottom:8px">Custom traits to look for (judged by gist, not keywords)</label>
-      <div id="adm-traits"></div>
-      <button class="btn-ghost" id="adm-trait-add" type="button" style="margin-top:6px">+ Add trait</button>
-
-      <div style="display:flex;gap:10px;align-items:center;margin-top:16px">
-        <button class="btn-send" id="adm-tuning-save">Save tuning for this role</button>
-        <span id="adm-tuning-msg" style="font-size:12px;color:var(--text-dim)"></span>
       </div>
     </div>
   </div>
