@@ -293,6 +293,17 @@ def is_connected() -> bool:
     return public_status()["connected"]
 
 
+def get_active_client(mode: Optional[str] = None) -> Optional[dict]:
+    """Public accessor for auth.py's Google Sign-In login flow, which reuses
+    this same OAuth client (narrower scopes, its own redirect URI) rather
+    than requiring a second client registration in Google Cloud Console."""
+    return _active_client(mode)
+
+
+def client_mode() -> str:
+    return _client_mode()
+
+
 # ──────────────────────────────────────────────
 # CSRF state for the authorize/callback round trip
 #

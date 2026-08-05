@@ -30,7 +30,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from google.oauth2 import service_account
@@ -218,11 +218,13 @@ def find_employee_by_email(email: str) -> Optional[dict]:
     return None
 
 
+def _truthy(v) -> bool:
+    return (v or "").strip().lower() in ("true", "1", "yes")
+
+
 def is_admin_email(email: str) -> bool:
     emp = find_employee_by_email(email)
-    if not emp:
-        return False
-    return (emp.get("is_admin") or "").strip().lower() in ("true", "1", "yes")
+    return bool(emp) and _truthy(emp.get("is_admin"))
 
 
 def _dedupe_key(emp: dict) -> str:
@@ -698,15 +700,44 @@ async def api_schema():
     return {"fields": field_schema()}
 
 
+def _any_admin_exists() -> bool:
+    return any(_truthy(e.get("is_admin")) for e in list_employees())
+
+
+def _gate_is_admin(data: dict, request: Request) -> dict:
+    """Only a signed-in admin may grant/revoke dashboard admin access through
+    this endpoint. Employee CRUD here is otherwise open to any signed-in
+    dashboard user — without this, a non-admin could self-promote by
+    including is_admin in their own record's create/update body.
+
+    Bootstrap exception: while auth is off, or once auth is on but no
+    employee is yet marked admin, edits are allowed unrestricted — otherwise
+    nobody could ever grant the first admin."""
+    if "is_admin" not in data:
+        return data
+    try:
+        from auth import auth_enabled, current_user
+        if not auth_enabled() or not _any_admin_exists():
+            return data
+        email = current_user(request)
+        if email and is_admin_email(email):
+            return data
+    except Exception:
+        pass
+    data = dict(data)
+    data.pop("is_admin", None)
+    return data
+
+
 @router.post("")
-async def api_create(body: EmployeeBody):
-    return create_employee(body.data)
+async def api_create(body: EmployeeBody, request: Request):
+    return create_employee(_gate_is_admin(body.data, request))
 
 
 @router.put("/{emp_id}")
-async def api_update(emp_id: str, body: EmployeeBody):
+async def api_update(emp_id: str, body: EmployeeBody, request: Request):
     try:
-        return update_employee(emp_id, body.data)
+        return update_employee(emp_id, _gate_is_admin(body.data, request))
     except KeyError:
         raise HTTPException(404, "Employee not found.")
 
