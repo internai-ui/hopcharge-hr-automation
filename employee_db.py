@@ -23,6 +23,7 @@ import io
 import json
 import logging
 import re
+import threading
 import urllib.request
 import urllib.error
 import uuid
@@ -44,6 +45,8 @@ logger = logging.getLogger("volt_cv.employee_db")
 
 EMPLOYEES_FILE = OUTPUT_DIR / "employees.json"
 SHEET_SETTINGS_FILE = OUTPUT_DIR / "employee_sheet_settings.json"
+
+_lock = threading.Lock()
 
 SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 FORMS_SCOPES = ["https://www.googleapis.com/auth/forms.responses.readonly",
@@ -236,40 +239,46 @@ def _dedupe_key(emp: dict) -> str:
 
 
 def create_employee(data: dict) -> dict:
-    store = _load()
-    emp = _normalize(data)
-    emp["_id"] = uuid.uuid4().hex
-    emp["created_at"] = emp["updated_at"] = _now()
-    store["employees"].append(emp)
-    _save(store)
+    with _lock:
+        store = _load()
+        emp = _normalize(data)
+        emp["_id"] = uuid.uuid4().hex
+        emp["created_at"] = emp["updated_at"] = _now()
+        store["employees"].append(emp)
+        _save(store)
     _sheet_sync_safe(store["employees"])
     return emp
 
 
 def update_employee(emp_id: str, data: dict) -> dict:
-    store = _load()
-    for i, e in enumerate(store["employees"]):
-        if e.get("_id") == emp_id:
-            merged = {**e, **_normalize({**e, **data})}
-            merged["_id"] = emp_id
-            merged["created_at"] = e.get("created_at", _now())
-            merged["updated_at"] = _now()
-            store["employees"][i] = merged
-            _save(store)
-            _sheet_sync_safe(store["employees"])
-            return merged
-    raise KeyError(emp_id)
+    with _lock:
+        store = _load()
+        for i, e in enumerate(store["employees"]):
+            if e.get("_id") == emp_id:
+                merged = {**e, **_normalize({**e, **data})}
+                merged["_id"] = emp_id
+                merged["created_at"] = e.get("created_at", _now())
+                merged["updated_at"] = _now()
+                store["employees"][i] = merged
+                _save(store)
+                break
+        else:
+            raise KeyError(emp_id)
+    _sheet_sync_safe(store["employees"])
+    return merged
 
 
 def delete_employee(emp_id: str) -> bool:
-    store = _load()
-    before = len(store["employees"])
-    store["employees"] = [e for e in store["employees"] if e.get("_id") != emp_id]
-    if len(store["employees"]) == before:
-        return False
-    _save(store)
-    _sheet_sync_safe(store["employees"])
-    return True
+    with _lock:
+        store = _load()
+        before = len(store["employees"])
+        store["employees"] = [e for e in store["employees"] if e.get("_id") != emp_id]
+        removed = len(store["employees"]) != before
+        if removed:
+            _save(store)
+    if removed:
+        _sheet_sync_safe(store["employees"])
+    return removed
 
 
 # ──────────────────────────────────────────────
@@ -704,49 +713,69 @@ def _any_admin_exists() -> bool:
     return any(_truthy(e.get("is_admin")) for e in list_employees())
 
 
-def _gate_is_admin(data: dict, request: Request) -> dict:
-    """Only a signed-in admin may grant/revoke dashboard admin access through
-    this endpoint. Employee CRUD here is otherwise open to any signed-in
-    dashboard user — without this, a non-admin could self-promote by
-    including is_admin in their own record's create/update body.
+def _gate_is_admin(data: dict, request: Request) -> tuple[dict, list[str]]:
+    """Returns (cleaned_data, ignored_fields). Only a signed-in admin may
+    grant/revoke dashboard admin access through this endpoint. Employee CRUD
+    here is otherwise open to any signed-in dashboard user — without this, a
+    non-admin could self-promote by including is_admin in their own record's
+    create/update body. The caller surfaces `ignored_fields` back to the
+    frontend so a stripped is_admin change is never silently swallowed.
 
     Bootstrap exception: while auth is off, or once auth is on but no
     employee is yet marked admin, edits are allowed unrestricted — otherwise
     nobody could ever grant the first admin."""
     if "is_admin" not in data:
-        return data
+        return data, []
     try:
         from auth import auth_enabled, current_user
         if not auth_enabled() or not _any_admin_exists():
-            return data
+            return data, []
         email = current_user(request)
         if email and is_admin_email(email):
-            return data
+            return data, []
     except Exception:
         pass
     data = dict(data)
     data.pop("is_admin", None)
-    return data
+    return data, ["is_admin"]
 
 
 @router.post("")
 async def api_create(body: EmployeeBody, request: Request):
-    return create_employee(_gate_is_admin(body.data, request))
+    try:
+        cleaned, ignored = _gate_is_admin(body.data, request)
+        result = create_employee(cleaned)
+        if ignored:
+            result = {**result, "_ignored_fields": ignored}
+        return result
+    except Exception as exc:
+        raise _http(exc)
 
 
 @router.put("/{emp_id}")
 async def api_update(emp_id: str, body: EmployeeBody, request: Request):
     try:
-        return update_employee(emp_id, _gate_is_admin(body.data, request))
+        cleaned, ignored = _gate_is_admin(body.data, request)
+        result = update_employee(emp_id, cleaned)
+        if ignored:
+            result = {**result, "_ignored_fields": ignored}
+        return result
     except KeyError:
         raise HTTPException(404, "Employee not found.")
+    except Exception as exc:
+        raise _http(exc)
 
 
 @router.delete("/{emp_id}")
 async def api_delete(emp_id: str):
-    if not delete_employee(emp_id):
-        raise HTTPException(404, "Employee not found.")
-    return {"ok": True}
+    try:
+        if not delete_employee(emp_id):
+            raise HTTPException(404, "Employee not found.")
+        return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _http(exc)
 
 
 @router.get("/sheet/settings")

@@ -20,12 +20,11 @@
     else if (!$('ai-model').value) $('ai-model').value = MODELS[_provider][0];
   }
 
-  // Mode toggle
-  document.querySelectorAll('.ai-mode-option').forEach(opt => {
-    opt.addEventListener('click', async () => {
-      const mode = opt.dataset.mode;
-      document.querySelectorAll('.ai-mode-option').forEach(o => o.classList.remove('selected'));
-      opt.classList.add('selected');
+  // Mode toggle — real radio inputs, native label-click semantics select them.
+  document.querySelectorAll('.ai-mode-radio-input').forEach(radio => {
+    radio.addEventListener('change', async () => {
+      const mode = radio.value;
+      document.querySelectorAll('.ai-mode-option').forEach(o => o.classList.toggle('selected', o.dataset.mode === mode));
       _currentMode = mode;
       updateModeUI();
 
@@ -53,11 +52,11 @@
     if (effectiveMode === 'offline') {
       apiSection.classList.add('hidden');
       switchBtn.textContent = 'Switch to API Mode';
-      switchBtn.onclick = () => { document.querySelector('[data-mode="api"]').click(); };
+      switchBtn.onclick = () => { document.querySelector('input[name="ai-mode"][value="api"]').click(); };
     } else {
       apiSection.classList.remove('hidden');
       switchBtn.textContent = 'Switch to Offline Mode';
-      switchBtn.onclick = () => { document.querySelector('[data-mode="offline"]').click(); };
+      switchBtn.onclick = () => { document.querySelector('input[name="ai-mode"][value="offline"]').click(); };
     }
   }
 
@@ -71,15 +70,7 @@
   }
 
   const featureToggle = $('ai-feature-enable');
-  function _syncFeatureKnob() {
-    const knob = featureToggle.nextElementSibling;
-    if (knob) {
-      knob.style.setProperty('--knob', featureToggle.checked ? 'translateX(17px)' : 'translateX(0)');
-      knob.style.background = featureToggle.checked ? '#60a5fa' : 'rgba(255,255,255,0.15)';
-    }
-  }
   featureToggle.addEventListener('change', async () => {
-    _syncFeatureKnob();
     featureToggle.disabled = true;
     try {
       const r = await fetch('/api/ai/feature', {
@@ -89,12 +80,10 @@
       const d = await r.json();
       _featureEnabled = !!d.enabled;
       featureToggle.checked = _featureEnabled;
-      _syncFeatureKnob();
       updateFeatureUI();
       toast(_featureEnabled ? 'AI-assisted CV parsing enabled' : 'AI-assisted CV parsing disabled — offline parser only', 'ok');
     } catch (e) {
       featureToggle.checked = !featureToggle.checked;
-      _syncFeatureKnob();
       alert('Failed to update the AI-parsing toggle: ' + e.message);
     } finally {
       featureToggle.disabled = false;
@@ -106,7 +95,6 @@
       const d = await fetch('/api/ai/feature').then(r => r.json());
       _featureEnabled = !!d.enabled;
       featureToggle.checked = _featureEnabled;
-      _syncFeatureKnob();
       updateFeatureUI();
     } catch (e) { }
   }

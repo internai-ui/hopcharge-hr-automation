@@ -19,8 +19,6 @@
 <div id="glow-dot"></div>
 <div id="progress-rail"><div id="progress-fill"></div></div>
 
-<!-- ── SIDEBAR HOVER ZONE (move cursor to left edge to open) ── -->
-<div id="sidebar-hotzone"></div>
 <button id="sidebar-toggle-btn" type="button" aria-label="Open navigation menu" title="Menu">
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
 </button>
@@ -278,12 +276,12 @@
 
         <div class="manual-emails-row" style="margin:-4px 0 14px;padding:11px 14px;background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.18);border-radius:8px">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-            <label class="switch" style="position:relative;display:inline-block;width:38px;height:21px;flex-shrink:0">
-              <input type="checkbox" id="manual-enable" style="opacity:0;width:0;height:0">
-              <span class="slider" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.15);border-radius:21px;transition:.25s"></span>
+            <label class="switch">
+              <input type="checkbox" id="manual-enable">
+              <span class="switch-track"></span>
             </label>
             <div style="flex:1">
-              <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:#60a5fa">✉ MANUALLY ADD EMAILS</div>
+              <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:#60a5fa">MANUALLY ADD EMAILS</div>
               <div style="font-size:11px;color:var(--muted);margin-top:1px">Send Round 0 form links to emails you paste below, instead of parsed candidates</div>
             </div>
           </div>
@@ -294,9 +292,9 @@
         </div>
 
         <div class="track-toggle-row" style="display:flex;align-items:center;gap:10px;margin:-4px 0 14px;padding:11px 14px;background:rgba(31,45,89,0.06);border:1px solid rgba(31,45,89,0.18);border-radius:8px">
-          <label class="switch" style="position:relative;display:inline-block;width:38px;height:21px;flex-shrink:0">
-            <input type="checkbox" id="track-enable" style="opacity:0;width:0;height:0">
-            <span class="slider" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.15);border-radius:21px;transition:.25s"></span>
+          <label class="switch">
+            <input type="checkbox" id="track-enable">
+            <span class="switch-track"></span>
           </label>
           <div style="flex:1">
             <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--violet)">⏱ TRACK FORM COMPLETION TIME</div>
@@ -357,10 +355,10 @@
         <select id="reply-filter" title="Filter" style="background:var(--glass-2);border:1px solid var(--border-dim);border-radius:9px;color:var(--text-on);font-size:13px;padding:8px 12px;cursor:pointer">
           <option value="all">All status</option>
           <option value="unread">Unread replies</option>
-          <option value="not_interested">🔴 Not Interested</option>
-          <option value="interested">🟢 Interested</option>
-          <option value="question">🟡 Question / Inquiry</option>
-          <option value="auto_reply">⚪ Auto-reply / OOO</option>
+          <option value="not_interested">Not Interested</option>
+          <option value="interested">Interested</option>
+          <option value="question">Question / Inquiry</option>
+          <option value="auto_reply">Auto-reply / OOO</option>
         </select>
         <div class="search-wrap"><span class="search-icon">&#x2315;</span><input id="reply-search" type="text" placeholder="Search name, email&#x2026;"></div>
         <button id="reply-check-now" class="btn-ghost" title="Check Gmail for new replies now" aria-label="Check Gmail for new replies now">&#x21bb; Check now</button>
@@ -395,12 +393,12 @@
     <div class="email-panel" style="margin-bottom:28px">
       <div class="email-body">
         <div class="apppass-toggle-row" style="display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid var(--border-dim);border-radius:8px">
-          <label class="switch" style="position:relative;display:inline-block;width:38px;height:21px;flex-shrink:0">
-            <input type="checkbox" id="forms-svcacct-enable" style="opacity:0;width:0;height:0">
-            <span class="slider" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.15);border-radius:21px;transition:.25s"></span>
+          <label class="switch">
+            <input type="checkbox" id="forms-svcacct-enable">
+            <span class="switch-track"></span>
           </label>
           <div style="flex:1">
-            <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--text-mid)">🔑 USE SERVICE ACCOUNT INSTEAD (FALLBACK)</div>
+            <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--text-mid)">USE SERVICE ACCOUNT INSTEAD (FALLBACK)</div>
             <div style="font-size:11px;color:var(--muted);margin-top:1px">Collapses once your Google account has Forms access. Turn on to use a service-account key instead (e.g. for a form you don't personally own).</div>
           </div>
         </div>
@@ -1021,12 +1019,12 @@
 
     <!-- AI-assisted CV parsing -->
     <div class="glass-card ai-cfg-card" style="margin-bottom:20px;padding:16px 20px;display:flex;align-items:center;gap:14px">
-      <label class="switch" style="position:relative;display:inline-block;width:38px;height:21px;flex-shrink:0">
-        <input type="checkbox" id="ai-feature-enable" style="opacity:0;width:0;height:0">
-        <span class="slider" style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.15);border-radius:21px;transition:.25s"></span>
+      <label class="switch">
+        <input type="checkbox" id="ai-feature-enable">
+        <span class="switch-track"></span>
       </label>
       <div style="flex:1">
-        <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--violet)">🤖 ENABLE AI-ASSISTED CV PARSING</div>
+        <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--violet)">ENABLE AI-ASSISTED CV PARSING</div>
         <div style="font-size:11px;color:var(--muted);margin-top:1px" id="ai-feature-desc">Off by default. CVs are parsed with the offline regex + spaCy parser only — no API key fields, no external calls. Turning this on reveals the Claude / OpenAI / Gemini / Groq / Hugging Face configuration below.</div>
       </div>
     </div>
@@ -1037,23 +1035,23 @@
         <div class="ai-cfg-title">CV Parsing Mode</div>
 
         <div class="ai-mode-options">
-          <div class="ai-mode-option" data-mode="offline">
-            <div class="ai-mode-radio"></div>
+          <label class="ai-mode-option" data-mode="offline">
+            <input type="radio" name="ai-mode" value="offline" class="ai-mode-radio-input" checked>
             <div class="ai-mode-text">
-              <div class="ai-mode-label">📄 Offline (Regex + spaCy)</div>
+              <div class="ai-mode-label">Offline (Regex + spaCy)</div>
               <div class="ai-mode-desc">Deterministic section-heading parsing. No API key needed. Always works, even for unusual layouts it can't fully read.</div>
               <div class="ai-mode-status" id="offline-status">Active · Parsing now</div>
             </div>
-          </div>
+          </label>
 
-          <div class="ai-mode-option hidden" data-mode="api" id="ai-mode-api-option">
-            <div class="ai-mode-radio"></div>
+          <label class="ai-mode-option hidden" data-mode="api" id="ai-mode-api-option">
+            <input type="radio" name="ai-mode" value="api" class="ai-mode-radio-input">
             <div class="ai-mode-text">
-              <div class="ai-mode-label">🤖 AI-Based (Claude / OpenAI / Gemini / Groq / Hugging Face)</div>
+              <div class="ai-mode-label">AI-Based (Claude / OpenAI / Gemini / Groq / Hugging Face)</div>
               <div class="ai-mode-desc">LLM-based extraction — handles unusual formats, tables, and non-standard section names far more consistently. Requires an API key.</div>
               <div class="ai-mode-status" id="api-status">Not configured</div>
             </div>
-          </div>
+          </label>
         </div>
 
         <!-- API config section (shown only when API mode selected) -->
@@ -1108,7 +1106,7 @@
 
         <div style="font-size:13px;color:var(--text-mid);line-height:1.7">
           <div style="margin-bottom:16px">
-            <div style="font-weight:700;color:var(--text-on);margin-bottom:6px">📄 Offline Parsing</div>
+            <div style="font-weight:700;color:var(--text-on);margin-bottom:6px">Offline Parsing</div>
             <ul style="margin:0;padding-left:20px">
               <li>Regex + spaCy section-heading detection</li>
               <li>Fast and free — no API calls</li>
@@ -1118,7 +1116,7 @@
           </div>
 
           <div class="hidden" id="ai-how-it-works-api" style="margin-bottom:16px">
-            <div style="font-weight:700;color:var(--text-on);margin-bottom:6px">🤖 AI-Based Parsing</div>
+            <div style="font-weight:700;color:var(--text-on);margin-bottom:6px">AI-Based Parsing</div>
             <ul style="margin:0;padding-left:20px">
               <li>Routes the extracted text through an LLM for structured extraction</li>
               <li>Handles arbitrary formats far more consistently</li>
@@ -1152,7 +1150,7 @@
       <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap">
         <button class="btn-send" id="adm-rec-save">Save recruitment email</button>
         <button class="btn-ghost" id="adm-rec-reset">Reset to default</button>
-        <button class="btn-ghost adm-preview-toggle" type="button" data-kind="recruitment">👁 Preview</button>
+        <button class="btn-ghost adm-preview-toggle" type="button" data-kind="recruitment">Preview</button>
       </div>
       <div id="adm-recruitment-preview-wrap" class="hidden adm-preview-wrap">
         <div style="font-size:11px;color:var(--text-dim);margin:14px 0 8px">Live preview — sample candidate data, exact email layout.</div>
@@ -1181,7 +1179,7 @@
       <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap">
         <button class="btn-send" id="adm-ob-save">Save onboarding email</button>
         <button class="btn-ghost" id="adm-ob-reset">Reset to default</button>
-        <button class="btn-ghost adm-preview-toggle" type="button" data-kind="onboarding">👁 Preview</button>
+        <button class="btn-ghost adm-preview-toggle" type="button" data-kind="onboarding">Preview</button>
       </div>
       <div id="adm-onboarding-preview-wrap" class="hidden adm-preview-wrap">
         <div style="font-size:11px;color:var(--text-dim);margin:14px 0 8px">Live preview — sample candidate data, exact email layout.</div>
@@ -1210,7 +1208,7 @@
       <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap">
         <button class="btn-send" id="adm-rej-save">Save rejection email</button>
         <button class="btn-ghost" id="adm-rej-reset">Reset to default</button>
-        <button class="btn-ghost adm-preview-toggle" type="button" data-kind="rejection">👁 Preview</button>
+        <button class="btn-ghost adm-preview-toggle" type="button" data-kind="rejection">Preview</button>
       </div>
       <div id="adm-rejection-preview-wrap" class="hidden adm-preview-wrap">
         <div style="font-size:11px;color:var(--text-dim);margin:14px 0 8px">Live preview — sample candidate data, exact email layout.</div>

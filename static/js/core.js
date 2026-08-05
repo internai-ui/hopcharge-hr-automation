@@ -70,9 +70,13 @@ document.addEventListener('mouseout',  e => { if (glow && e.target.closest('butt
 /* ───────── TOASTS ───────── */
 const toastBox = document.getElementById('toast-box');
 function toast(msg, type='inf', ms=3400) {
-  const icon = {ok:'⚡',err:'✗',inf:'◈'}[type];
+  const icons = {
+    ok: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>',
+    err: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>',
+    inf: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="10" r="7.3"/><path d="M10 9.2v4.4M10 6.4h.01"/></svg>',
+  };
   const t = document.createElement('div'); t.className=`toast ${type}`;
-  t.innerHTML = `<span class="toast-ic">${icon}</span><span>${msg}</span>`;
+  t.innerHTML = `<span class="toast-ic">${icons[type]}</span><span>${msg}</span>`;
   toastBox.appendChild(t);
   setTimeout(()=>{ t.style.animation='tout 280ms ease forwards'; setTimeout(()=>t.remove(),280); }, ms);
 }
@@ -153,9 +157,8 @@ function validateRequired(fields) {
   return true;
 }
 
-/* ───────── SIDEBAR / ROUTING ───────── */
+/* ───────── SIDEBAR ───────── */
 const body = document.body;
-const sidebarHotzone = document.getElementById('sidebar-hotzone');
 const sidebarEl = document.getElementById('sidebar');
 const scrim = document.getElementById('sidebar-scrim');
 /* The sidebar sits off-screen (translateX(-100%)) when closed, but without
@@ -165,56 +168,75 @@ const scrim = document.getElementById('sidebar-scrim');
    from both the tab order and the accessibility tree while closed. */
 function openNav(){ body.classList.add('nav-open'); if (sidebarEl) sidebarEl.inert = false; }
 function closeNav(){ body.classList.remove('nav-open'); if (sidebarEl) sidebarEl.inert = true; }
+function toggleNav(){ body.classList.contains('nav-open') ? closeNav() : openNav(); }
 
-/* Hover-to-expand: cursor reaching the left edge opens the sidebar; moving the
-   cursor beyond the sidebar's right edge retracts it after a short grace delay
-   so a quick move or a slim gap doesn't make it flicker shut. No visible
-   trigger button. */
-let _navCloseTimer = null;
-function _cancelClose(){ if (_navCloseTimer){ clearTimeout(_navCloseTimer); _navCloseTimer = null; } }
-function _scheduleClose(){ _cancelClose(); _navCloseTimer = setTimeout(closeNav, 240); }
-
-/* Only enable hover behaviour on devices that actually have a hover pointer
-   (a mouse/trackpad) so touch devices aren't affected. */
-const _hasHover = window.matchMedia && window.matchMedia('(hover: hover)').matches;
-
-if (sidebarHotzone) {
-  sidebarHotzone.addEventListener('mouseenter', () => { if (_hasHover){ _cancelClose(); openNav(); } });
-  /* Tap/click the edge still opens it (covers touch + non-hover fallbacks). */
-  sidebarHotzone.addEventListener('click', openNav);
-}
+/* Sidebar only opens via this explicit button — no hover-to-expand. */
 const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
-if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', openNav);
-
-/* Reliable retract: while the sidebar is open, watch the pointer and close it
-   once it moves past the sidebar's right edge (plus a small buffer). This works
-   even if the cursor never lands on the sidebar itself (e.g. a fast diagonal
-   move away), which a plain mouseleave can miss. */
-if (_hasHover) {
-  document.addEventListener('mousemove', (e) => {
-    if (!body.classList.contains('nav-open')) return;
-    const w = sidebarEl ? sidebarEl.getBoundingClientRect().right : 272;
-    if (e.clientX > w + 40) _scheduleClose();
-    else _cancelClose();
-  });
-}
-if (sidebarEl) {
-  sidebarEl.addEventListener('mouseenter', _cancelClose);
-}
+if (sidebarToggleBtn) sidebarToggleBtn.addEventListener('click', toggleNav);
 scrim.addEventListener('click', closeNav);
-function goToPage(name) {
+
+/* ───────── ROUTING ───────── */
+const PAGE_NAMES = ['main','parser','email','replies','forms','rejected',
+                     'accepted','analytics','colleges','employees','admin'];
+
+function pathForPage(name) { return name === 'main' ? '/' : '/' + name; }
+function pageForPath(path) {
+  const clean = path.replace(/\/+$/, '') || '/';
+  if (clean === '/' || clean === '') return 'main';
+  const name = clean.slice(1);
+  return PAGE_NAMES.includes(name) ? name : null;
+}
+
+/* activatePage() only flips DOM state — no history writes, so popstate (the
+   browser back/forward buttons) can call it directly without creating new
+   history entries. goToPage() is what every click handler calls; it also
+   pushes a URL unless told not to. */
+function activatePage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-' + name).classList.add('active');
+  const section = document.getElementById('page-' + name);
+  if (!section) return false;
+  section.classList.add('active');
   document.querySelectorAll('.sb-item').forEach(b => b.classList.toggle('active', b.dataset.page === name));
   window.scrollTo({ top:0, behavior:'auto' });
   closeNav();
   if (name === 'email' && window.refreshEmailCount) refreshEmailCount();
   if (name === 'replies' && window.loadRepliesPage) window.loadRepliesPage();
   if (name === 'admin' && window.loadAdminSettings) window.loadAdminSettings();
+  if (name === 'employees' && window.loadEmployees) window.loadEmployees();
   if (window.refreshGoogleAuthWidgets) window.refreshGoogleAuthWidgets();
+  return true;
 }
+
+function goToPage(name, opts) {
+  opts = opts || {};
+  if (!PAGE_NAMES.includes(name)) name = 'main';
+  if (!activatePage(name)) return;
+  const path = pathForPage(name);
+  if (opts.replace) history.replaceState({ page: name }, '', path);
+  else if (!opts.fromPopstate && location.pathname !== path) history.pushState({ page: name }, '', path);
+}
+window.goToPage = goToPage;
+
+window.addEventListener('popstate', (e) => {
+  activatePage((e.state && e.state.page) || pageForPath(location.pathname) || 'main');
+});
+
 document.querySelectorAll('.sb-item[data-page]').forEach(b => b.addEventListener('click', () => goToPage(b.dataset.page)));
 document.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => goToPage(b.dataset.goto)));
+
+/* Initial load: the server already served the right index.html for this URL
+   (see app.py's per-page routes) — sync the DOM to it without pushing a
+   redundant history entry. Deferred to DOMContentLoaded (already-fired case
+   handled too) rather than running inline, so this always runs against a
+   fully-parsed document regardless of where this script tag sits. */
+function _initRoute() {
+  goToPage(pageForPath(location.pathname) || 'main', { replace: true });
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _initRoute);
+} else {
+  _initRoute();
+}
 
 /* ───────── SCROLL-DRIVEN CHARGING ───────── */
 const sceneWrap=document.getElementById('scene-wrap'), cable=document.getElementById('cable'), plug=document.getElementById('plug'),

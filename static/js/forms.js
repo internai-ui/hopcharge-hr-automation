@@ -42,8 +42,6 @@
   function _syncSvcAcctUI(){
     const on = svcAcctEnable && svcAcctEnable.checked;
     if (svcAcctFields) svcAcctFields.classList.toggle('hidden', !on);
-    const knob = svcAcctEnable?.closest('.switch')?.querySelector('.slider');
-    if(knob){ knob.style.setProperty('--knob', on?'translateX(17px)':'translateX(0)'); knob.style.background=on?'#60a5fa':'rgba(255,255,255,0.15)'; }
     validate();
   }
   if (svcAcctEnable) svcAcctEnable.addEventListener('change', ()=>{ svcAcctEnable._userTouched = true; _syncSvcAcctUI(); });

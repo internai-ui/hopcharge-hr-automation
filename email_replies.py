@@ -193,8 +193,7 @@ def _detect_reply_intent(text: str) -> dict:
                 "category": "not_interested",
                 "label": "Not Interested",
                 "badge_bg": "rgba(239, 68, 68, 0.18)",
-                "badge_color": "#f87171",
-                "icon": "🔴"
+                "badge_color": "#f87171"
             }
 
     # 2. Out of Office / Auto Reply
@@ -208,8 +207,7 @@ def _detect_reply_intent(text: str) -> dict:
                 "category": "auto_reply",
                 "label": "Auto-Reply / OOO",
                 "badge_bg": "rgba(156, 163, 175, 0.18)",
-                "badge_color": "#9ca3af",
-                "icon": "⚪"
+                "badge_color": "#9ca3af"
             }
 
     # 3. Question / Inquiry
@@ -223,8 +221,7 @@ def _detect_reply_intent(text: str) -> dict:
                 "category": "question",
                 "label": "Question / Inquiry",
                 "badge_bg": "rgba(245, 158, 11, 0.18)",
-                "badge_color": "#fbbf24",
-                "icon": "🟡"
+                "badge_color": "#fbbf24"
             }
 
     # 4. Interested / Applied
@@ -239,8 +236,7 @@ def _detect_reply_intent(text: str) -> dict:
                 "category": "interested",
                 "label": "Interested / Form Submitted",
                 "badge_bg": "rgba(52, 211, 153, 0.18)",
-                "badge_color": "#34d399",
-                "icon": "🟢"
+                "badge_color": "#34d399"
             }
 
     # Default / General Response
@@ -248,8 +244,7 @@ def _detect_reply_intent(text: str) -> dict:
         "category": "neutral",
         "label": "Replied",
         "badge_bg": "rgba(96, 165, 250, 0.18)",
-        "badge_color": "#60a5fa",
-        "icon": "🔵"
+        "badge_color": "#60a5fa"
     }
 
 

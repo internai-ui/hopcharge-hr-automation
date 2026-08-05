@@ -74,11 +74,6 @@
   if (manualEnable) {
     const syncManualUI = function(){
       if (manualFields) manualFields.classList.toggle('hidden', !manualEnable.checked);
-      const knob = manualEnable.closest('.switch')?.querySelector('.slider');
-      if (knob) {
-        knob.style.setProperty('--knob', manualEnable.checked ? 'translateX(17px)' : 'translateX(0)');
-        knob.style.background = manualEnable.checked ? '#60a5fa' : 'rgba(255,255,255,0.15)';
-      }
       validateEmailForm();
     };
     manualEnable.addEventListener('change', syncManualUI);
@@ -88,11 +83,6 @@
   if (trackEnable) {
     const syncTrackUI = function(){
       if (trackFields) trackFields.classList.toggle('hidden', !trackEnable.checked);
-      const knob = trackEnable.closest('.switch')?.querySelector('.slider');
-      if (knob) {
-        knob.style.setProperty('--knob', trackEnable.checked ? 'translateX(17px)' : 'translateX(0)');
-        knob.style.background = trackEnable.checked ? '#60a5fa' : 'rgba(255,255,255,0.15)';
-      }
     };
     trackEnable.addEventListener('change', async () => {
       syncTrackUI();

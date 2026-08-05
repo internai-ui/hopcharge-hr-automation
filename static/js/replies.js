@@ -36,7 +36,7 @@
       let statusBadge = '';
       if (r.status === 'replied') {
         if (r.intent) {
-          statusBadge = `<span class="dec-badge" style="background:${r.intent.badge_bg};color:${r.intent.badge_color};font-weight:600;display:inline-flex;align-items:center;gap:4px">${r.intent.icon} ${esc(r.intent.label)}</span>`;
+          statusBadge = `<span class="dec-badge" style="background:${r.intent.badge_bg};color:${r.intent.badge_color};font-weight:600">${esc(r.intent.label)}</span>`;
         } else {
           statusBadge = `<span class="dec-badge" style="background:${r.read?'rgba(96,165,250,.12)':'rgba(52,211,153,.15)'};color:${r.read?'#60a5fa':'#34d399'}">${r.read?'Replied':'● New reply'}</span>`;
         }
@@ -121,7 +121,7 @@
     if (reply.intent) {
       intentHeader = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
         <span style="font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dim)">DECODED INTENT:</span>
-        <span style="background:${reply.intent.badge_bg};color:${reply.intent.badge_color};padding:4px 10px;border-radius:16px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px">${reply.intent.icon} ${esc(reply.intent.label)}</span>
+        <span style="background:${reply.intent.badge_bg};color:${reply.intent.badge_color};padding:4px 10px;border-radius:16px;font-size:12px;font-weight:700">${esc(reply.intent.label)}</span>
       </div>`;
     }
 

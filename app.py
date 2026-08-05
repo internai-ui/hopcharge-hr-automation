@@ -162,6 +162,25 @@ async def root():
     return FileResponse(str(STATIC_DIR / "index.html"))
 
 
+# Client-side routed pages — same SPA, different deep-link URLs. Each of these
+# just re-serves index.html; static/js/core.js's router reads location.pathname
+# on load and activates the matching <section>. Kept as explicit routes (not a
+# catch-all) so auth_middleware gates exactly these paths like "/" already is,
+# without becoming a public catch-all that would swallow unrelated 404s. This
+# list must stay in sync with core.js's PAGE_NAMES (minus "main", which is "/").
+_SPA_PAGES = ["parser", "email", "replies", "forms", "rejected",
+              "accepted", "analytics", "colleges", "employees", "admin"]
+
+
+async def _serve_spa():
+    return FileResponse(str(STATIC_DIR / "index.html"))
+
+
+for _page in _SPA_PAGES:
+    app.add_api_route(f"/{_page}", _serve_spa, methods=["GET"], include_in_schema=False)
+del _page
+
+
 @app.get("/api/health", include_in_schema=False)
 async def health():
     """Liveness probe for load balancers / uptime checks (never behind login)."""

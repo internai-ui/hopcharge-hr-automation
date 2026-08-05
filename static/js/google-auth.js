@@ -47,7 +47,7 @@
             </div>
             <div class="g-widget-controls">
               <span class="g-widget-pill" data-gw="pill">Checking...</span>
-              <button type="button" class="btn-primary g-widget-connect-btn hidden" data-gw="connect">
+              <button type="button" class="g-widget-connect-btn hidden" data-gw="connect">
                 Connect Google Account
               </button>
               <button type="button" class="btn-ghost g-widget-disconnect-btn hidden" data-gw="disconnect" style="border-color:rgba(248,113,113,0.35);color:#f87171">
