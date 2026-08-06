@@ -36,7 +36,7 @@
       let statusBadge = '';
       if (r.status === 'replied') {
         if (r.intent) {
-          statusBadge = `<span class="dec-badge" style="background:${r.intent.badge_bg};color:${r.intent.badge_color};font-weight:600">${esc(r.intent.label)}</span>`;
+          statusBadge = `<span class="dec-badge" style="background:${r.intent.badge_bg};color:${r.intent.badge_color};font-weight:600">${esc(r.intent.label)}${r.reply_count > 1 ? ` · ${r.reply_count}` : ''}</span>`;
         } else {
           statusBadge = `<span class="dec-badge" style="background:${r.read?'rgba(96,165,250,.12)':'rgba(52,211,153,.15)'};color:${r.read?'#60a5fa':'#34d399'}">${r.read?'Replied':'● New reply'}</span>`;
         }
@@ -102,7 +102,10 @@
       body.appendChild(fl);
     }
 
-    if (rec.status !== 'replied' || !rec.reply){
+    const messages = (rec.thread_messages || []).filter(m => m.body_text || m.snippet || m.clean_text);
+    const candidateMessages = messages.filter(m => m.is_candidate);
+
+    if (!candidateMessages.length){
       const empty = document.createElement('div');
       empty.className = 'cand-qa-item full';
       empty.style.marginTop = '10px';
@@ -111,37 +114,33 @@
       return;
     }
 
-    const reply = rec.reply;
     const wrap = document.createElement('div');
     wrap.className = 'cand-qa-item full';
     wrap.style.cssText = 'margin-top:10px;border-top:1px solid var(--border-dim);padding-top:18px';
-    const receivedWhen = reply.received_at ? new Date(reply.received_at).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
-    
-    let intentHeader = '';
-    if (reply.intent) {
-      intentHeader = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <span style="font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dim)">DECODED INTENT:</span>
-        <span style="background:${reply.intent.badge_bg};color:${reply.intent.badge_color};padding:4px 10px;border-radius:16px;font-size:12px;font-weight:700">${esc(reply.intent.label)}</span>
-      </div>`;
-    }
+    wrap.innerHTML = `<div class="cand-qa-q">Conversation${candidateMessages.length > 1 ? ` <span style="opacity:.55;font-weight:400">· ${candidateMessages.length} replies</span>` : ''}</div>`;
 
-    wrap.innerHTML = `
-      ${intentHeader}
-      <div class="cand-qa-q">Candidate Response <span style="opacity:.55;font-weight:400">- from ${esc(reply.from||'')}, ${esc(receivedWhen)}</span></div>
-    `;
+    messages.forEach(m => {
+      const when = m.received_at ? new Date(m.received_at).toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
+      const text = m.clean_text || m.body_text || m.snippet || '';
+      const who = m.is_candidate ? (rec.candidate_name || 'Candidate') : 'You';
 
-    const cleanText = reply.clean_text || reply.body_text || reply.snippet || '';
+      let intentBadge = '';
+      if (m.is_candidate && m.intent) {
+        intentBadge = ` <span style="background:${m.intent.badge_bg};color:${m.intent.badge_color};padding:2px 9px;border-radius:12px;font-size:11px;font-weight:700">${esc(m.intent.label)}</span>`;
+      }
 
-    const contentBox = document.createElement('div');
-    contentBox.style.cssText = 'margin-top:10px;background:var(--glass-2);border:1px solid var(--border-dim);border-left:3px solid ' + (reply.intent?.badge_color || '#60a5fa') + ';border-radius:8px;padding:14px 16px';
-    contentBox.style.whiteSpace = 'pre-wrap';
-    contentBox.style.fontSize = '13.5px';
-    contentBox.style.lineHeight = '1.65';
-    contentBox.style.color = 'var(--text-on)';
-    contentBox.textContent = cleanText;
-    wrap.appendChild(contentBox);
+      const bubble = document.createElement('div');
+      bubble.style.cssText = 'margin-top:14px';
+      bubble.innerHTML = `<div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-dim);margin-bottom:6px"><b style="color:var(--text-mid)">${esc(who)}</b><span>${esc(when)}</span>${intentBadge}</div>`;
 
-
+      const contentBox = document.createElement('div');
+      contentBox.style.cssText = 'background:var(--glass-2);border:1px solid var(--border-dim);border-left:3px solid ' +
+        (m.is_candidate ? (m.intent?.badge_color || '#60a5fa') : 'rgba(255,255,255,0.25)') +
+        ';border-radius:8px;padding:14px 16px;white-space:pre-wrap;font-size:13.5px;line-height:1.65;color:var(--text-on)';
+      contentBox.textContent = text;
+      bubble.appendChild(contentBox);
+      wrap.appendChild(bubble);
+    });
 
     body.appendChild(wrap);
 

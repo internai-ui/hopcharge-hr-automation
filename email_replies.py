@@ -7,9 +7,13 @@ When emailer.send_campaign() sends a message through the Gmail API (OAuth
 path — see gmail_oauth.py), Gmail returns a thread_id for that send. We
 record one entry per thread here. A background poller (mirrors
 dual_writer.py's _background_refresh() daemon-thread pattern) periodically
-calls threads.get() for every thread still in "sent" status and checks
-whether a message shows up whose sender isn't our own connected account —
-that's a reply.
+calls threads.get() for EVERY tracked thread (not just ones with no reply
+yet) and diffs the full message list against what we've already stored,
+by Gmail message id. Every message not seen before is recorded, tagged
+is_candidate=True/False by comparing its From address against the
+connected account — so a full back-and-forth (candidate replies, a manual
+follow-up sent from real Gmail, the candidate replying again, and so on)
+is captured as a real conversation, not just a single first reply.
 
 This module ONLY reads Gmail (gmail.readonly is enough — see gmail_oauth.py's
 SCOPES). "Marking a reply read/handled" is a purely in-app flag; nothing
@@ -55,12 +59,33 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _migrate_record(rec: dict) -> dict:
+    """Older records stored a single `reply` dict (first reply only). Fold
+    it into the new `thread_messages` list (one entry) so existing history
+    isn't lost when this ships. Idempotent — a no-op once migrated. Runs on
+    every load; only persisted to disk the next time this record is saved
+    by poll_once()/mark_read(), same lazy-write pattern used elsewhere."""
+    if "thread_messages" not in rec:
+        old = rec.pop("reply", None)
+        if old:
+            entry = dict(old)
+            entry["is_candidate"] = True
+            entry.setdefault("message_id", f"legacy-{rec.get('sent_message_id', '')}")
+            rec["thread_messages"] = [entry]
+        else:
+            rec["thread_messages"] = []
+    rec.pop("reply", None)
+    return rec
+
+
 def _load() -> dict:
     if not REPLIES_FILE.exists():
         return {"records": {}}
     try:
         data = json.loads(REPLIES_FILE.read_text(encoding="utf-8"))
         data.setdefault("records", {})
+        for rec in data["records"].values():
+            _migrate_record(rec)
         return data
     except (json.JSONDecodeError, OSError):
         logger.warning("email_replies.json corrupt — starting fresh.")
@@ -89,7 +114,7 @@ def register_sent(thread_id: str, message_id: str, email: str,
             "sent_message_id": message_id,
             "sent_at": _now_iso(),
             "status": "sent",       # sent → replied
-            "reply": None,
+            "thread_messages": [],
             "read": True,            # nothing to read until a reply arrives
             "handled_at": None,
         }
@@ -290,7 +315,10 @@ def _internal_date_to_iso(ms: Optional[str]) -> Optional[str]:
 
 
 def poll_once() -> dict:
-    """Check every open ("sent") tracked thread for a reply."""
+    """Check every tracked thread — including ones already marked "replied"
+    — for messages we haven't recorded yet, by Gmail message id. This is
+    what makes chained/multi-message conversations work: a thread doesn't
+    stop being polled just because it got one reply."""
     if not gmail_oauth.is_connected():
         return {"checked": 0, "new_replies": 0, "skipped": "not_connected"}
 
@@ -307,8 +335,6 @@ def poll_once() -> dict:
         data = _load()
         changed = False
         for thread_id, rec in data["records"].items():
-            if rec.get("status") != "sent":
-                continue
             checked += 1
             try:
                 thread = service.users().threads().get(userId="me", id=thread_id, format="full").execute()
@@ -316,36 +342,44 @@ def poll_once() -> dict:
                 logger.warning("poll_once: threads.get failed for %s: %s", thread_id, exc)
                 continue
 
-            reply_msg = None
-            for msg in (thread.get("messages") or [])[1:]:  # skip our own first message
+            existing = rec.setdefault("thread_messages", [])
+            seen_ids = {m.get("message_id") for m in existing if m.get("message_id")}
+
+            new_candidate_msg = False
+            for msg in (thread.get("messages") or []):
+                msg_id = msg.get("id")
+                if not msg_id or msg_id in seen_ids:
+                    continue  # already recorded on a previous poll
+
                 headers = (msg.get("payload") or {}).get("headers", [])
                 _, addr = parseaddr(_header(headers, "From"))
-                if addr.strip().lower() != connected_email:
-                    reply_msg = msg
-                    break
-            if not reply_msg:
-                continue
+                is_candidate = addr.strip().lower() != connected_email
 
-            headers = (reply_msg.get("payload") or {}).get("headers", [])
-            body_text, body_html = _extract_body(reply_msg.get("payload") or {})
-            clean_text = _strip_quoted_text(body_text or reply_msg.get("snippet", ""))
-            intent = _detect_reply_intent(clean_text or body_text or reply_msg.get("snippet", ""))
+                body_text, body_html = _extract_body(msg.get("payload") or {})
+                entry = {
+                    "message_id": msg_id,
+                    "from": _header(headers, "From"),
+                    "is_candidate": is_candidate,
+                    "received_at": _internal_date_to_iso(msg.get("internalDate")),
+                    "snippet": _make_preview(body_text, msg.get("snippet", "")),
+                    "body_text": body_text,
+                    "body_html": body_html,
+                }
+                if is_candidate:
+                    clean_text = _strip_quoted_text(body_text or msg.get("snippet", ""))
+                    entry["clean_text"] = clean_text
+                    entry["intent"] = _detect_reply_intent(clean_text or body_text or msg.get("snippet", ""))
+                    new_candidate_msg = True
 
-            rec["status"] = "replied"
-            rec["reply"] = {
-                "from": _header(headers, "From"),
-                "snippet": _make_preview(body_text, reply_msg.get("snippet", "")),
-                "clean_text": clean_text,
-                "intent": intent,
-                "body_text": body_text,
-                "body_html": body_html,
-                "received_at": _internal_date_to_iso(reply_msg.get("internalDate")),
-                "message_id": reply_msg.get("id"),
-            }
-            rec["read"] = False
-            changed = True
-            new_replies += 1
-            logger.info("New reply detected from %s (thread=%s)", rec.get("candidate_email"), thread_id)
+                existing.append(entry)
+                seen_ids.add(msg_id)
+                changed = True
+
+            if new_candidate_msg:
+                rec["status"] = "replied"
+                rec["read"] = False
+                new_replies += 1
+                logger.info("New reply detected from %s (thread=%s)", rec.get("candidate_email"), thread_id)
 
         if changed:
             _save(data)
@@ -374,6 +408,13 @@ _poller_thread.start()
 # 3. Read tracking data for the dashboard — in-app only, never touches Gmail
 # ══════════════════════════════════════════════════════════════════════════
 
+def _latest_candidate_message(rec: dict) -> Optional[dict]:
+    for m in reversed(rec.get("thread_messages", []) or []):
+        if m.get("is_candidate"):
+            return m
+    return None
+
+
 def list_replies(status: str = "all") -> list[dict]:
     data = _load()
     rows = []
@@ -387,20 +428,21 @@ def list_replies(status: str = "all") -> list[dict]:
             "status": rec.get("status"),
             "sent_at": rec.get("sent_at"),
             "read": rec.get("read", True),
+            "reply_count": sum(1 for m in rec.get("thread_messages", []) or [] if m.get("is_candidate")),
         }
-        reply = rec.get("reply")
-        if reply:
-            row["reply_from"] = reply.get("from")
-            row["reply_snippet"] = reply.get("snippet")
-            row["received_at"] = reply.get("received_at")
-            
-            raw_text = reply.get("body_text", "")
-            clean_text = reply.get("clean_text") or _strip_quoted_text(raw_text or reply.get("snippet", ""))
-            intent = reply.get("intent") or _detect_reply_intent(clean_text or raw_text or reply.get("snippet", ""))
+        latest = _latest_candidate_message(rec)
+        if latest:
+            row["reply_from"] = latest.get("from")
+            row["reply_snippet"] = latest.get("snippet")
+            row["received_at"] = latest.get("received_at")
+
+            raw_text = latest.get("body_text", "")
+            clean_text = latest.get("clean_text") or _strip_quoted_text(raw_text or latest.get("snippet", ""))
+            intent = latest.get("intent") or _detect_reply_intent(clean_text or raw_text or latest.get("snippet", ""))
 
             row["clean_text"] = clean_text
             row["intent"] = intent
-            row["clean_snippet"] = clean_text if clean_text else reply.get("snippet", "")
+            row["clean_snippet"] = clean_text if clean_text else latest.get("snippet", "")
 
             # Filter by intent category if specified
             if status in ["not_interested", "interested", "question", "auto_reply"] and intent.get("category") != status:
@@ -418,14 +460,17 @@ def get_reply_detail(thread_id: str) -> Optional[dict]:
         return None
     row = dict(rec)
     row["thread_id"] = thread_id
-    if rec.get("reply"):
-        reply = dict(rec["reply"])
-        raw_text = reply.get("body_text", "")
-        clean_text = reply.get("clean_text") or _strip_quoted_text(raw_text or reply.get("snippet", ""))
-        intent = reply.get("intent") or _detect_reply_intent(clean_text or raw_text or reply.get("snippet", ""))
-        reply["clean_text"] = clean_text
-        reply["intent"] = intent
-        row["reply"] = reply
+    messages = []
+    for m in rec.get("thread_messages", []) or []:
+        m = dict(m)
+        if m.get("is_candidate"):
+            raw_text = m.get("body_text", "")
+            clean_text = m.get("clean_text") or _strip_quoted_text(raw_text or m.get("snippet", ""))
+            intent = m.get("intent") or _detect_reply_intent(clean_text or raw_text or m.get("snippet", ""))
+            m["clean_text"] = clean_text
+            m["intent"] = intent
+        messages.append(m)
+    row["thread_messages"] = messages
     return row
 
 
