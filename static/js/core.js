@@ -58,15 +58,6 @@
   addEventListener('resize', () => { resize(); if (PARTICLES_ON) init(); });
 })();
 
-/* ───────── CURSOR GLOW (disabled - website has no cursor glow) ───────── */
-const glow = document.getElementById('glow-dot');
-if (glow) glow.style.display = 'none';
-let mx=0,my=0,gx=0,gy=0;
-document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; });
-(function tick(){ gx+=(mx-gx)*0.12; gy+=(my-gy)*0.12; if(glow){glow.style.left=gx+'px'; glow.style.top=gy+'px';} requestAnimationFrame(tick); })();
-document.addEventListener('mouseover', e => { if (glow && e.target.closest('button,a,label,input,.ccard,.sb-item,.wcard')) { glow.style.width=glow.style.height='42px'; } });
-document.addEventListener('mouseout',  e => { if (glow && e.target.closest('button,a,label,input,.ccard,.sb-item,.wcard')) { glow.style.width=glow.style.height='22px'; } });
-
 /* ───────── TOASTS ───────── */
 const toastBox = document.getElementById('toast-box');
 function toast(msg, type='inf', ms=3400) {
