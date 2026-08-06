@@ -997,19 +997,8 @@
       <p>Edit the emails sent at each stage, the recruitment form, and AI-assisted CV parsing. Changes apply from the moment you save.</p>
     </div>
 
-
-    <!-- AI CV Parsing Settings -->
-    <div class="ccard" style="margin-bottom:26px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;color:var(--text-on)">🤖 AI CV Parsing Settings</div>
-        <span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);background:var(--violet-dim);border-radius:5px;padding:3px 9px">LLM Parser</span>
-
     <!-- Recruitment form -->
     <div class="ccard" style="margin-bottom:26px">
-
-    <!-- Recruitment form -->
-    <div class="ccard" style="margin-bottom:26px">
-
       <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:16px;color:var(--text-on);margin-bottom:4px">Recruitment form</div>
       <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">Set once here - used by both Send Emails (the CTA link embedded in every recruitment email) and Form Responses (syncing submitted answers via the Forms API).</div>
 
@@ -1109,135 +1098,6 @@
           <button id="ai-switch-btn" class="btn-ghost" style="flex:1">Switch to API Mode</button>
         </div>
       </div>
-    </div>
-
-<<<<<<< HEAD
-    <!-- AI-assisted CV parsing -->
-    <div class="glass-card ai-cfg-card" style="margin-bottom:20px;padding:16px 20px;display:flex;align-items:center;gap:14px">
-      <label class="switch">
-        <input type="checkbox" id="ai-feature-enable">
-        <span class="switch-track"></span>
-      </label>
-      <div style="flex:1">
-        <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--violet)">ENABLE AI-ASSISTED CV PARSING</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:1px" id="ai-feature-desc">Off by default. CVs are parsed with the offline regex + spaCy parser only - no API key fields, no external calls. Turning this on reveals the Claude / OpenAI / Gemini / Groq / Hugging Face configuration below.</div>
-      </div>
-    </div>
-
-    <div id="ai-cfg-grid" class="ai-cfg-grid" style="margin-bottom:26px">
-      <!-- Mode selector -->
-      <div class="glass-card ai-cfg-card">
-        <div class="ai-cfg-title">CV Parsing Mode</div>
-
-        <div class="ai-mode-options">
-          <label class="ai-mode-option" data-mode="offline">
-            <input type="radio" name="ai-mode" value="offline" class="ai-mode-radio-input" checked>
-            <div class="ai-mode-text">
-              <div class="ai-mode-label">Offline (Regex + spaCy)</div>
-              <div class="ai-mode-desc">Deterministic section-heading parsing. No API key needed. Always works, even for unusual layouts it can't fully read.</div>
-              <div class="ai-mode-status" id="offline-status">Active · Parsing now</div>
-            </div>
-          </label>
-
-          <label class="ai-mode-option hidden" data-mode="api" id="ai-mode-api-option">
-            <input type="radio" name="ai-mode" value="api" class="ai-mode-radio-input">
-            <div class="ai-mode-text">
-              <div class="ai-mode-label">AI-Based (Claude / OpenAI / Gemini / Groq / Hugging Face)</div>
-              <div class="ai-mode-desc">LLM-based extraction - handles unusual formats, tables, and non-standard section names far more consistently. Requires an API key.</div>
-              <div class="ai-mode-status" id="api-status">Not configured</div>
-            </div>
-          </label>
-        </div>
-
-        <!-- API config section (shown only when API mode selected) -->
-        <div id="api-config-section" class="ai-api-config hidden" style="margin-top:24px;padding-top:24px;border-top:1px solid var(--border-dim)">
-          <label class="field-label">Provider</label>
-          <div class="ai-provider-toggle">
-            <button class="ai-prov-btn active" data-provider="huggingface">
-              <span class="ai-prov-name">Hugging Face <span style="opacity:.6;font-weight:600">(free)</span></span>
-            </button>
-            <button class="ai-prov-btn" data-provider="anthropic">
-              <span class="ai-prov-name">Anthropic Claude</span>
-            </button>
-            <button class="ai-prov-btn" data-provider="openai">
-              <span class="ai-prov-name">OpenAI</span>
-            </button>
-            <button class="ai-prov-btn" data-provider="gemini">
-              <span class="ai-prov-name">Google Gemini</span>
-            </button>
-            <button class="ai-prov-btn" data-provider="groq">
-              <span class="ai-prov-name">Groq</span>
-            </button>
-          </div>
-          <span class="field-hint">Hugging Face uses a free-tier shared inference API (no billing) - get a token at huggingface.co/settings/tokens with "Inference Providers" permission.</span>
-
-          <label class="field-label" for="ai-model" style="margin-top:18px">Model<span class="req-mark">*</span></label>
-          <input id="ai-model" class="field-input" list="ai-model-list" placeholder="e.g. claude-3-5-sonnet-latest" autocomplete="off" required>
-          <datalist id="ai-model-list"></datalist>
-          <span class="field-hint">Pick a suggestion or type the exact model id from your provider console.</span>
-
-          <label class="field-label" for="ai-key" style="margin-top:18px">API Key<span class="req-mark">*</span></label>
-          <input id="ai-key" class="field-input" type="password" placeholder="Enter your API key" required>
-          <span class="field-hint">Stored encrypted · never displayed after save</span>
-
-          <label class="field-label" for="ai-temp" style="margin-top:18px">Temperature <span id="ai-temp-val" style="color:var(--violet)">0.2</span></label>
-          <input id="ai-temp" type="range" min="0" max="1" step="0.05" value="0.2" class="ai-slider">
-          <div class="ai-temp-labels"><span>Precise (0.0)</span><span>Creative (1.0)</span></div>
-
-          <div class="send-row" style="margin-top:22px">
-            <button id="ai-save-btn" class="btn-parse">Save API Key</button>
-            <button id="ai-clear-btn" class="btn-ghost">Clear Key (Use Offline)</button>
-          </div>
-        </div>
-
-        <div class="send-row hidden" id="ai-switch-btn-row" style="margin-top:18px;gap:8px">
-          <button id="ai-switch-btn" class="btn-ghost" style="flex:1">Switch to API Mode</button>
-        </div>
-
-      </div>
-      <div style="font-size:13px;color:var(--text-mid);margin-bottom:18px">Configure the external AI provider used for intelligent CV parsing. When enabled, uploaded PDFs are parsed via your chosen LLM (Claude, OpenAI, Gemini, Groq, or Hugging Face) for consistent extraction across complex resume layouts. When disabled, the free offline regex+spaCy parser is used.</div>
-
-      <label class="switch-row" style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding:14px 16px;background:rgba(255,255,255,0.03);border:1px solid var(--border-dim);border-radius:10px;cursor:pointer">
-        <span class="switch">
-          <input type="checkbox" id="ai-feature-enable">
-          <span class="slider"></span>
-        </span>
-        <div style="flex:1">
-          <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;color:var(--text-on)">ENABLE AI-BASED CV PARSING</div>
-          <div style="font-size:11px;color:var(--text-dim);margin-top:2px" id="ai-feature-desc">Off by default. Parses CVs using offline regex+spaCy. Enable to configure LLM provider.</div>
-        </div>
-      </label>
-
-      <div id="api-config-section" class="hidden">
-        <label class="field-label" style="font-size:12px;font-weight:600;margin-bottom:6px">Provider</label>
-        <div class="ai-provider-toggle" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
-          <button type="button" class="ai-prov-btn active" data-provider="huggingface"><span class="ai-prov-name">Hugging Face (free)</span></button>
-          <button type="button" class="ai-prov-btn" data-provider="anthropic"><span class="ai-prov-name">Anthropic Claude</span></button>
-          <button type="button" class="ai-prov-btn" data-provider="openai"><span class="ai-prov-name">OpenAI</span></button>
-          <button type="button" class="ai-prov-btn" data-provider="gemini"><span class="ai-prov-name">Google Gemini</span></button>
-          <button type="button" class="ai-prov-btn" data-provider="groq"><span class="ai-prov-name">Groq</span></button>
-        </div>
-
-        <label class="field-label" for="ai-model" style="font-size:12px;font-weight:600;margin-bottom:6px">Model<span class="req-mark">*</span></label>
-        <input id="ai-model" class="field-input" list="ai-model-list" placeholder="e.g. meta-llama/Llama-3.1-8B-Instruct" autocomplete="off" required style="margin-bottom:14px">
-        <datalist id="ai-model-list"></datalist>
-
-        <label class="field-label" for="ai-key" style="font-size:12px;font-weight:600;margin-bottom:6px">API Key<span class="req-mark">*</span></label>
-        <input id="ai-key" class="field-input" type="password" placeholder="Enter your API key" required style="margin-bottom:14px">
-
-        <label class="field-label" for="ai-temp" style="font-size:12px;font-weight:600;margin-bottom:6px">Temperature <span id="ai-temp-val" style="color:var(--violet)">0.2</span></label>
-        <input id="ai-temp" type="range" min="0" max="1" step="0.05" value="0.2" class="adm-slider" style="margin-bottom:18px">
-
-        <div style="display:flex;gap:10px;align-items:center">
-          <button id="ai-save-btn" class="btn-send" type="button">Save AI Settings</button>
-          <button id="ai-test-btn" class="btn-ghost" type="button">Test Connection</button>
-          <button id="ai-clear-btn" class="btn-ghost" type="button">Clear Key (Use Offline)</button>
-        </div>
-        <div id="ai-config-msg" style="font-size:12px;color:var(--text-dim);margin-top:10px"></div>
-      <!-- Info card -->
-      <div class="glass-card ai-cfg-card">
-        <div class="ai-cfg-title">How It Works</div>
-
 
       <!-- Info card -->
       <div class="glass-card ai-cfg-card">
@@ -1287,11 +1147,6 @@
       </div>
       <textarea id="adm-rec-body" rows="9" class="field-input" required style="resize:vertical;line-height:1.6" placeholder="Email body text…"></textarea>
       <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap">
-
-        <button class="btn-send" id="adm-rec-save" type="button">Save recruitment email</button>
-        <button class="btn-ghost" id="adm-rec-reset" type="button">Reset to default</button>
-        <button class="btn-ghost adm-preview-toggle" type="button" data-kind="recruitment">👁 Preview</button>
-=======
         <button class="btn-send" id="adm-rec-save">Save recruitment email</button>
         <button class="btn-ghost" id="adm-rec-reset">Reset to default</button>
         <button class="btn-ghost adm-preview-toggle" type="button" data-kind="recruitment">Preview</button>
@@ -1321,15 +1176,9 @@
       </div>
       <textarea id="adm-ob-body" rows="6" class="field-input" required style="resize:vertical;line-height:1.6" placeholder="Onboarding body…"></textarea>
       <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap">
-<<<<<<< HEAD
-        <button class="btn-send" id="adm-ob-save" type="button">Save onboarding email</button>
-        <button class="btn-ghost" id="adm-ob-reset" type="button">Reset to default</button>
-        <button class="btn-ghost adm-preview-toggle" type="button" data-kind="onboarding">👁 Preview</button>
-
         <button class="btn-send" id="adm-ob-save">Save onboarding email</button>
         <button class="btn-ghost" id="adm-ob-reset">Reset to default</button>
         <button class="btn-ghost adm-preview-toggle" type="button" data-kind="onboarding">Preview</button>
-
       </div>
       <div id="adm-onboarding-preview-wrap" class="hidden adm-preview-wrap">
         <div style="font-size:11px;color:var(--text-dim);margin:14px 0 8px">Live preview - sample candidate data, exact email layout.</div>
@@ -1356,15 +1205,9 @@
       </div>
       <textarea id="adm-rej-body" rows="6" class="field-input" required style="resize:vertical;line-height:1.6" placeholder="Rejection body…"></textarea>
       <div style="display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap">
-
-        <button class="btn-send" id="adm-rej-save" type="button">Save rejection email</button>
-        <button class="btn-ghost" id="adm-rej-reset" type="button">Reset to default</button>
-        <button class="btn-ghost adm-preview-toggle" type="button" data-kind="rejection">👁 Preview</button>
-
         <button class="btn-send" id="adm-rej-save">Save rejection email</button>
         <button class="btn-ghost" id="adm-rej-reset">Reset to default</button>
         <button class="btn-ghost adm-preview-toggle" type="button" data-kind="rejection">Preview</button>
-
       </div>
       <div id="adm-rejection-preview-wrap" class="hidden adm-preview-wrap">
         <div style="font-size:11px;color:var(--text-dim);margin:14px 0 8px">Live preview - sample candidate data, exact email layout.</div>
