@@ -717,7 +717,7 @@ input.invalid:focus, select.invalid:focus, textarea.invalid:focus {
 .dec-accept:hover { background:rgba(52,211,153,.15); }
 .dec-reject { color:#f87171; border-color:rgba(248,113,113,.4); }
 .dec-reject:hover { background:rgba(248,113,113,.15); }
-.dec-badge { font-family:'Poppins',sans-serif; font-weight:700; font-size:11px; letter-spacing:.4px; padding:3px 9px; border-radius:6px; }
+.dec-badge { display:inline-block; font-family:'Poppins',sans-serif; font-weight:700; font-size:11px; letter-spacing:.4px; padding:3px 9px; border-radius:6px; }
 .dec-rejected { background:rgba(248,113,113,.13); color:#f87171; }
 .dec-accepted { background:rgba(52,211,153,.13); color:#34d399; }
 /* Accepted-section stage tabs */
