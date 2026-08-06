@@ -27,6 +27,7 @@ scope, matching form_tracking.py's own precedent).
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
@@ -314,11 +315,80 @@ def _internal_date_to_iso(ms: Optional[str]) -> Optional[str]:
         return None
 
 
+def _record_message(rec: dict, msg: dict, connected_email: str) -> bool:
+    """Append `msg` (a full Gmail message resource) to rec['thread_messages']
+    if not already recorded (dedup by Gmail message id). Returns True iff it
+    was a new CANDIDATE message (used by callers to flip status/read) — a
+    no-op re-append of an already-seen message, or a new message that's one
+    of our own follow-ups, both return False."""
+    msgs = rec.setdefault("thread_messages", [])
+    msg_id = msg.get("id")
+    if not msg_id or any(m.get("message_id") == msg_id for m in msgs):
+        return False
+
+    headers = (msg.get("payload") or {}).get("headers", [])
+    _, addr = parseaddr(_header(headers, "From"))
+    is_candidate = addr.strip().lower() != connected_email
+
+    body_text, body_html = _extract_body(msg.get("payload") or {})
+    entry = {
+        "message_id": msg_id,
+        "from": _header(headers, "From"),
+        "is_candidate": is_candidate,
+        "received_at": _internal_date_to_iso(msg.get("internalDate")),
+        "snippet": _make_preview(body_text, msg.get("snippet", "")),
+        "body_text": body_text,
+        "body_html": body_html,
+    }
+    if is_candidate:
+        clean_text = _strip_quoted_text(body_text or msg.get("snippet", ""))
+        entry["clean_text"] = clean_text
+        entry["intent"] = _detect_reply_intent(clean_text or body_text or msg.get("snippet", ""))
+
+    msgs.append(entry)
+    return is_candidate
+
+
+def _merge_messages(data: dict, messages_by_thread: dict, connected_email: str) -> int:
+    """Merge fetched Gmail messages (grouped by thread_id) into the JSON
+    store and flip status/read for any thread that got a new candidate
+    message. Caller holds _lock and saves afterward. Returns new_replies
+    (threads with >=1 new candidate message this cycle, not raw message
+    count — matches the original per-thread semantics)."""
+    new_replies = 0
+    for thread_id, msgs in messages_by_thread.items():
+        rec = data["records"].get(thread_id)
+        if rec is None:
+            continue  # not (or no longer) one of our tracked campaign threads
+        new_candidate = False
+        for msg in msgs:
+            if _record_message(rec, msg, connected_email):
+                new_candidate = True
+        if new_candidate:
+            rec["status"] = "replied"
+            rec["read"] = False
+            new_replies += 1
+            logger.info("New reply detected from %s (thread=%s)", rec.get("candidate_email"), thread_id)
+    return new_replies
+
+
 def poll_once() -> dict:
-    """Check every tracked thread — including ones already marked "replied"
-    — for messages we haven't recorded yet, by Gmail message id. This is
-    what makes chained/multi-message conversations work: a thread doesn't
-    stop being polled just because it got one reply."""
+    """Check for new messages on every tracked thread.
+
+    Steady state uses Gmail's history.list for incremental sync: one API
+    call (a couple more only if the mailbox has been very active) tells us
+    every message added anywhere in the mailbox since the last poll,
+    regardless of how many threads we're tracking — O(1) per cycle, not
+    O(tracked threads). Falls back to the old full per-thread walk only
+    when there's no historyId yet (first-ever poll) or Gmail reports ours
+    has expired (~7 days of inactivity, HTTP 404) — both rare, and both
+    self-healing: a fallback run ends by capturing a fresh historyId so the
+    next cycle goes back to incremental.
+
+    All Gmail API calls happen OUTSIDE _lock; the lock is only held around
+    the in-memory merge + JSON save, so a slow/large sync never blocks
+    mark_read() or other readers for its full duration.
+    """
     if not gmail_oauth.is_connected():
         return {"checked": 0, "new_replies": 0, "skipped": "not_connected"}
 
@@ -328,61 +398,98 @@ def poll_once() -> dict:
         return {"checked": 0, "new_replies": 0, "skipped": "not_connected"}
 
     connected_email = (gmail_oauth.public_status().get("connected_email") or "").strip().lower()
+    start_history_id = gmail_oauth.get_history_id()
 
-    checked = 0
-    new_replies = 0
+    with _lock:
+        snapshot = _load()["records"]
+        tracked_thread_ids = set(snapshot.keys())
+        seen_message_ids = {
+            m.get("message_id")
+            for rec in snapshot.values()
+            for m in (rec.get("thread_messages") or [])
+            if m.get("message_id")
+        }
+
+    if start_history_id:
+        try:
+            new_refs = []  # (message_id, thread_id), only for threads we track
+            page_token = None
+            next_history_id = None
+            while True:
+                resp = service.users().history().list(
+                    userId="me", startHistoryId=start_history_id,
+                    historyTypes=["messageAdded"], pageToken=page_token,
+                ).execute()
+                for h in resp.get("history", []):
+                    for added in h.get("messagesAdded", []):
+                        m = added.get("message") or {}
+                        msg_id = m.get("id")
+                        # Skip refetching messages we've already recorded --
+                        # history.list can legitimately re-report a message
+                        # if ranges overlap (e.g. after a fallback resync).
+                        if msg_id and msg_id not in seen_message_ids and m.get("threadId") in tracked_thread_ids:
+                            new_refs.append((msg_id, m["threadId"]))
+                next_history_id = resp.get("historyId") or next_history_id
+                page_token = resp.get("nextPageToken")
+                if not page_token:
+                    break
+
+            messages_by_thread: dict = {}
+            for msg_id, thread_id in new_refs:
+                try:
+                    msg_full = service.users().messages().get(
+                        userId="me", id=msg_id, format="full").execute()
+                except HttpError as exc:
+                    logger.warning("poll_once: messages.get failed for %s: %s", msg_id, exc)
+                    continue
+                messages_by_thread.setdefault(thread_id, []).append(msg_full)
+
+            with _lock:
+                data = _load()
+                checked = len(data["records"])
+                new_replies = _merge_messages(data, messages_by_thread, connected_email)
+                if messages_by_thread:
+                    _save(data)
+
+            if next_history_id:
+                gmail_oauth.set_history_id(next_history_id)
+            return {"checked": checked, "new_replies": new_replies}
+
+        except HttpError as exc:
+            status = getattr(exc.resp, "status", None)
+            if status == 404:
+                logger.info("Gmail historyId expired — falling back to a full resync.")
+            else:
+                logger.warning("history.list failed (%s) — falling back to a full resync.", exc)
+            # fall through to the full resync below
+
+    # ── Full resync: no historyId yet, or Gmail expired ours. One-time
+    # O(tracked threads) walk, same cost as before this fix — only reached
+    # here, never on a normal cycle. ──
+    thread_payloads = []
+    for thread_id in tracked_thread_ids:
+        try:
+            thread_payloads.append((thread_id, service.users().threads().get(
+                userId="me", id=thread_id, format="full").execute()))
+        except HttpError as exc:
+            logger.warning("full resync: threads.get failed for %s: %s", thread_id, exc)
+
+    messages_by_thread: dict = {}
+    for thread_id, thread in thread_payloads:
+        messages_by_thread[thread_id] = thread.get("messages") or []
+
     with _lock:
         data = _load()
-        changed = False
-        for thread_id, rec in data["records"].items():
-            checked += 1
-            try:
-                thread = service.users().threads().get(userId="me", id=thread_id, format="full").execute()
-            except HttpError as exc:
-                logger.warning("poll_once: threads.get failed for %s: %s", thread_id, exc)
-                continue
-
-            existing = rec.setdefault("thread_messages", [])
-            seen_ids = {m.get("message_id") for m in existing if m.get("message_id")}
-
-            new_candidate_msg = False
-            for msg in (thread.get("messages") or []):
-                msg_id = msg.get("id")
-                if not msg_id or msg_id in seen_ids:
-                    continue  # already recorded on a previous poll
-
-                headers = (msg.get("payload") or {}).get("headers", [])
-                _, addr = parseaddr(_header(headers, "From"))
-                is_candidate = addr.strip().lower() != connected_email
-
-                body_text, body_html = _extract_body(msg.get("payload") or {})
-                entry = {
-                    "message_id": msg_id,
-                    "from": _header(headers, "From"),
-                    "is_candidate": is_candidate,
-                    "received_at": _internal_date_to_iso(msg.get("internalDate")),
-                    "snippet": _make_preview(body_text, msg.get("snippet", "")),
-                    "body_text": body_text,
-                    "body_html": body_html,
-                }
-                if is_candidate:
-                    clean_text = _strip_quoted_text(body_text or msg.get("snippet", ""))
-                    entry["clean_text"] = clean_text
-                    entry["intent"] = _detect_reply_intent(clean_text or body_text or msg.get("snippet", ""))
-                    new_candidate_msg = True
-
-                existing.append(entry)
-                seen_ids.add(msg_id)
-                changed = True
-
-            if new_candidate_msg:
-                rec["status"] = "replied"
-                rec["read"] = False
-                new_replies += 1
-                logger.info("New reply detected from %s (thread=%s)", rec.get("candidate_email"), thread_id)
-
-        if changed:
+        checked = len(data["records"])
+        new_replies = _merge_messages(data, messages_by_thread, connected_email)
+        if messages_by_thread:
             _save(data)
+
+    try:
+        profile = service.users().getProfile(userId="me").execute()
+        gmail_oauth.set_history_id(profile.get("historyId"))
+    except HttpError as exc:
+        logger.warning("Could not capture historyId after full resync: %s", exc)
 
     return {"checked": checked, "new_replies": new_replies}
 
@@ -520,8 +627,11 @@ async def get_reply(thread_id: str):
 
 @router.post("/check-now")
 async def post_check_now():
+    # poll_once() makes blocking network calls (googleapiclient isn't async)
+    # and can take a while on a full resync -- run it off the event loop so
+    # it doesn't stall every other request/user while it's in flight.
     try:
-        result = poll_once()
+        result = await asyncio.to_thread(poll_once)
     except gmail_oauth.GmailNotConnectedError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     return {"success": True, **result}

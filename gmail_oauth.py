@@ -293,6 +293,22 @@ def is_connected() -> bool:
     return public_status()["connected"]
 
 
+def get_history_id() -> Optional[str]:
+    """Last-seen Gmail historyId for the current mode's connection. Used by
+    email_replies.py for incremental sync via users.history.list() instead
+    of polling every tracked thread individually — this is captured at
+    connect time (see the OAuth callback below) and kept current there."""
+    return _mode_cfg(_read()).get("history_id")
+
+
+def set_history_id(history_id: Optional[str]) -> None:
+    if not history_id:
+        return
+    cfg = _read()
+    _mode_cfg(cfg)["history_id"] = history_id
+    _write(cfg)
+
+
 def get_active_client(mode: Optional[str] = None) -> Optional[dict]:
     """Public accessor for auth.py's Google Sign-In login flow, which reuses
     this same OAuth client (narrower scopes, its own redirect URI) rather
