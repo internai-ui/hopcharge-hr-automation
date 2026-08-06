@@ -140,6 +140,24 @@ def public_config() -> dict:
         }
 
 
+def is_available() -> bool:
+    """True only when the master toggle is on AND the selected provider can
+    actually be called -- either a key is set, or the provider is
+    HuggingFace, whose free-tier router needs no key. This is the check
+    every caller (AI resume parsing, AI reply-intent classification) should
+    use before attempting a real LLM call; ai_providers.get_provider()
+    itself always returns SOME provider instance even with an empty key
+    (that's how HuggingFace's keyless free tier works), so "the provider
+    object isn't None" is never a valid signal of readiness on its own."""
+    with _lock:
+        raw = _load_raw()
+        if not raw.get("ai_feature_enabled", False):
+            return False
+        if raw.get("provider", "huggingface") == "huggingface":
+            return True
+        return bool(raw.get("api_key_encrypted"))
+
+
 def save_config(
     provider: str,
     model: str,

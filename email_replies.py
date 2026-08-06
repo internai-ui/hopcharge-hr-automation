@@ -203,75 +203,101 @@ def _strip_quoted_html(html: str) -> str:
     return html
 
 
+_INTENT_CATEGORIES = {
+    "not_interested": {"label": "Not Interested", "badge_bg": "rgba(239, 68, 68, 0.18)", "badge_color": "#f87171"},
+    "auto_reply": {"label": "Auto-Reply / OOO", "badge_bg": "rgba(156, 163, 175, 0.18)", "badge_color": "#9ca3af"},
+    "question": {"label": "Question / Inquiry", "badge_bg": "rgba(245, 158, 11, 0.18)", "badge_color": "#fbbf24"},
+    "interested": {"label": "Interested / Form Submitted", "badge_bg": "rgba(52, 211, 153, 0.18)", "badge_color": "#34d399"},
+    "neutral": {"label": "Replied", "badge_bg": "rgba(96, 165, 250, 0.18)", "badge_color": "#60a5fa"},
+}
+
+_INTENT_SYSTEM_PROMPT = (
+    "Classify a candidate's email reply to a recruitment campaign into exactly one category.\n"
+    "Categories:\n"
+    "- not_interested: candidate declines, opts out, or asks to stop being contacted\n"
+    "- auto_reply: an automatic out-of-office reply, or an automated mail-delivery-failure/"
+    "bounce notice -- not a real reply typed by a person\n"
+    "- question: candidate asks about the role (salary, location, timing, requirements) "
+    "without yet confirming interest\n"
+    "- interested: candidate confirms interest, says they've submitted or will submit the "
+    "form, or is otherwise clearly engaged\n"
+    "- neutral: none of the above clearly applies\n"
+    'Return ONLY this JSON: {"category":"<one of the five category names above>"}'
+)
+
+
 def _detect_reply_intent(text: str) -> dict:
-    """Classify reply text into intent category and display badge information."""
+    """Fast, fully offline keyword classifier. Used as the always-available
+    fallback when AI-based classification (_classify_intent_ai) is off,
+    unconfigured, or fails -- and directly by read paths (list_replies/
+    get_reply_detail's legacy-data fallback) which must never make a
+    network call on a GET request."""
     clean = (text or "").lower()
 
-    # 1. Not Interested / Opt Out
-    not_interested_keywords = [
-        "not interested", "no thanks", "don't contact", "dont contact",
-        "leave me alone", "remove me", "unsubscribe", "not looking",
-        "pass on this", "decline", "please stop", "no interest", "not open"
+    keyword_rules = [
+        ("not_interested", [
+            "not interested", "no thanks", "don't contact", "dont contact",
+            "leave me alone", "remove me", "unsubscribe", "not looking",
+            "pass on this", "decline", "please stop", "no interest", "not open",
+        ]),
+        ("auto_reply", [
+            "automatic reply", "out of office", "auto-reply", "auto reply",
+            "currently away", "vacation responder", "on leave until",
+        ]),
+        ("question", [
+            "?", "salary", "ctc", "location", "timings", "hybrid", "remote",
+            "role details", "job description", "stipend", "duration",
+        ]),
+        ("interested", [
+            "interested", "filled", "submitted", "completed", "attached",
+            "looking forward", "thank you", "thanks for reaching", "glad to",
+            "happy to", "available for interview", "schedule",
+        ]),
     ]
-    for kw in not_interested_keywords:
-        if kw in clean:
-            return {
-                "category": "not_interested",
-                "label": "Not Interested",
-                "badge_bg": "rgba(239, 68, 68, 0.18)",
-                "badge_color": "#f87171"
-            }
+    for category, keywords in keyword_rules:
+        if any(kw in clean for kw in keywords):
+            return {"category": category, **_INTENT_CATEGORIES[category]}
 
-    # 2. Out of Office / Auto Reply
-    auto_reply_keywords = [
-        "automatic reply", "out of office", "auto-reply", "auto reply",
-        "currently away", "vacation responder", "on leave until"
-    ]
-    for kw in auto_reply_keywords:
-        if kw in clean:
-            return {
-                "category": "auto_reply",
-                "label": "Auto-Reply / OOO",
-                "badge_bg": "rgba(156, 163, 175, 0.18)",
-                "badge_color": "#9ca3af"
-            }
+    return {"category": "neutral", **_INTENT_CATEGORIES["neutral"]}
 
-    # 3. Question / Inquiry
-    question_keywords = [
-        "?", "salary", "ctc", "location", "timings", "hybrid", "remote",
-        "role details", "job description", "stipend", "duration"
-    ]
-    for kw in question_keywords:
-        if kw in clean:
-            return {
-                "category": "question",
-                "label": "Question / Inquiry",
-                "badge_bg": "rgba(245, 158, 11, 0.18)",
-                "badge_color": "#fbbf24"
-            }
 
-    # 4. Interested / Applied
-    interested_keywords = [
-        "interested", "filled", "submitted", "completed", "attached",
-        "looking forward", "thank you", "thanks for reaching", "glad to",
-        "happy to", "available for interview", "schedule"
-    ]
-    for kw in interested_keywords:
-        if kw in clean:
-            return {
-                "category": "interested",
-                "label": "Interested / Form Submitted",
-                "badge_bg": "rgba(52, 211, 153, 0.18)",
-                "badge_color": "#34d399"
-            }
+def _classify_intent_ai(text: str) -> Optional[dict]:
+    """Try classifying via the same AI-provider infra as AI-based CV parsing
+    (ai_config_store/ai_providers -- Claude/OpenAI/Gemini/Groq/HuggingFace).
+    More reliable than keyword matching for cases keywords get wrong -- e.g.
+    a Gmail delivery-failure bounce that happens to contain a "?" in a URL
+    reads as auto_reply to an LLM, not "question" the way a bare "?" search
+    would classify it. Returns None (never raises) when AI parsing is off,
+    unconfigured, or the call fails for any reason -- callers fall back to
+    _detect_reply_intent in that case, mirroring exactly how AI-based CV
+    parsing falls back to the offline parser."""
+    try:
+        import ai_config_store
+        from ai_providers import get_provider
+    except ImportError:
+        return None
+    try:
+        if not ai_config_store.is_available():
+            return None
+        provider = get_provider(ai_config_store.get_runtime_config())
+        out = provider.complete_json(_INTENT_SYSTEM_PROMPT, (text or "")[:4000])
+        category = (out or {}).get("category")
+        info = _INTENT_CATEGORIES.get(category)
+        if not info:
+            return None
+        return {"category": category, **info}
+    except Exception as exc:
+        logger.warning("AI reply-intent classification failed, falling back to keywords: %s", exc)
+        return None
 
-    # Default / General Response
-    return {
-        "category": "neutral",
-        "label": "Replied",
-        "badge_bg": "rgba(96, 165, 250, 0.18)",
-        "badge_color": "#60a5fa"
-    }
+
+def _classify_intent(text: str) -> dict:
+    """Primary entry point for classifying a NEW candidate reply at
+    record-time (poll_once() only -- never call this from a read path, it
+    may make a blocking network call). Tries AI classification first,
+    falls back to keyword matching on any failure so this always returns
+    something and a flaky/unconfigured provider never blocks a poll cycle."""
+    return _classify_intent_ai(text) or _detect_reply_intent(text)
 
 
 def _extract_body(payload: dict) -> tuple[str, str]:
@@ -315,24 +341,20 @@ def _internal_date_to_iso(ms: Optional[str]) -> Optional[str]:
         return None
 
 
-def _record_message(rec: dict, msg: dict, connected_email: str) -> bool:
-    """Append `msg` (a full Gmail message resource) to rec['thread_messages']
-    if not already recorded (dedup by Gmail message id). Returns True iff it
-    was a new CANDIDATE message (used by callers to flip status/read) — a
-    no-op re-append of an already-seen message, or a new message that's one
-    of our own follow-ups, both return False."""
-    msgs = rec.setdefault("thread_messages", [])
-    msg_id = msg.get("id")
-    if not msg_id or any(m.get("message_id") == msg_id for m in msgs):
-        return False
-
+def _build_message_entry(msg: dict, connected_email: str) -> dict:
+    """Extract + classify one Gmail message into our stored shape. Does all
+    the CPU/network-bound work up front -- including AI intent
+    classification, which may call an LLM -- so callers can do this OUTSIDE
+    _lock and only merge the ready-made entries under the lock as a cheap,
+    purely in-memory step (same principle as keeping Gmail API calls out
+    of the lock)."""
     headers = (msg.get("payload") or {}).get("headers", [])
     _, addr = parseaddr(_header(headers, "From"))
     is_candidate = addr.strip().lower() != connected_email
 
     body_text, body_html = _extract_body(msg.get("payload") or {})
     entry = {
-        "message_id": msg_id,
+        "message_id": msg.get("id"),
         "from": _header(headers, "From"),
         "is_candidate": is_candidate,
         "received_at": _internal_date_to_iso(msg.get("internalDate")),
@@ -343,26 +365,39 @@ def _record_message(rec: dict, msg: dict, connected_email: str) -> bool:
     if is_candidate:
         clean_text = _strip_quoted_text(body_text or msg.get("snippet", ""))
         entry["clean_text"] = clean_text
-        entry["intent"] = _detect_reply_intent(clean_text or body_text or msg.get("snippet", ""))
+        entry["intent"] = _classify_intent(clean_text or body_text or msg.get("snippet", ""))
+    return entry
 
+
+def _record_entry(rec: dict, entry: dict) -> bool:
+    """Append a pre-built message entry (see _build_message_entry) to
+    rec['thread_messages'] if not already recorded (dedup by Gmail message
+    id). Returns True iff it was a new CANDIDATE message (used by callers
+    to flip status/read). Purely in-memory -- safe to call while holding
+    _lock."""
+    msgs = rec.setdefault("thread_messages", [])
+    msg_id = entry.get("message_id")
+    if not msg_id or any(m.get("message_id") == msg_id for m in msgs):
+        return False
     msgs.append(entry)
-    return is_candidate
+    return bool(entry.get("is_candidate"))
 
 
-def _merge_messages(data: dict, messages_by_thread: dict, connected_email: str) -> int:
-    """Merge fetched Gmail messages (grouped by thread_id) into the JSON
-    store and flip status/read for any thread that got a new candidate
-    message. Caller holds _lock and saves afterward. Returns new_replies
-    (threads with >=1 new candidate message this cycle, not raw message
-    count — matches the original per-thread semantics)."""
+def _merge_messages(data: dict, messages_by_thread: dict) -> int:
+    """Merge pre-built message entries (grouped by thread_id, see
+    _build_message_entry) into the JSON store and flip status/read for any
+    thread that got a new candidate message. Caller holds _lock and saves
+    afterward. Returns new_replies (threads with >=1 new candidate message
+    this cycle, not raw message count — matches the original per-thread
+    semantics)."""
     new_replies = 0
-    for thread_id, msgs in messages_by_thread.items():
+    for thread_id, entries in messages_by_thread.items():
         rec = data["records"].get(thread_id)
         if rec is None:
             continue  # not (or no longer) one of our tracked campaign threads
         new_candidate = False
-        for msg in msgs:
-            if _record_message(rec, msg, connected_email):
+        for entry in entries:
+            if _record_entry(rec, entry):
                 new_candidate = True
         if new_candidate:
             rec["status"] = "replied"
@@ -442,12 +477,15 @@ def poll_once() -> dict:
                 except HttpError as exc:
                     logger.warning("poll_once: messages.get failed for %s: %s", msg_id, exc)
                     continue
-                messages_by_thread.setdefault(thread_id, []).append(msg_full)
+                # Classification (possibly an LLM call) happens here, still
+                # outside _lock.
+                entry = _build_message_entry(msg_full, connected_email)
+                messages_by_thread.setdefault(thread_id, []).append(entry)
 
             with _lock:
                 data = _load()
                 checked = len(data["records"])
-                new_replies = _merge_messages(data, messages_by_thread, connected_email)
+                new_replies = _merge_messages(data, messages_by_thread)
                 if messages_by_thread:
                     _save(data)
 
@@ -474,14 +512,24 @@ def poll_once() -> dict:
         except HttpError as exc:
             logger.warning("full resync: threads.get failed for %s: %s", thread_id, exc)
 
+    # Classification (possibly an LLM call per NEW candidate message)
+    # happens here, still outside _lock. Skip messages we've already
+    # recorded/classified in a previous cycle -- a full resync re-fetches
+    # each tracked thread's ENTIRE message list from Gmail, so without this
+    # filter every already-known message would get needlessly reclassified
+    # (and re-billed, for a paid LLM provider) every time a resync runs.
     messages_by_thread: dict = {}
     for thread_id, thread in thread_payloads:
-        messages_by_thread[thread_id] = thread.get("messages") or []
+        messages_by_thread[thread_id] = [
+            _build_message_entry(m, connected_email)
+            for m in (thread.get("messages") or [])
+            if m.get("id") not in seen_message_ids
+        ]
 
     with _lock:
         data = _load()
         checked = len(data["records"])
-        new_replies = _merge_messages(data, messages_by_thread, connected_email)
+        new_replies = _merge_messages(data, messages_by_thread)
         if messages_by_thread:
             _save(data)
 

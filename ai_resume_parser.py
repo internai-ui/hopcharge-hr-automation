@@ -98,14 +98,10 @@ def _coerce_confidence(v) -> dict:
 
 def is_available() -> bool:
     """
-    True only when the master AI toggle is on AND a real provider (API key)
-    is configured. Mirrors the exact guard scoring/providers.get_provider()
-    already applies, so this stays in sync with the Admin Settings toggle
-    without duplicating its logic.
+    True only when the master AI toggle is on AND a real provider (API key,
+    or HuggingFace's keyless free tier) is configured.
     """
-    if not config_store.is_feature_enabled():
-        return False
-    return get_provider(config_store.get_runtime_config()) is not None
+    return ai_config_store.is_available()
 
 
 def parse_resume_ai(raw_text: str, source_file: str = "") -> CandidateRecord:
@@ -116,7 +112,7 @@ def parse_resume_ai(raw_text: str, source_file: str = "") -> CandidateRecord:
     credits, unusable response, etc.) — callers must catch and fall back to
     parser.parse_resume(), which always works offline.
     """
-    provider = get_provider(config_store.get_runtime_config())
+    provider = get_provider(ai_config_store.get_runtime_config())
     if provider is None:
         raise ProviderError("AI-based resume parsing is not enabled.", status="disabled")
 
@@ -124,7 +120,6 @@ def parse_resume_ai(raw_text: str, source_file: str = "") -> CandidateRecord:
     if not text:
         raise ValueError("No text to parse.")
 
-    provider = get_provider(ai_config_store.get_runtime_config())
     user_prompt = (
         f"Resume Source File: {source_file}\n\n"
         f"Resume Content:\n<resume>\n{text[:_MAX_INPUT_CHARS]}\n</resume>\n\n"
