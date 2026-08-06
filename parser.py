@@ -53,13 +53,24 @@ def _extract_emails(text: str) -> list[str]:
     return list(dict.fromkeys(re.findall(EMAIL_PATTERN, text)))
 
 
+# A bare "2020-2021"-style year range is numeric and dash-separated, so it
+# satisfies PHONE_PATTERN's shape too — this is the one false-positive
+# source common enough in resumes (work-experience/education date ranges)
+# to guard against explicitly, rather than trying to broadly distinguish
+# "looks like a phone" from "looks like two years" in the pattern itself.
+_YEAR_RANGE_RE = re.compile(r"^\(?(?:19|20)\d{2}\)?\s*[\s\-–—]\s*\(?(?:19|20)\d{2}\)?$")
+
+
 def _extract_phones(text: str) -> list[str]:
     raw = re.findall(PHONE_PATTERN, text)
     cleaned = []
     for p in raw:
-        digits = re.sub(r"\D", "", p)
+        candidate = p.strip()
+        if _YEAR_RANGE_RE.match(candidate):
+            continue
+        digits = re.sub(r"\D", "", candidate)
         if 7 <= len(digits) <= 15:
-            cleaned.append(p.strip())
+            cleaned.append(candidate)
     return list(dict.fromkeys(cleaned))
 
 
@@ -148,7 +159,11 @@ def _is_section_heading(line: str) -> bool:
     """Return True if the line matches a known resume section heading."""
     stripped = line.strip()
     for pat, _ in SECTION_HEADINGS:
-        if re.match(r"^\s*" + pat + r"\s*[:\-–—]?\s*$", stripped, re.IGNORECASE):
+        # pat is itself alternation-heavy (e.g. "a|b|c") and NOT wrapped in
+        # its own group, so it must be grouped here -- otherwise `^`/`$`
+        # only bind to the first/last alternative of pat, not to each one,
+        # and this ends up matching far more loosely than intended.
+        if re.match(r"^\s*(?:" + pat + r")\s*[:\-–—]?\s*$", stripped, re.IGNORECASE):
             return True
     return False
 
@@ -470,20 +485,27 @@ def _extract_name(text: str, email: str = "") -> tuple[str, float]:
 # LOCATION EXTRACTION
 # ═══════════════════════════════════════════════
 
+_CITY_PATTERN = r"(?:Mumbai|Delhi|Bangalore|Bengaluru|Hyderabad|Chennai|Kolkata|Pune|Ahmedabad|Jaipur|Lucknow|Noida|Gurgaon|Gurugram|Chandigarh|Kochi|Indore|Bhopal|Patna|Coimbatore|Nagpur|Surat|Visakhapatnam|Vadodara|Thiruvananthapuram|Ranchi|Dehradun|New Delhi|Guwahati|Raipur|Bhubaneswar|Mangalore|Mysore|Jodhpur|Amritsar|Kanpur|Varanasi|Agra)"
+
+
 def _extract_location(text: str) -> tuple[str, float]:
-    """Try spaCy GPE entities from the header, then a regex heuristic."""
-    nlp = _get_nlp()
+    """Check the curated Indian-city list first (more precise for this
+    app's target audience than general-purpose NER, and immune to spaCy
+    occasionally mistagging a city as something else entirely -- e.g. it
+    reads "Bangalore" as a PERSON, not a GPE, often enough that leading
+    with spaCy would silently drop a perfectly identifiable city). Falls
+    back to spaCy's GPE/LOC entities for locations outside that list
+    (international cities, etc.)."""
     header = "\n".join(text.split("\n")[:15])
+    m = re.search(_CITY_PATTERN, header, re.IGNORECASE)
+    if m:
+        return m.group(0).strip(), 0.85
+    nlp = _get_nlp()
     if nlp:
         doc = nlp(header)
         for ent in doc.ents:
             if ent.label_ in ("GPE", "LOC"):
                 return ent.text.strip(), 0.70
-    # Heuristic: look for common Indian cities or "City, State" patterns in the header
-    city_pattern = r"(?:Mumbai|Delhi|Bangalore|Bengaluru|Hyderabad|Chennai|Kolkata|Pune|Ahmedabad|Jaipur|Lucknow|Noida|Gurgaon|Gurugram|Chandigarh|Kochi|Indore|Bhopal|Patna|Coimbatore|Nagpur|Surat|Visakhapatnam|Vadodara|Thiruvananthapuram|Ranchi|Dehradun|New Delhi|Guwahati|Raipur|Bhubaneswar|Mangalore|Mysore|Jodhpur|Amritsar|Kanpur|Varanasi|Agra)"
-    m = re.search(city_pattern, header, re.IGNORECASE)
-    if m:
-        return m.group(0).strip(), 0.75
     return "", 0.0
 
 
@@ -497,9 +519,23 @@ def _split_sections(text: str) -> dict[str, str]:
     Returns {section_key: content_text}.
     'header' captures everything before the first recognised heading.
     """
-    compiled = [(re.compile(r"^\s*" + pat + r"\s*[:\-–—]?\s*$", re.IGNORECASE), key) for pat, key in SECTION_HEADINGS]
-    # Also accept headings that are in ALL CAPS on their own line
-    compiled_upper = [(re.compile(r"^\s*" + pat + r"\s*[:\-–—]?\s*$", re.IGNORECASE), key) for pat, key in SECTION_HEADINGS]
+    # pat is alternation-heavy (e.g. "a|b|c") and not wrapped in its own
+    # group, so it's grouped here with (?:...) -- otherwise `^`/`$` only
+    # bind to pat's first/last alternative instead of each one, matching
+    # far more loosely than intended (e.g. a bare "^...skills" with no end
+    # anchor at all would match "SKILLS: Python, Django, ..." as a whole,
+    # silently swallowing everything after the colon).
+    # Heading alone on its line, e.g. "SKILLS" or "Skills:".
+    compiled = [(re.compile(r"^\s*(?:" + pat + r")\s*[:\-–—]?\s*$", re.IGNORECASE), key) for pat, key in SECTION_HEADINGS]
+    # Heading immediately followed by its content on the SAME line, e.g.
+    # "Skills: Python, Django, PostgreSQL" — very common in real resumes.
+    # Requires an explicit separator (: - –) so a sentence that merely
+    # contains a heading word (e.g. "4 years experience.") can't match —
+    # the separator only appears after a deliberate label.
+    compiled_inline = [
+        (re.compile(r"^\s*(?:" + pat + r")\s*[:\-–—]\s*(\S.*)$", re.IGNORECASE), key)
+        for pat, key in SECTION_HEADINGS
+    ]
 
     sections: dict[str, list[str]] = {"header": []}
     current = "header"
@@ -523,6 +559,15 @@ def _split_sections(text: str) -> dict[str, str]:
                             sections.setdefault(current, [])
                             matched = True
                             break
+            if not matched:
+                for regex, key in compiled_inline:
+                    m = regex.match(stripped)
+                    if m:
+                        current = key
+                        sections.setdefault(current, [])
+                        sections[current].append(m.group(1))
+                        matched = True
+                        break
         if not matched:
             sections.setdefault(current, [])
             sections[current].append(line)
@@ -622,6 +667,35 @@ def _split_title_company(text: str) -> tuple[str, str]:
     return text.strip(), ""
 
 
+# Matches both "CGPA: 8.9" / "GPA 3.8/4.0" (label first, the more common
+# real-world ordering) and "8.9 CGPA" / "85%" / "8.9/10" (value first) —
+# the old pattern only covered the value-first case, so a "CGPA: 8.9" line
+# matched nothing and fell through to being misread as an institution name.
+_SCORE_RE = re.compile(
+    r"(?:CGPA|GPA)\s*[:\-]?\s*\d+\.?\d*(?:\s*/\s*\d+)?"
+    r"|\d+\.?\d*\s*(?:CGPA|GPA)"
+    r"|\d+\.?\d*\s*%"
+    r"|\d+\.?\d*\s*/\s*\d+",
+    re.IGNORECASE,
+)
+_YEAR_RE = re.compile(r"(?:19|20)\d{2}")
+
+
+def _line_is_mostly_score_or_year(stripped: str, score_m, year_m) -> bool:
+    """True if `stripped` is essentially JUST a score/year fragment (e.g.
+    'CGPA: 8.9' or 'Year: 2019') rather than prose that happens to contain
+    one (e.g. an institution name with a founding year in it) — used to
+    decide a line should NOT be taken as the institution name."""
+    remainder = stripped
+    if score_m:
+        remainder = remainder.replace(score_m.group(0), "")
+    if year_m:
+        remainder = remainder.replace(year_m.group(0), "")
+    remainder = re.sub(r"[\s:;,\-–—.|]+", "", remainder, flags=re.IGNORECASE)
+    remainder = re.sub(r"(?i:year|score|percentage|marks|result)", "", remainder)
+    return len(remainder) <= 2
+
+
 def _parse_education(text: str) -> list[dict]:
     """Split education into entries, using degree keywords or date patterns."""
     degree_re = re.compile(
@@ -646,27 +720,24 @@ def _parse_education(text: str) -> list[dict]:
             if current:
                 entries.append(current)
             current = {"institution": "", "degree": stripped, "year": "", "score": ""}
-            # Check for year
-            ym = re.search(r"((?:19|20)\d{2})", stripped)
+            ym = _YEAR_RE.search(stripped)
             if ym:
-                current["year"] = ym.group(1)
-            # Check for percentage or CGPA
-            sm = re.search(r"(\d+\.?\d*\s*%|\d+\.?\d*\s*/\s*\d+|\d+\.?\d*\s*(?:CGPA|GPA|cgpa|gpa))", stripped)
+                current["year"] = ym.group(0)
+            sm = _SCORE_RE.search(stripped)
             if sm:
-                current["score"] = sm.group(1).strip()
+                current["score"] = sm.group(0).strip()
         elif current is not None:
-            if not current["institution"]:
+            ym = _YEAR_RE.search(stripped)
+            sm = _SCORE_RE.search(stripped)
+            if sm and not current["score"]:
+                current["score"] = sm.group(0).strip()
+            if ym and not current["year"]:
+                current["year"] = ym.group(0)
+            # Only a line that ISN'T mostly a score/year fragment can be the
+            # institution name -- a bare "CGPA: 8.9" line should never end
+            # up there just because "institution" was still empty.
+            if not current["institution"] and not _line_is_mostly_score_or_year(stripped, sm, ym):
                 current["institution"] = stripped
-            else:
-                # Might contain year or score
-                ym = re.search(r"((?:19|20)\d{2})", stripped)
-                if ym and not current["year"]:
-                    current["year"] = ym.group(1)
-                sm = re.search(r"(\d+\.?\d*\s*%|\d+\.?\d*\s*/\s*\d+|\d+\.?\d*\s*(?:CGPA|GPA|cgpa|gpa))", stripped)
-                if sm and not current["score"]:
-                    current["score"] = sm.group(1).strip()
-                if not current["institution"]:
-                    current["institution"] = stripped
         else:
             current = {"institution": stripped, "degree": "", "year": "", "score": ""}
 
@@ -792,14 +863,19 @@ def parse_resume(raw_text: str, source_file: str = "") -> CandidateRecord:
     if name:
         confidence["full_name"] = name_conf
 
-    # ── Location ──
-    loc, loc_conf = _extract_location(raw_text)
+    # ── Sections ──
+    sections = _split_sections(raw_text)
+
+    # ── Location ── constrained to the header (before the first detected
+    # section) rather than a blind first-N-raw-lines slice, so a resume
+    # with an early section (e.g. SKILLS right after contact info) can't
+    # feed section content into spaCy's location NER and pick up a false
+    # positive (a tech term or tool name occasionally gets mistagged as a
+    # place, e.g. "Django").
+    loc, loc_conf = _extract_location(sections.get("header", raw_text))
     record.location_city = loc
     if loc:
         confidence["location_city"] = loc_conf
-
-    # ── Sections ──
-    sections = _split_sections(raw_text)
 
     if "summary" in sections:
         record.summary_objective_profile = sections["summary"]

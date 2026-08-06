@@ -87,7 +87,11 @@ class HuggingFaceProvider(AIProvider):
         self.temperature = temperature
 
     def complete_json(self, system_prompt: str, user_prompt: str) -> dict:
-        url = f"https://api-inference.huggingface.co/models/{self.model}/v1/chat/completions"
+        # HuggingFace retired the old per-model api-inference.huggingface.co
+        # path in favor of a single router endpoint (their "Inference
+        # Providers" system) -- the model id goes in the JSON body, not the
+        # URL path. https://huggingface.co/docs/inference-providers
+        url = "https://router.huggingface.co/v1/chat/completions"
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"

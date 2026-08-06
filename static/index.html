@@ -1023,30 +1023,30 @@
       </label>
       <div style="flex:1">
         <div style="font-family:'Poppins',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.5px;color:var(--violet)">ENABLE AI-ASSISTED CV PARSING</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:1px" id="ai-feature-desc">Off by default. CVs are parsed with the offline regex + spaCy parser only - no API key fields, no external calls. Turning this on reveals the Claude / OpenAI / Gemini / Groq / Hugging Face configuration below.</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:1px" id="ai-feature-desc">Off by default. CVs are parsed with the offline regex + spaCy parser and replies are classified by keyword matching only - no API key fields, no external calls. Turning this on reveals the Claude / OpenAI / Gemini / Groq / Hugging Face configuration below, shared by both CV parsing and reply-intent classification.</div>
       </div>
     </div>
 
     <div id="ai-cfg-grid" class="ai-cfg-grid" style="margin-bottom:26px">
       <!-- Mode selector -->
       <div class="glass-card ai-cfg-card">
-        <div class="ai-cfg-title">CV Parsing Mode</div>
+        <div class="ai-cfg-title">CV Parsing Mode + Intent Analysis</div>
 
         <div class="ai-mode-options">
           <label class="ai-mode-option" data-mode="offline">
-            <input type="radio" name="ai-mode" value="offline" class="ai-mode-radio-input" checked>
+            <input type="radio" name="ai-mode" value="offline" class="ai-mode-radio-input">
             <div class="ai-mode-text">
               <div class="ai-mode-label">Offline (Regex + spaCy)</div>
-              <div class="ai-mode-desc">Deterministic section-heading parsing. No API key needed. Always works, even for unusual layouts it can't fully read.</div>
+              <div class="ai-mode-desc">Deterministic section-heading parsing for CVs and keyword matching for reply-intent labels (Replies page). No API key needed. Always works, even on layouts or wording it can't fully read.</div>
               <div class="ai-mode-status" id="offline-status">Active · Parsing now</div>
             </div>
           </label>
 
           <label class="ai-mode-option hidden" data-mode="api" id="ai-mode-api-option">
-            <input type="radio" name="ai-mode" value="api" class="ai-mode-radio-input">
+            <input type="radio" name="ai-mode" value="api" class="ai-mode-radio-input" checked>
             <div class="ai-mode-text">
               <div class="ai-mode-label">AI-Based (Claude / OpenAI / Gemini / Groq / Hugging Face)</div>
-              <div class="ai-mode-desc">LLM-based extraction - handles unusual formats, tables, and non-standard section names far more consistently. Requires an API key.</div>
+              <div class="ai-mode-desc">LLM-based CV extraction and reply-intent classification - handles unusual resume formats and nuanced replies (e.g. correctly reads a bounce notice as automated rather than a candidate's question) far more consistently. Requires an API key.</div>
               <div class="ai-mode-status" id="api-status">Not configured</div>
             </div>
           </label>
@@ -1104,28 +1104,30 @@
 
         <div style="font-size:13px;color:var(--text-mid);line-height:1.7">
           <div style="margin-bottom:16px">
-            <div style="font-weight:700;color:var(--text-on);margin-bottom:6px">Offline Parsing</div>
+            <div style="font-weight:700;color:var(--text-on);margin-bottom:6px">Offline (Regex + spaCy + Keywords)</div>
             <ul style="margin:0;padding-left:20px">
-              <li>Regex + spaCy section-heading detection</li>
+              <li>CVs: regex + spaCy section-heading detection</li>
+              <li>Replies: keyword matching against each reply's text</li>
               <li>Fast and free - no API calls</li>
-              <li>Works well on standard resume layouts</li>
-              <li>Can miss fields on unusual formats, tables, or creative layouts</li>
+              <li>Works well on standard resume layouts and clearly-worded replies</li>
+              <li>Can miss fields on unusual formats, tables, or creative layouts; can misread a wording quirk (e.g. a "?" in a bounce notice) as the wrong reply category</li>
             </ul>
           </div>
 
           <div class="hidden" id="ai-how-it-works-api" style="margin-bottom:16px">
-            <div style="font-weight:700;color:var(--text-on);margin-bottom:6px">AI-Based Parsing</div>
+            <div style="font-weight:700;color:var(--text-on);margin-bottom:6px">AI-Based (CV Parsing + Intent Analysis)</div>
             <ul style="margin:0;padding-left:20px">
-              <li>Routes the extracted text through an LLM for structured extraction</li>
-              <li>Handles arbitrary formats far more consistently</li>
-              <li>Falls back to offline parsing automatically if the call fails</li>
-              <li>Requires an API call (slight latency + cost, per your provider)</li>
+              <li>Routes CV text and reply text through the same configured LLM</li>
+              <li>CVs: handles arbitrary formats far more consistently</li>
+              <li>Replies: understands context, so it correctly separates real questions from automated bounces/out-of-office notices</li>
+              <li>Falls back to offline parsing/keyword matching automatically if a call fails</li>
+              <li>Requires an API call per CV or reply (slight latency + cost, per your provider)</li>
             </ul>
           </div>
 
           <div style="background:var(--glass-2);border-radius:var(--r-sm);padding:12px;border:1px solid var(--border-dim)">
             <strong style="color:var(--violet)">✓ Switch anytime</strong><br/>
-            When AI parsing is off or a call fails for any reason, the app always falls back to the offline parser - a resume is never left unparsed.
+            When AI parsing is off or a call fails for any reason, the app always falls back to the offline parser/keyword matcher - a resume or reply is never left unclassified.
           </div>
         </div>
       </div>
