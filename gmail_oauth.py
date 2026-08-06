@@ -89,6 +89,17 @@ from pydantic import BaseModel
 from config import OUTPUT_DIR
 from app_paths import _is_frozen, CREDENTIALS_DIR
 
+# Google's token endpoint silently grants "openid" + userinfo.email on any
+# code exchange through this OAuth client, because the same client is also
+# used for Google Sign-In (auth.py's LOGIN_SCOPES requests them). oauthlib
+# treats any mismatch between the scopes we asked for and the scopes Google
+# actually returned as a hard error ("Scope has changed from X to Y") unless
+# this is set — must be set before any Flow.fetch_token() call anywhere in
+# the process (auth.py's login flow reuses this same client and hits the
+# identical check), so this module-level line covers both since auth.py
+# already imports gmail_oauth.
+os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")
+
 logger = logging.getLogger("volt_cv.gmail_oauth")
 
 CONFIG_FILE: Path = OUTPUT_DIR / "gmail_oauth.json"
