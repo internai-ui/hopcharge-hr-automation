@@ -152,8 +152,7 @@ def _pipeline_to_rows(payload, wrapper_key, accepted=True):
             response_id=it.get("response_id"), name=it.get("name"),
             email=it.get("email"), phone=it.get("phone"), role=it.get("role"),
             answers=it.get("answers", []),
-            objective_score=it.get("objective_score"), ai_score=it.get("ai_score"),
-            total_score=it.get("total_score"), recommendation=it.get("recommendation"),
+            recommendation=it.get("recommendation"),
             history=it.get("history", []),
         )
         if accepted:
@@ -179,8 +178,7 @@ def _accepted_to_json(session):
     return {"accepted": [{
         "response_id": r.response_id, "name": r.name, "email": r.email,
         "phone": r.phone, "role": r.role, "answers": r.answers,
-        "objective_score": r.objective_score, "ai_score": r.ai_score,
-        "total_score": r.total_score, "recommendation": r.recommendation,
+        "recommendation": r.recommendation,
         "stage": r.stage, "accepted_note": r.accepted_note,
         "accepted_at": _iso(r.accepted_at), "stage_changed_at": _iso(r.stage_changed_at),
         "history": r.history,
@@ -196,8 +194,7 @@ def _rejected_to_json(session):
     return {"rejected": [{
         "response_id": r.response_id, "name": r.name, "email": r.email,
         "phone": r.phone, "role": r.role, "answers": r.answers,
-        "objective_score": r.objective_score, "ai_score": r.ai_score,
-        "total_score": r.total_score, "recommendation": r.recommendation,
+        "recommendation": r.recommendation,
         "rejected_round": r.rejected_round, "rejected_reason": r.rejected_reason,
         "rejected_at": _iso(r.rejected_at), "history": r.history,
     } for r in rows]}

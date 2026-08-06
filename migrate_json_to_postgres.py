@@ -120,8 +120,6 @@ def migrate_pipeline(session, src, dry, fname, model):
             response_id=it.get("response_id"), name=it.get("name"),
             email=it.get("email"), phone=it.get("phone"), role=it.get("role"),
             answers=it.get("answers", []),
-            objective_score=it.get("objective_score"),
-            ai_score=it.get("ai_score"), total_score=it.get("total_score"),
             recommendation=it.get("recommendation"),
             history=it.get("history", []),
         )

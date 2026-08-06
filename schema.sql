@@ -41,9 +41,6 @@ CREATE TABLE IF NOT EXISTS accepted_candidates (
     phone         TEXT,
     role          TEXT,
     answers       JSONB DEFAULT '[]',
-    objective_score INTEGER,
-    ai_score        INTEGER,
-    total_score     INTEGER,
     recommendation  TEXT,
     stage           TEXT NOT NULL DEFAULT 'hr'
                     CHECK (stage IN ('hr','round1','round2')),
@@ -57,7 +54,6 @@ CREATE TABLE IF NOT EXISTS accepted_candidates (
 );
 CREATE INDEX IF NOT EXISTS idx_acc_email ON accepted_candidates (lower(email)) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_acc_stage ON accepted_candidates (stage)        WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_acc_score ON accepted_candidates (total_score)  WHERE deleted_at IS NULL;
 DROP TRIGGER IF EXISTS trg_acc_updated ON accepted_candidates;
 CREATE TRIGGER trg_acc_updated BEFORE UPDATE ON accepted_candidates
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
@@ -73,9 +69,6 @@ CREATE TABLE IF NOT EXISTS rejected_candidates (
     phone         TEXT,
     role          TEXT,
     answers       JSONB DEFAULT '[]',
-    objective_score INTEGER,
-    ai_score        INTEGER,
-    total_score     INTEGER,
     recommendation  TEXT,
     rejected_round  TEXT,                          -- e.g. "Round 0 — Form Screening"
     rejected_reason TEXT DEFAULT '',
