@@ -1,5 +1,6 @@
 /* ───────── FORMS RETRIEVAL ───────── */
 (function () {
+  const _WARNING_ICON = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5 18 17H2Z"/><path d="M10 8v4"/><circle cx="10" cy="14.5" r=".6" fill="currentColor" stroke="none"/></svg>';
   const credsEl    = document.getElementById('forms-creds');
   const fetchBtn   = document.getElementById('forms-fetch-btn');
   const loadBtn    = document.getElementById('forms-load-btn');
@@ -16,9 +17,10 @@
       _formId = ((d.settings && d.settings.recruitment_form && d.settings.recruitment_form.form_id) || '').trim();
     }catch(e){ _formId = ''; }
     if (formIdStatus) {
+      formIdStatus.classList.toggle('setup-warning', !_formId);
       formIdStatus.innerHTML = _formId
         ? `<span style="font-family:'JetBrains Mono',monospace;font-size:11.5px">${_formId}</span>`
-        : `No recruitment form set yet. <a href="#" data-goto="admin" style="color:var(--violet)">Set it in Admin Settings</a>.`;
+        : `${_WARNING_ICON} No recruitment form set yet. <a href="#" data-goto="admin">Set it in Admin Settings</a>.`;
       formIdStatus.querySelector('[data-goto]')?.addEventListener('click', (e) => {
         e.preventDefault();
         if (window.goToPage) window.goToPage('admin');

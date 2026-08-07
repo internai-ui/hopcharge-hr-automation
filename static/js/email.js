@@ -1,5 +1,6 @@
 /* ───────── EMAIL CAMPAIGN ───────── */
 (function(){
+  const _WARNING_ICON = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2.5 18 17H2Z"/><path d="M10 8v4"/><circle cx="10" cy="14.5" r=".6" fill="currentColor" stroke="none"/></svg>';
   const formLinkStatus = document.getElementById('form-link-status');
   let _formLink = '';   // sourced from Admin Settings' saved recruitment form link
   const manualEnable = document.getElementById('manual-enable');
@@ -36,10 +37,11 @@
 
     if (sendBtn) sendBtn.disabled = !ok;
     if (sendInfo) {
+      sendInfo.classList.toggle('setup-warning', !linkOk);
       if (!auth.connected) {
         sendInfo.textContent = 'Connect your Google account above to send emails.';
       } else if (!linkOk) {
-        sendInfo.textContent = 'Set the recruitment form link in Admin Settings first.';
+        sendInfo.innerHTML = `${_WARNING_ICON} Set the recruitment form link in Admin Settings first.`;
       } else if (recipients === 0) {
         sendInfo.textContent = manualActive() ? 'Enter at least one valid recipient email below.' : 'Parse CVs first, or use manually added emails.';
       } else {
@@ -58,9 +60,10 @@
       _formLink = ((d.settings && d.settings.recruitment_form && d.settings.recruitment_form.form_link) || '').trim();
     }catch(e){ _formLink = ''; }
     if (formLinkStatus) {
+      formLinkStatus.classList.toggle('setup-warning', !_formLink);
       formLinkStatus.innerHTML = _formLink
         ? `Recruitment form: <a href="${_formLink}" target="_blank" rel="noopener" style="color:var(--violet)">${_formLink}</a>`
-        : `No recruitment form set yet. <a href="#" data-goto="admin" style="color:var(--violet)">Set it in Admin Settings</a>.`;
+        : `${_WARNING_ICON} No recruitment form set yet. <a href="#" data-goto="admin">Set it in Admin Settings</a>.`;
       formLinkStatus.querySelector('[data-goto]')?.addEventListener('click', (e) => {
         e.preventDefault();
         if (window.goToPage) window.goToPage('admin');
