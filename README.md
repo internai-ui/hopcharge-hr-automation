@@ -1,13 +1,13 @@
 # Hopcharge HR BAU Automation Dashboard (VOLT.CV)
 
-Internal FastAPI dashboard that automates HopCharge's recruitment operations end to end: parsing resumes, dispatching recruitment emails, syncing Google Form responses, scoring candidates, managing the accept/reject pipeline, college outreach, and the employee master sheet.
+Internal FastAPI dashboard that automates HopCharge's recruitment operations end to end: parsing resumes, dispatching recruitment emails, tracking and classifying candidate replies, syncing Google Form responses, managing the accept/reject pipeline, college outreach, and the employee master sheet.
 
 ## What it does
 
 - **CV Parser** — upload resume PDFs (or sync from a Google Drive folder); text is extracted via pdfplumber → PyMuPDF → Tesseract OCR fallback, then parsed into structured fields (name, email, phone, work experience, education, skills, etc.) with a confidence score per field.
-- **Send Emails** — dispatches personalised recruitment emails via your connected Google account (OAuth — see "Connect Google Account" below), embedding your Google Form assessment link. Optional click-tracking (off by default — see below).
+- **Send Emails** — dispatches personalised recruitment emails via your connected Google account (OAuth — see "Connect Google Account" below), embedding your Google Form assessment link. Optional click-tracking (off by default — see below), which can run on your own server or on Cloudflare Workers' free tier (see `cloudflare/README.md`) if you don't want a public URL of your own.
+- **Replies** — tracks candidate replies to campaign emails via Gmail, and classifies each one (not interested / auto-reply / question / interested / neutral) using either keyword matching (default, offline) or the same LLM provider used for CV parsing, if enabled.
 - **Form Responses** — pulls candidate submissions from the Google Forms API.
-- **Scoring** — hybrid model: deterministic rubric rules (`objective_score`) plus an `ai_score` component computed either by a fully offline rules engine (default, no API key, no network calls) or a real LLM provider if you explicitly enable it (see below).
 - **Accepted / Rejected** — a four-stage pipeline (HR Round → Round 1 → Round 2 → Onboarded) with restore-from-rejected support.
 - **Analytics** — operational metrics across configurable time windows.
 - **College Outreach** — a separate pipeline for discovering, prioritizing, and tracking outreach to college placement cells.
@@ -39,13 +39,15 @@ python3 -m uvicorn app:app --reload --port 8000
 
 Open `http://localhost:8000`. If `DASHBOARD_AUTH` isn't set (or is commented out) in `neon.env`, the dashboard opens directly with no login.
 
+When `DASHBOARD_AUTH=on`, sign-in is Google-only, restricted to email addresses already present in the Employee Database (matched against the `email`/`email_official` fields) — there are no separate accounts or passwords. Admin access is the `is_admin` checkbox on an employee's record. It reuses the same OAuth client already configured for "Connect Google Account" (Send Emails page); see `auth.py`'s module docstring for the one extra Google Cloud Console step (adding `/api/auth/google/callback` as a second Authorized redirect URI on that client).
+
 > If `python3 -m uvicorn` still can't find the module even inside an activated venv, your shell likely has a stale command-hash pointing at a different Python (common with pyenv). Run `hash -r` (zsh/bash) or just call `./.venv/bin/python -m uvicorn app:app --reload --port 8000` directly, which always resolves correctly regardless of shell state.
 
 ## Two feature toggles, both off by default
 
-**AI-based scoring & resume parsing** (Sidebar → AI Settings): a master switch that gates all external LLM provider access (Claude / OpenAI / Gemini / Groq / Hugging Face). Off by default — scoring runs on the offline rules engine only, no API key fields shown, no external calls possible even if a key was previously saved. Turning it on reveals provider configuration; Hugging Face's free-tier router is the default provider since it needs no billing. When enabled, resume parsing also routes through the configured LLM for more robust extraction on unusual resume formats, falling back to the regex/spaCy parser automatically on any failure.
+**AI-based CV parsing & reply-intent classification** (Admin Settings → "CV Parsing Mode + Intent Analysis"): a master switch that gates all external LLM provider access (Claude / OpenAI / Gemini / Groq / Hugging Face) for both features. Off by default — CV parsing runs on the offline regex + spaCy parser and replies are classified by keyword matching only, no API key fields shown, no external calls possible even if a key was previously saved. Turning it on reveals provider configuration; once a key is set, AI-based is the selected mode by default (Hugging Face's free-tier router needs no billing, so it's the default provider). Both CV parsing and reply-intent classification fall back to their offline equivalent automatically on any failure — a resume or reply is never left unparsed/unclassified.
 
-**Click-tracking** (Send Emails page): off by default — campaign emails link straight to your Google Form, no public server required. Turning it on measures per-candidate form-completion time via a `/t/<token>` redirect, which does require this server to be reachable at a public HTTPS URL for the tracking link to work for real candidates.
+**Click-tracking** (Send Emails page): off by default — campaign emails link straight to your Google Form, no public server required. Turning it on measures per-candidate form-completion time via a `/t/<token>` redirect (self-hosted, or via Cloudflare Workers — see `cloudflare/README.md`), which requires that redirect endpoint to be reachable at a public HTTPS URL for real candidates to hit it.
 
 Both are persisted server-side (not per-browser), so the choice survives restarts and is shared across anyone hitting the same server.
 
