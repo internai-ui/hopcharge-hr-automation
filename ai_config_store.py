@@ -181,4 +181,9 @@ def save_config(
             raw["api_key_encrypted"] = enc
 
         _save_raw(raw)
-        return public_config()
+
+    # public_config() acquires _lock itself -- must call it only after
+    # releasing the lock above. threading.Lock is NOT reentrant, so calling
+    # it while still holding _lock deadlocks the calling thread forever
+    # (confirmed: every real "Save API Key" request hung indefinitely).
+    return public_config()
