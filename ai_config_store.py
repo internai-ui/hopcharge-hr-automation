@@ -33,9 +33,8 @@ DEFAULT_CONFIG = {
 
 MODELS = {
     "huggingface": [
+        "Qwen/Qwen3-4B-Instruct-2507",
         "meta-llama/Llama-3.1-8B-Instruct",
-        "Qwen/Qwen2.5-Coder-32B-Instruct",
-        "deepseek-ai/DeepSeek-R1",
     ],
     "anthropic": [
         "claude-3-5-sonnet-latest",
