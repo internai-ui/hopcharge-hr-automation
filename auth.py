@@ -351,7 +351,11 @@ router = APIRouter(tags=["auth"])
 async def login_page(request: Request):
     if not auth_enabled() or current_user(request):
         return RedirectResponse("/", status_code=302)
-    return FileResponse(str(STATIC_DIR / "login.html"))
+    # no-store: same reasoning as app.py's SPA routes -- an already-signed-in
+    # browser could otherwise cache this exact page (fetched right before
+    # signing in) and a later logged-out visit could serve it from disk
+    # cache without hitting the server/middleware at all.
+    return FileResponse(str(STATIC_DIR / "login.html"), headers={"Cache-Control": "no-store"})
 
 
 @router.get("/api/auth/google/authorize")

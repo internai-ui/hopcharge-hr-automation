@@ -157,10 +157,21 @@ app.middleware("http")(auth_middleware)
 # Routes
 # ──────────────────────────────────────────────
 
+_NO_STORE_HEADERS = {"Cache-Control": "no-store"}
+
+
 @app.get("/", include_in_schema=False)
 async def root():
-    """Serve the single-page frontend."""
-    return FileResponse(str(STATIC_DIR / "index.html"))
+    """Serve the single-page frontend.
+
+    no-store is deliberate: this document is gated by auth_middleware, and
+    without it a browser can serve a locally-cached copy of a page it
+    fetched during an earlier authenticated session on a later visit —
+    without ever making a network request, so the middleware never even
+    runs. That looks exactly like an auth bypass even though the
+    server-side check is intact; no-store forces revalidation with the
+    server (and therefore the middleware) on every visit."""
+    return FileResponse(str(STATIC_DIR / "index.html"), headers=_NO_STORE_HEADERS)
 
 
 # Client-side routed pages — same SPA, different deep-link URLs. Each of these
@@ -174,7 +185,7 @@ _SPA_PAGES = ["parser", "email", "replies", "forms", "rejected",
 
 
 async def _serve_spa():
-    return FileResponse(str(STATIC_DIR / "index.html"))
+    return FileResponse(str(STATIC_DIR / "index.html"), headers=_NO_STORE_HEADERS)
 
 
 for _page in _SPA_PAGES:
