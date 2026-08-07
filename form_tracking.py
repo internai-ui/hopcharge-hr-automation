@@ -38,9 +38,11 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import secrets
 import threading
 import urllib.parse
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -122,7 +124,11 @@ def issue_token(email: str, name: str = "") -> str:
         data["by_email"][email] = token
         _save(data)
         logger.info("Issued tracking token for %s", email)
-        return token
+
+    # Outside the lock -- this is a network call (see the "no network calls
+    # under the lock" convention shared with email_replies.py's poller).
+    push_token_to_cloudflare(token, email, name)
+    return token
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -369,3 +375,157 @@ def tracking_summary() -> dict:
         })
 
     return summary
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# 5. Optional: Cloudflare Workers as the public redirect endpoint
+#
+# If you don't want your own server publicly reachable, deploy the Worker
+# in cloudflare/worker.js instead — it does the exact same click-time
+# recording + redirect as track_and_redirect() in app.py, but runs on
+# Cloudflare's free tier (100k requests/day) instead of your own machine.
+# See cloudflare/README.md for setup.
+#
+# Wire-up: issue_token() pushes each new token to the Worker's KV store
+# (so it's ready the moment the campaign email goes out); app.py's
+# _save_tracking_config() pushes the form URL/email-entry-id config the
+# same way. A periodic sync (mirrors dual_writer.py's background-refresh
+# and email_replies.py's poller) pulls click updates back into this file.
+#
+# Every function here is a no-op if the three CLOUDFLARE_* env vars below
+# aren't set — purely additive. The existing self-hosted /t/<token> route
+# in app.py keeps working with or without this.
+# ══════════════════════════════════════════════════════════════════════════
+
+_CF_ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "").strip()
+_CF_NAMESPACE_ID = os.environ.get("CLOUDFLARE_KV_NAMESPACE_ID", "").strip()
+_CF_API_TOKEN = os.environ.get("CLOUDFLARE_API_TOKEN", "").strip()
+
+
+def cloudflare_configured() -> bool:
+    return bool(_CF_ACCOUNT_ID and _CF_NAMESPACE_ID and _CF_API_TOKEN)
+
+
+def _cf_kv_url(key: str = "") -> str:
+    base = (f"https://api.cloudflare.com/client/v4/accounts/{_CF_ACCOUNT_ID}"
+            f"/storage/kv/namespaces/{_CF_NAMESPACE_ID}")
+    return f"{base}/values/{urllib.parse.quote(key, safe='')}" if key else base
+
+
+def _cf_request(url: str, method: str = "GET", data: Optional[bytes] = None):
+    req = urllib.request.Request(
+        url, data=data, method=method,
+        headers={"Authorization": f"Bearer {_CF_API_TOKEN}", "Content-Type": "text/plain"},
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        return resp.read()
+
+
+def push_token_to_cloudflare(token: str, email: str, name: str = "") -> None:
+    """Push a newly-issued token to the Worker's KV store. Best-effort —
+    failures are logged, never raised, since a campaign send must not fail
+    just because Cloudflare sync hiccuped (the token still works fine with
+    the self-hosted /t/<token> route if that's what's configured)."""
+    if not cloudflare_configured():
+        return
+    record = {
+        "email": email, "name": name, "issued_at": _now_iso(),
+        "click_time": None, "click_count": 0, "last_click_time": None,
+    }
+    try:
+        _cf_request(_cf_kv_url(f"token:{token}"), method="PUT",
+                    data=json.dumps(record).encode("utf-8"))
+    except Exception as exc:
+        logger.warning("Could not push token %s to Cloudflare KV: %s", token, exc)
+
+
+def push_tracking_config_to_cloudflare(base_form_url: str, email_entry_id: Optional[str] = None) -> None:
+    """Push the form URL / email-entry-id config the Worker needs at
+    click-time. Call this wherever _save_tracking_config() is called
+    (app.py). Best-effort, same reasoning as push_token_to_cloudflare."""
+    if not cloudflare_configured():
+        return
+    config = {"base_form_url": base_form_url, "email_entry_id": email_entry_id}
+    try:
+        _cf_request(_cf_kv_url("config:tracking"), method="PUT",
+                    data=json.dumps(config).encode("utf-8"))
+    except Exception as exc:
+        logger.warning("Could not push tracking config to Cloudflare KV: %s", exc)
+
+
+def sync_clicks_from_cloudflare() -> dict:
+    """Pull click_time/click_count updates for every token from the
+    Worker's KV store and merge them into local storage. All network calls
+    happen OUTSIDE _lock (same principle as email_replies.py's poller) —
+    only the final merge+save is locked. Returns {checked, updated}."""
+    if not cloudflare_configured():
+        return {"checked": 0, "updated": 0, "skipped": "not_configured"}
+
+    remote_records: dict[str, dict] = {}
+    cursor = None
+    while True:
+        list_url = _cf_kv_url() + "/keys?prefix=token%3A"
+        if cursor:
+            list_url += f"&cursor={cursor}"
+        try:
+            listing = json.loads(_cf_request(list_url).decode("utf-8"))
+        except Exception as exc:
+            logger.warning("Cloudflare KV list failed: %s", exc)
+            break
+
+        for key_info in listing.get("result", []):
+            key_name = key_info.get("name", "")
+            token = key_name.split("token:", 1)[-1]
+            try:
+                remote_records[token] = json.loads(_cf_request(_cf_kv_url(key_name)).decode("utf-8"))
+            except Exception as exc:
+                logger.warning("Cloudflare KV read failed for %s: %s", token, exc)
+
+        cursor = listing.get("result_info", {}).get("cursor") or None
+        if not cursor:
+            break
+
+    checked = len(remote_records)
+    updated = 0
+    with _lock:
+        data = _load()
+        changed = False
+        for token, remote in remote_records.items():
+            local = data["tokens"].get(token)
+            if local is None:
+                continue
+            if remote.get("click_time") and not local.get("click_time"):
+                local["click_time"] = remote["click_time"]
+                local["status"] = "opened"
+                changed = True
+                updated += 1
+            if (remote.get("click_count") or 0) > (local.get("click_count") or 0):
+                local["click_count"] = remote["click_count"]
+                local["last_click_time"] = remote.get("last_click_time")
+                changed = True
+        if changed:
+            _save(data)
+
+    return {"checked": checked, "updated": updated}
+
+
+_CF_SYNC_INTERVAL = 300  # seconds — matches email_replies.py's poll cadence
+
+
+def _cf_poller_loop() -> None:
+    """Daemon thread, started at import — same pattern as email_replies.py's
+    _poller_loop(). Does nothing every cycle until CLOUDFLARE_* is
+    configured, at which point it starts pulling click updates."""
+    import time as _time
+    while True:
+        _time.sleep(_CF_SYNC_INTERVAL)
+        if not cloudflare_configured():
+            continue
+        try:
+            sync_clicks_from_cloudflare()
+        except Exception as exc:
+            logger.error("Cloudflare click sync failed: %s", exc, exc_info=True)
+
+
+_cf_poller_thread = threading.Thread(target=_cf_poller_loop, daemon=True)
+_cf_poller_thread.start()

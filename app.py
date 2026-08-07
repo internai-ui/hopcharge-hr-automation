@@ -239,6 +239,10 @@ def _load_tracking_config() -> dict:
 def _save_tracking_config(cfg: dict) -> None:
     import json as _json
     _tracking_config_path().write_text(_json.dumps(cfg, indent=2))
+    # No-op unless CLOUDFLARE_* env vars are set — see form_tracking.py's
+    # Cloudflare Workers section.
+    form_tracking.push_tracking_config_to_cloudflare(
+        cfg.get("base_form_url", ""), cfg.get("email_entry_id"))
 
 
 class TrackingConfig(BaseModel):

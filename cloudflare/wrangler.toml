@@ -1,0 +1,9 @@
+name = "hopcharge-form-tracking"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# Created by `wrangler kv namespace create TRACKING_KV` (see README.md) —
+# paste the id it prints here before running `wrangler deploy`.
+[[kv_namespaces]]
+binding = "TRACKING_KV"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
